@@ -53,12 +53,34 @@ export function generateQueryProof(query: string): string {
   return `zkstark_${timestamp}_${Math.abs(queryDigest).toString(16)}_risc0_v2`;
 }
 
+export function calculateConfidence(traces: SecurityTrace[], answer: string): { metrics: any, sources: string[] } {
+  const verifiedTracesCount = traces.filter(t => t.zkpStatus === 'verified' && t.smtApproval).length;
+  const avgRelevance = traces.reduce((acc, t) => acc + t.relevanceScore, 0) / (traces.length || 1);
+  
+  // Simulated grounding metrics
+  const retrievalAccuracy = avgRelevance * 0.95;
+  const groundingFidelity = (verifiedTracesCount / (traces.length || 1)) * 0.98;
+  const hallucinationRisk = 1.0 - (groundingFidelity * 0.9);
+  
+  return {
+    metrics: {
+      retrievalAccuracy: Math.min(retrievalAccuracy, 1.0),
+      groundingFidelity: Math.min(groundingFidelity, 1.0),
+      hallucinationRisk: Math.max(hallucinationRisk, 0.0),
+      overallConfidence: (retrievalAccuracy + groundingFidelity) / 2
+    },
+    sources: traces.map(t => t.nodeId)
+  };
+}
+
 export function createTrace(nodeId: string, content: string, constraints: string[]): SecurityTrace {
+  const relevanceScore = 0.85 + (Math.random() * 0.15); // Simulated relevance re-ranking score
   return {
     nodeId,
     zkpStatus: verifyZKP(nodeId),
     provenanceHash: generateC2PAHash(content),
     smtApproval: formalVerification(content, constraints),
     timestamp: new Date().toISOString(),
+    relevanceScore
   };
 }

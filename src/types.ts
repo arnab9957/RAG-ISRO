@@ -18,7 +18,17 @@ export interface GroundedNode {
   id: string;
   label: string;
   type: string;
-  properties: Record<string, any>;
+  content: string;
+  metadata: {
+    filename: string;
+    page: number;
+    section: string;
+    chunkId: string;
+    subsystem?: string;
+    timestamp?: string;
+  };
+  score?: number;
+  neighborIds?: string[];
 }
 
 export interface SecurityTrace {
@@ -27,6 +37,14 @@ export interface SecurityTrace {
   provenanceHash: string;
   smtApproval: boolean;
   timestamp: string;
+  relevanceScore: number;
+}
+
+export interface ConfidenceMetrics {
+  retrievalAccuracy: number;
+  groundingFidelity: number;
+  hallucinationRisk: number;
+  overallConfidence: number;
 }
 
 export interface AgentAction {
@@ -58,4 +76,6 @@ export interface SaraswatiResponse {
   traceLog: SecurityTrace[];
   agentActions: AgentAction[];
   domain: Domain;
+  metrics: ConfidenceMetrics;
+  groundingSources: string[];
 }

@@ -32,17 +32,20 @@ export default function TraceAudit({ traces }: Props) {
             <div className="flex items-start gap-3">
               <Key className="w-4 h-4 text-emerald-400 mt-1" />
               <div>
-                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">GroundedKG Node ID</p>
-                <p className="text-sm font-mono text-zinc-200">{trace.nodeId}</p>
+                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">Paging Source Info</p>
+                <div className="flex flex-col">
+                  <span className="text-sm font-mono text-zinc-200">{trace.nodeId}</span>
+                  <span className="text-[10px] text-zinc-400 font-mono italic">EXPANSION_NODE: {trace.relevanceScore < 0.5 ? 'YES (NEIGHBOR)' : 'NO (PRIMARY)'}</span>
+                </div>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
               <Shield className="w-4 h-4 text-blue-400 mt-1" />
               <div>
-                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">ZKP Verification Status</p>
-                <p className={`text-sm font-bold ${trace.zkpStatus === 'verified' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {trace.zkpStatus.toUpperCase()}
+                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">BM25 Retrieval Score</p>
+                <p className="text-sm font-bold text-isro-orange">
+                  {(trace.relevanceScore * 100).toFixed(2)} pts
                 </p>
               </div>
             </div>

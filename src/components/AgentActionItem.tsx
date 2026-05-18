@@ -3,10 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { FC } from "react";
+import { FC, useState } from "react";
 import { motion } from "motion/react";
 import { AgentAction, AgentRole } from "../types";
-import { CheckCircle2, CircleDashed, AlertTriangle, ShieldCheck, Cpu, Search } from "lucide-react";
+import { 
+  CheckCircle2, 
+  CircleDashed, 
+  AlertTriangle, 
+  ShieldCheck, 
+  Cpu, 
+  Search,
+  ChevronDown,
+  ChevronUp 
+} from "lucide-react";
 
 interface AgentActionItemProps {
   action: AgentAction;
@@ -26,6 +35,9 @@ const statusIcons = {
 };
 
 const AgentActionItem: FC<AgentActionItemProps> = ({ action }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const shouldTruncate = action.output && action.output.length > 150;
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -52,9 +64,26 @@ const AgentActionItem: FC<AgentActionItemProps> = ({ action }) => {
         <motion.div 
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
-          className="p-2 bg-black/40 rounded border border-zinc-800/50 text-xs font-mono text-zinc-400 overflow-hidden"
+          className="p-3 bg-black/40 rounded border border-zinc-800/50 text-xs font-mono text-zinc-400 overflow-hidden"
         >
-          {action.output.length > 200 ? `${action.output.substring(0, 200)}...` : action.output}
+          <div className="whitespace-pre-wrap leading-relaxed">
+            {shouldTruncate && !isExpanded 
+              ? `${action.output.substring(0, 150)}...` 
+              : action.output}
+          </div>
+          
+          {shouldTruncate && (
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="mt-3 flex items-center gap-1.5 text-[9px] font-bold text-isro-orange hover:text-orange-400 transition-colors uppercase tracking-widest"
+            >
+              {isExpanded ? (
+                <>Collapse Detail <ChevronUp className="w-3 h-3" /></>
+              ) : (
+                <>Expand Execution Detail <ChevronDown className="w-3 h-3" /></>
+              )}
+            </button>
+          )}
         </motion.div>
       )}
       

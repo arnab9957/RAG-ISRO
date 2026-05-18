@@ -69,6 +69,9 @@ export default function HistoryView({ history, onSelect, onClear }: HistoryViewP
                 TRACE_NODES: {item.response.traceLog.length}
               </div>
               <div className="px-2 py-0.5 bg-zinc-900 rounded text-[9px] font-mono text-zinc-500 border border-zinc-800">
+                CONFIDENCE: {item.response.metrics ? `${(item.response.metrics.overallConfidence * 100).toFixed(0)}%` : 'N/A'}
+              </div>
+              <div className="px-2 py-0.5 bg-zinc-900 rounded text-[9px] font-mono text-zinc-500 border border-zinc-800">
                 VERIFIED: YES
               </div>
             </div>

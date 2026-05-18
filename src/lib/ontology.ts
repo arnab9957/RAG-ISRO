@@ -3,192 +3,65 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Domain, GroundedNode } from '../types';
+import { Domain, GroundedNode, AdvancedFilters } from '../types';
 
 export const KNOWLEDGE_BASE: Record<Domain, GroundedNode[]> = {
   [Domain.AEROSPACE]: [
     {
-      id: 'CCSDS-133.0-B-2',
-      label: 'Space Packet Protocol',
-      type: 'Protocol',
-      properties: {
-        standard: 'CCSDS',
-        version: '133.0-B-2',
-        criticality: 'High',
-        description: 'Defines the structural format of telemetry packets for deep space missions.',
-        subsystem: 'Telemetry',
-        timestamp: '2025-10-12T10:00:00Z'
-      }
+      id: 'AERO-DOC-001-P1',
+      label: 'Page 1: CCSDS Frame Structure',
+      type: 'ProtocolSpec',
+      content: 'The CCSDS Space Packet Protocol defines the structure of telemetry packets. A primary header consists of Version, Type, Sec. Header Flag, APID, Sequence Flags, Sequence Count, and Packet Length.',
+      metadata: { filename: 'CCSDS_133.pdf', page: 1, section: 'Packet Structure', chunkId: 'CH-001', subsystem: 'Telemetry' },
+      neighborIds: ['AERO-DOC-001-P2']
     },
     {
-      id: 'THERMAL-TOLERANCE-001',
-      label: 'Thermal Subsystem Parameters',
+      id: 'AERO-DOC-001-P2',
+      label: 'Page 2: APID Allocation',
+      type: 'ProtocolSpec',
+      content: 'APID (Application Process Identifier) provides the identification of the application process. Values 0-2047 are reserved for mission-specific applications. APID 2047 is reserved for Idle Packets.',
+      metadata: { filename: 'CCSDS_133.pdf', page: 2, section: 'APID Management', chunkId: 'CH-002', subsystem: 'Telemetry' },
+      neighborIds: ['AERO-DOC-001-P1', 'AERO-DOC-001-P3']
+    },
+    {
+      id: 'AERO-DOC-001-P3',
+      label: 'Page 3: Sequence Control',
+      type: 'ProtocolSpec',
+      content: 'Sequence control ensures packets are processed in order. It uses a 14-bit sequence count for tracking packet delivery and identifying missing data in space-to-ground links.',
+      metadata: { filename: 'CCSDS_133.pdf', page: 3, section: 'Error Control', chunkId: 'CH-003', subsystem: 'Telemetry' },
+      neighborIds: ['AERO-DOC-001-P2']
+    },
+    {
+      id: 'AERO-THERMAL-P10',
+      label: 'Page 10: Thermal Protection System',
       type: 'EngineeringSpec',
-      properties: {
-        min_temp: -150,
-        max_temp: 125,
-        unit: 'Celsius',
-        subsystem: 'Payload',
-        verification_method: 'Thermal Vacuum Test',
-        timestamp: '2026-01-05T08:30:00Z'
-      }
+      content: 'The Thermal Protection System (TPS) protects the spacecraft from extreme temperatures. Multi-Layer Insulation (MLI) consists of several layers of aluminized Mylar to reduce radiation heat transfer.',
+      metadata: { filename: 'THERMAL_TECH.pdf', page: 10, section: 'Insulation', chunkId: 'TH-010', subsystem: 'Thermal' },
+      neighborIds: ['AERO-THERMAL-P11']
     },
     {
-      id: 'ORBITAL-MECH-G1',
-      label: 'Geosynchronous Transfer Orbit (GTO)',
-      type: 'OrbitalDynamics',
-      properties: {
-        perigee: '180 km',
-        apogee: '35900 km',
-        inclination: '18 degrees',
-        v_delta: '1.5 km/s',
-        subsystem: 'Guidance',
-        timestamp: '2026-02-20T14:15:00Z'
-      }
-    },
-    {
-      id: 'IMS-1-BUS-SPEC',
-      label: 'Indian Mini Satellite (IMS-1) Bus',
+      id: 'AERO-THERMAL-P11',
+      label: 'Page 11: Active Control Systems',
       type: 'EngineeringSpec',
-      properties: {
-        payload_mass: '150±10 kg',
-        interface: 'MIL1553B TMTC',
-        power_support: 'Solar Array/Li-Ion',
-        subsystem: 'Structure',
-        timestamp: '2025-06-20T00:00:00Z'
-      }
-    },
-    {
-      id: 'CCSDS-XML-NDM',
-      label: 'CCSDS Navigation Data Messages (XML)',
-      type: 'Protocol',
-      properties: {
-        format: 'Extensible Markup Language',
-        schema: 'NDM/XML integrated set',
-        application: 'Intersite data exchange',
-        subsystem: 'Guidance',
-        timestamp: '2024-11-10T00:00:00Z'
-      }
-    },
-    {
-      id: 'ISTRAC-OPS-G1',
-      label: 'ISTRAC Ground Segment Architecture',
-      type: 'MissionSpec',
-      properties: {
-        network: 'Deep Space Network Complex',
-        control_center: 'SCC Bangalore',
-        links: 'S-Band/X-Band',
-        subsystem: 'Telemetry',
-        timestamp: '2026-01-15T00:00:00Z'
-      }
-    },
-    {
-      id: 'EDGED-TEL-SLE-001',
-      label: 'Edge-of-Network Space Link Extension (SLE)',
-      type: 'NetworkProtocol',
-      properties: {
-        layer: 'Data Link Layer (L2)',
-        processing: 'Distributed Frame Verification',
-        latency_target: '< 10ms',
-        security: 'CAPRISE Encrypted',
-        subsystem: 'Telemetry',
-        timestamp: '2026-03-15T09:00:00Z'
-      }
-    },
-    {
-      id: 'TELEMETRY-FRAME-CRYPTO',
-      label: 'Cryptographic Frame Authentication',
-      type: 'SecuritySpec',
-      properties: {
-        algorithm: 'AES-GCM-256',
-        integrity: 'HMAC-SHA-512',
-        compliance: 'CERT-In ISRO-L3',
-        description: 'Mandatory for all edged query interfaces.',
-        subsystem: 'Telemetry',
-        timestamp: '2026-04-10T12:00:00Z'
-      }
-    },
-    {
-      id: 'LUNA-PR-022',
-      label: 'Lunar Polar Rover Navigation',
-      type: 'MissionSpec',
-      properties: {
-        target: 'Lunar South Pole',
-        autonomous_nav: 'Enabled',
-        obstacle_avoidance: 'Lidar-based',
-        subsystem: 'Guidance',
-        timestamp: '2026-05-01T09:00:00Z'
-      }
+      content: 'Active thermal control includes heaters and louvers. Louvers are used to vary the radiation properties of a radiator surface. Heaters maintain minimum temperatures during eclipse phases.',
+      metadata: { filename: 'THERMAL_TECH.pdf', page: 11, section: 'Active Control', chunkId: 'TH-011', subsystem: 'Thermal' },
+      neighborIds: ['AERO-THERMAL-P10']
     }
   ],
   [Domain.GOVERNMENT]: [
     {
-      id: 'GFR-RULE-160',
-      label: 'Public Procurement Policy',
+      id: 'GFR-2017-R160',
+      label: 'GFR Rule 160: Procurement',
       type: 'Regulation',
-      properties: {
-        authority: 'Ministry of Finance',
-        last_updated: '2024-01-15',
-        requirement: 'Global Tender Enquiry (GTE) required for values above INR 200 Crore.',
-        mdds_compliance: 'Verified',
-        timestamp: '2024-01-15T00:00:00Z'
-      }
+      content: 'Rule 160 of GFR 2017 states that every authority delegated with the financial powers of making procurement in public interest shall have the responsibility and accountability to bring efficiency, economy, and transparency.',
+      metadata: { filename: 'GFR_2017.pdf', page: 60, section: 'Procurement Principles', chunkId: 'GFR-160' }
     },
     {
-      id: 'CERT-IN-CYBER-2024',
-      label: 'CERT-In Cybersecurity Directions',
+      id: 'GFR-2017-R161',
+      label: 'GFR Rule 161: Bidding',
       type: 'Regulation',
-      properties: {
-        sync_standard: 'NIC NTP Server',
-        logging_period: '180 Days Immutable',
-        audit_scope: 'VPN/Database/Network',
-        compliance: 'Mandatory',
-        timestamp: '2024-04-28T00:00:00Z'
-      }
-    },
-    {
-      id: 'PROCUREMENT-MANUAL-2017',
-      label: 'Manual for Procurement of Goods',
-      type: 'Regulation',
-      properties: {
-        issued_by: 'Dept of Expenditure',
-        principles: 'Value for Money / Transparency',
-        auction_type: 'Electronic Reverse Auction',
-        timestamp: '2017-06-01T00:00:00Z'
-      }
-    },
-    {
-      id: 'GFR-RULE-144',
-      label: 'Fundamental Principles of Procurement',
-      type: 'Regulation',
-      properties: {
-        transparency: 'High',
-        fairness: 'Mandatory',
-        efficiency: 'Optimized',
-        timestamp: '2024-02-01T00:00:00Z'
-      }
-    },
-    {
-      id: 'GFR-RULE-149',
-      label: 'GeM Procurement',
-      type: 'Regulation',
-      properties: {
-        platform: 'Government e-Marketplace',
-        threshold: 'Mandatory for all items available on GeM.',
-        exceptions: 'Proprietary Article Certificate case.',
-        timestamp: '2023-11-20T00:00:00Z'
-      }
-    },
-    {
-      id: 'MEITY-MDDS-V2',
-      label: 'Metadata Standard for e-Governance',
-      type: 'Standard',
-      properties: {
-        entity: 'Procurement Contract',
-        required_fields: ['ContractID', 'VendorTAN', 'SanctionDate', 'ValueINR'],
-        encryption: 'AES-256',
-        timestamp: '2022-05-10T00:00:00Z'
-      }
+      content: 'Advertised Tender Enquiry should be used for procurement of goods worth Rs. 25 lakhs and above. Minimum time for submission of bids should be 3 weeks for domestic and 4 weeks for global tenders.',
+      metadata: { filename: 'GFR_2017.pdf', page: 61, section: 'Bidding Procedures', chunkId: 'GFR-161' }
     }
   ]
 };
@@ -206,35 +79,73 @@ export function getOntologyStats() {
   };
 }
 
-import { AdvancedFilters } from '../types';
+
+
+/**
+ * Simple Keyword Match Score (Simulation of BM25)
+ */
+function scoreNode(node: GroundedNode, queryTerms: string[]): number {
+  let score = 0;
+  const content = node.content.toLowerCase();
+  const label = node.label.toLowerCase();
+  
+  queryTerms.forEach(term => {
+    // Frequency based scoring
+    const occurrences = content.split(term).length - 1;
+    score += occurrences * 1.0;
+    
+    // Weight label matches higher
+    if (label.includes(term)) {
+      score += 5.0;
+    }
+    
+    // Exact section matches
+    if (node.metadata.section.toLowerCase().includes(term)) {
+      score += 3.0;
+    }
+  });
+
+  return score;
+}
 
 export function searchOntology(query: string, domain: Domain, filters?: AdvancedFilters): GroundedNode[] {
-  const q = query.toLowerCase();
-  return KNOWLEDGE_BASE[domain].filter(node => {
-    // 1. Text Search
-    const matchesText = 
-      node.label.toLowerCase().includes(q) || 
-      node.id.toLowerCase().includes(q) ||
-      JSON.stringify(node.properties).toLowerCase().includes(q);
-    
-    if (!matchesText) return false;
+  const queryTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+  if (queryTerms.length === 0) return [];
 
-    // 2. Filters
-    if (filters) {
-      if (filters.subsystem && node.properties.subsystem !== filters.subsystem) return false;
-      if (filters.dataType && node.type !== filters.dataType) return false;
-      
-      const nodeTime = node.properties.timestamp ? new Date(node.properties.timestamp).getTime() : 0;
-      if (filters.dateStart) {
-        const startTime = new Date(filters.dateStart).getTime();
-        if (nodeTime < startTime) return false;
-      }
-      if (filters.dateEnd) {
-        const endTime = new Date(filters.dateEnd).getTime();
-        if (nodeTime > endTime) return false;
-      }
+  const candidates = KNOWLEDGE_BASE[domain].map(node => ({
+    ...node,
+    score: scoreNode(node, queryTerms)
+  })).filter(node => node.score! > 0);
+
+  // Sort by score
+  candidates.sort((a, b) => b.score! - a.score!);
+
+  // Top K results
+  const topK = candidates.slice(0, 3);
+  
+  // PAGING LOGIC: Expand with Neighboring Pages
+  const expandedResults: GroundedNode[] = [];
+  const seenIds = new Set<string>();
+
+  topK.forEach(node => {
+    if (!seenIds.has(node.id)) {
+      expandedResults.push(node);
+      seenIds.add(node.id);
     }
-
-    return true;
+    
+    // Add neighbors for context expansion
+    if (node.neighborIds) {
+      node.neighborIds.forEach(neighborId => {
+        if (!seenIds.has(neighborId)) {
+          const neighbor = KNOWLEDGE_BASE[domain].find(n => n.id === neighborId);
+          if (neighbor) {
+            expandedResults.push({ ...neighbor, score: node.score! * 0.5 }); // Lower score for expansion context
+            seenIds.add(neighborId);
+          }
+        }
+      });
+    }
   });
+
+  return expandedResults;
 }

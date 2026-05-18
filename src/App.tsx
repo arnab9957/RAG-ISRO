@@ -18,11 +18,14 @@ import {
   BookOpen,
   Info,
   Clock,
+  Download,
   Landmark,
   Filter,
   Calendar,
   Layers,
-  Settings2
+  Settings2,
+  Gauge,
+  AlertTriangle
 } from 'lucide-react';
 import { AgentAction, Domain, SaraswatiResponse, AdvancedFilters, HistoryItem } from './types';
 import { SaraswatiOrchestrator } from './lib/agents';
@@ -125,6 +128,40 @@ export default function App() {
     setActiveTab('console');
   };
 
+  const handleExport = () => {
+    if (!response) return;
+    
+    const exportData = {
+      metadata: {
+        timestamp: new Date().toISOString(),
+        domain,
+        query,
+        system: "SARASWATI_FRAMEWORK_V2",
+        node: "NIC_SECURED_NODE_882"
+      },
+      ...response
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    const safeQuery = query.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+    const defaultName = `SARASWATI_${domain.toUpperCase()}_${safeQuery}`;
+    const customName = window.prompt("Enter filename for export:", defaultName);
+    
+    if (customName === null) return; // Cancelled
+    
+    const fileName = `${customName || defaultName}.json`;
+    
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-isro-orange selection:text-white">
       {/* Header */}
@@ -144,24 +181,25 @@ export default function App() {
             </div>
           </div>
           
-          <nav className="hidden lg:flex items-center gap-1 bg-zinc-900/50 p-1 rounded-xl border border-zinc-800">
+          <nav className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-xl border border-zinc-800 overflow-x-auto no-scrollbar max-w-[calc(100vw-12rem)] md:max-w-none">
             {[
               { id: 'console', label: 'Console', icon: Terminal },
-              { id: 'database', label: 'Knowledge Base', icon: Database },
+              { id: 'database', label: 'Nodes', icon: Database },
               { id: 'guidelines', label: 'Protocols', icon: BookOpen },
               { id: 'history', label: 'History', icon: Clock }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as Tab)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all shrink-0 ${
                   activeTab === tab.id 
                     ? 'bg-zinc-800 text-isro-orange border border-zinc-700 shadow-xl' 
                     : 'text-zinc-500 hover:text-zinc-300'
                 }`}
               >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
+                <tab.icon className="w-3.5 h-3.5 md:w-4 h-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.id === 'database' ? 'DB' : tab.label}</span>
               </button>
             ))}
           </nav>
@@ -183,15 +221,11 @@ export default function App() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+              className="flex flex-col lg:grid lg:grid-cols-12 gap-8"
             >
-              {/* Sidebar / Controls */}
-              <div className="lg:col-span-4 space-y-6">
+              {/* Sidebar / Controls (Order Last on Mobile) */}
+              <div className="order-last lg:order-none lg:col-span-4 space-y-6">
                 <section className="isro-glass p-6 rounded-2xl">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-isro-orange mb-6 flex items-center gap-2">
-                    <Database className="w-4 h-4" />
-                    Domain Selection
-                  </h2>
                   
                   <div className="grid grid-cols-1 gap-3">
                     {[Domain.AEROSPACE, Domain.GOVERNMENT].map((d) => (
@@ -353,36 +387,36 @@ export default function App() {
                 </section>
               </div>
 
-              {/* Main Interface */}
-              <div className="lg:col-span-8 space-y-6">
+              {/* Main Interface (Order First on Mobile) */}
+              <div className="order-first lg:order-none lg:col-span-8 space-y-6">
                 {/* Query Input */}
                 <form 
                   onSubmit={handleQuery}
                   className="relative group block"
                 >
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-isro-orange to-isro-blue rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                  <div className="relative isro-glass rounded-2xl flex items-center gap-4 p-2 pl-6">
-                    <Search className="w-6 h-6 text-zinc-600" />
+                  <div className="relative isro-glass rounded-2xl flex items-center gap-2 md:gap-4 p-2 pl-4 md:pl-6">
+                    <Search className="w-5 h-5 md:w-6 md:h-6 text-zinc-600 shrink-0" />
                     <input 
                       type="text" 
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder={domain === Domain.AEROSPACE ? "Query spacecraft telemetry or mission standards..." : "Query GFR rules or procurement compliance..."}
-                      className="flex-1 bg-transparent border-none outline-none text-zinc-200 placeholder:text-zinc-600 text-lg py-4"
+                      placeholder={domain === Domain.AEROSPACE ? "Query telemetry..." : "Query GFR rules..."}
+                      className="flex-1 bg-transparent border-none outline-none text-zinc-200 placeholder:text-zinc-600 text-sm md:text-lg py-3 md:py-4 min-w-0"
                       disabled={isQuerying}
                     />
                     <button 
                       type="submit"
                       disabled={isQuerying || !query.trim()}
-                      className="bg-isro-orange hover:bg-orange-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-4 px-8 rounded-xl transition-all flex items-center gap-2 group/btn"
+                      className="bg-isro-orange hover:bg-orange-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-3 md:py-4 px-4 md:px-8 rounded-xl transition-all flex items-center gap-2 group/btn shrink-0"
                     >
                       {isQuerying ? (
-                        <RefreshCcw className="w-5 h-5 animate-spin" />
+                        <RefreshCcw className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
                       ) : (
                         <>
-                          <Activity className="w-5 h-5" />
-                          <span>EXECUTE</span>
-                          <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                          <Activity className="w-4 h-4 md:w-5 md:h-5" />
+                          <span className="hidden sm:inline">EXECUTE</span>
+                          <ArrowRight className="hidden md:block w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                         </>
                       )}
                     </button>
@@ -398,29 +432,65 @@ export default function App() {
                       exit={{ opacity: 0, scale: 0.95 }}
                       className="space-y-6"
                     >
-                      <section className="isro-glass p-8 rounded-2xl bg-gradient-to-br from-zinc-900/80 to-black">
-                        <div className="flex items-center justify-between mb-8">
+                      <section className="isro-glass p-4 md:p-8 rounded-2xl bg-gradient-to-br from-zinc-900/80 to-black">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                               <ShieldCheck className="w-5 h-5 text-emerald-500" />
                             </div>
-                            <h2 className="text-xl font-display font-medium text-white tracking-tight">Verified Technical Synthesis</h2>
+                            <h2 className="text-lg md:text-xl font-display font-medium text-white tracking-tight">Verified Technical Synthesis</h2>
                           </div>
-                          <div className="px-3 py-1 bg-zinc-800 rounded-full border border-zinc-700 text-[10px] font-mono text-zinc-400">
-                            TOKEN_ID: {Math.random().toString(36).substring(7).toUpperCase()}
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={handleExport}
+                              className="flex items-center gap-2 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-full border border-zinc-700 text-[10px] font-mono transition-colors"
+                            >
+                              <Download className="w-3 h-3" />
+                              EXPORT_JSON
+                            </button>
+                            <div className="px-3 py-1 bg-zinc-800 rounded-full border border-zinc-700 text-[10px] font-mono text-zinc-400">
+                              TOKEN_ID: {Math.random().toString(36).substring(7).toUpperCase()}
+                            </div>
                           </div>
                         </div>
 
                         <div className="prose prose-invert max-w-none text-zinc-300 leading-relaxed space-y-4">
-                          <p className="border-l-2 border-emerald-500 pl-6 italic text-zinc-400 text-sm mb-8 bg-emerald-500/5 py-4 rounded-r-lg">
+                          <p className="border-l-2 border-emerald-500 pl-4 md:pl-6 italic text-zinc-400 text-xs md:text-sm mb-8 bg-emerald-500/5 py-4 rounded-r-lg">
                             "Grounded in verified {domain} ontologies and formally verified via neuro-symbolic swarm validation."
                           </p>
-                          <div className="whitespace-pre-wrap font-sans text-lg">
+                          <div className="whitespace-pre-wrap font-sans text-base md:text-lg">
                             {response.answer}
                           </div>
                         </div>
 
-                        <div className="mt-12 pt-8 border-t border-zinc-800">
+                        <div className="mt-8 pt-8 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-4 gap-4">
+                          {[
+                            { label: 'Retrieval Accuracy', value: response.metrics?.retrievalAccuracy, icon: Database, color: 'text-isro-blue' },
+                            { label: 'Grounding Fidelity', value: response.metrics?.groundingFidelity, icon: ShieldCheck, color: 'text-emerald-500' },
+                            { label: 'Hallucination Risk', value: response.metrics?.hallucinationRisk, icon: AlertTriangle, color: 'text-red-500', inverse: true },
+                            { label: 'Overall Confidence', value: response.metrics?.overallConfidence, icon: Gauge, color: 'text-isro-orange' },
+                          ].map((item) => (
+                            <div key={item.label} className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <item.icon className={`w-3.5 h-3.5 ${item.color}`} />
+                                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-tighter">{item.label}</span>
+                              </div>
+                              <div className="flex items-end justify-between">
+                                <span className="text-xl font-display font-medium text-white">
+                                  {item.value !== undefined ? `${(item.value * 100).toFixed(1)}%` : 'N/A'}
+                                </span>
+                                <div className="w-12 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full ${item.inverse ? ((item.value ?? 0) > 0.2 ? 'bg-red-500' : 'bg-emerald-500') : ((item.value ?? 0) > 0.8 ? 'bg-emerald-500' : 'bg-isro-orange')}`} 
+                                    style={{ width: `${(item.value ?? 0) * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-8 pt-8 border-t border-zinc-800">
                           <TraceAudit traces={response.traceLog} />
                         </div>
                       </section>
@@ -489,21 +559,21 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      <footer className="py-6 border-t border-zinc-800/50 mt-12 bg-black/50">
-        <div className="max-w-7xl mx-auto px-6 h-full space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-8">
-              <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">© 2026 ISRO SARASWATI UNIT II</span>
-              <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">NIC SECURED NODE #882</span>
+      <footer className="py-6 md:py-10 border-t border-zinc-800/50 mt-12 bg-black/50">
+        <div className="max-w-7xl mx-auto px-6 h-full space-y-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
+              <span className="text-[9px] md:text-[10px] font-mono text-zinc-600 uppercase tracking-widest leading-relaxed">© 2026 ISRO SARASWATI UNIT II</span>
+              <span className="text-[9px] md:text-[10px] font-mono text-zinc-600 uppercase tracking-widest leading-relaxed">NIC SECURED NODE #882</span>
             </div>
-            <div className="flex items-center gap-4 opacity-40 grayscale h-6">
+            <div className="flex items-center gap-4 opacity-40 grayscale h-5 md:h-6">
               <img src="https://upload.wikimedia.org/wikipedia/commons/b/bd/Indian_Space_Research_Organisation_Logo.svg" alt="ISRO" className="h-full" />
               <div className="h-4 w-[1px] bg-zinc-800" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/2/22/MeitY_Logo.png" alt="MeitY" className="h-full" />
+              <img src="https://upload.wikimedia.org/wikipedia/en/thumb/9/9c/Digital_India_logo.svg/512px-Digital_India_logo.svg.png" alt="Digital India" className="h-full" />
             </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 pt-6 border-t border-zinc-900">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-8 pt-8 border-t border-zinc-900">
             <div className="space-y-1">
               <p className="text-[10px] font-bold text-zinc-700 uppercase">AEROSPACE_NODES</p>
               <p className="text-xs font-mono text-isro-orange">{stats.current[Domain.AEROSPACE].nodes}</p>
