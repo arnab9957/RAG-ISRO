@@ -66,21 +66,6 @@ export const KNOWLEDGE_BASE: Record<Domain, GroundedNode[]> = {
   ]
 };
 
-export function getOntologyStats() {
-  return {
-    [Domain.AEROSPACE]: {
-      nodes: KNOWLEDGE_BASE[Domain.AEROSPACE].length,
-      types: Array.from(new Set(KNOWLEDGE_BASE[Domain.AEROSPACE].map(n => n.type))),
-    },
-    [Domain.GOVERNMENT]: {
-      nodes: KNOWLEDGE_BASE[Domain.GOVERNMENT].length,
-      types: Array.from(new Set(KNOWLEDGE_BASE[Domain.GOVERNMENT].map(n => n.type))),
-    }
-  };
-}
-
-
-
 /**
  * Simple Keyword Match Score (Simulation of BM25)
  */
@@ -108,44 +93,24 @@ function scoreNode(node: GroundedNode, queryTerms: string[]): number {
   return score;
 }
 
-export function searchOntology(query: string, domain: Domain, filters?: AdvancedFilters): GroundedNode[] {
-  const queryTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
-  if (queryTerms.length === 0) return [];
+export async function searchOntology(query: string, domain: Domain, filters?: AdvancedFilters): Promise<GroundedNode[]> {
+  try {
+    const response = await fetch('http://localhost:3001/api/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, domain, filters }),
+    });
 
-  const candidates = KNOWLEDGE_BASE[domain].map(node => ({
-    ...node,
-    score: scoreNode(node, queryTerms)
-  })).filter(node => node.score! > 0);
-
-  // Sort by score
-  candidates.sort((a, b) => b.score! - a.score!);
-
-  // Top K results
-  const topK = candidates.slice(0, 3);
-  
-  // PAGING LOGIC: Expand with Neighboring Pages
-  const expandedResults: GroundedNode[] = [];
-  const seenIds = new Set<string>();
-
-  topK.forEach(node => {
-    if (!seenIds.has(node.id)) {
-      expandedResults.push(node);
-      seenIds.add(node.id);
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText}`);
     }
-    
-    // Add neighbors for context expansion
-    if (node.neighborIds) {
-      node.neighborIds.forEach(neighborId => {
-        if (!seenIds.has(neighborId)) {
-          const neighbor = KNOWLEDGE_BASE[domain].find(n => n.id === neighborId);
-          if (neighbor) {
-            expandedResults.push({ ...neighbor, score: node.score! * 0.5 }); // Lower score for expansion context
-            seenIds.add(neighborId);
-          }
-        }
-      });
-    }
-  });
 
-  return expandedResults;
+    const data = await response.json();
+    return data.nodes || [];
+  } catch (error) {
+    console.error('Vector DB Search failed, falling back to local simulation:', error);
+    return [];
+  }
 }

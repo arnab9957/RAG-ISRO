@@ -1,0 +1,33 @@
+version: '3.9'
+
+services:
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: saraswati-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ALLOW_RESET=TRUE
+    restart: unless-stopped
+
+  ingest:
+    build:
+      context: .
+      dockerfile: ingest.Dockerfile
+    image: saraswati-ingest:latest
+    container_name: saraswati-ingest
+    working_dir: /app
+    # Only mount datasets into the running container; code and node_modules are baked in the image
+    volumes:
+      - ./datasets:/app/datasets:ro
+    depends_on:
+      - chromadb
+    environment:
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - CHROMADB_URL=http://chromadb:8000
+    # Use the Dockerfile CMD by default. For one-off runs use `docker-compose run --rm ingest`.
+    restart: "no"

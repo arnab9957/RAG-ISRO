@@ -15,7 +15,6 @@ import {
   Activity,
   ArrowRight,
   RefreshCcw,
-  BookOpen,
   Info,
   Clock,
   Download,
@@ -29,14 +28,12 @@ import {
 } from 'lucide-react';
 import { AgentAction, Domain, SaraswatiResponse, AdvancedFilters, HistoryItem } from './types';
 import { SaraswatiOrchestrator } from './lib/agents';
-import { getOntologyStats } from './lib/ontology';
 import AgentActionItem from './components/AgentActionItem';
 import TraceAudit from './components/TraceAudit';
 import KnowledgeBaseView from './components/KnowledgeBaseView';
-import GuidelinesView from './components/GuidelinesView';
 import HistoryView from './components/HistoryView';
 
-type Tab = 'console' | 'database' | 'guidelines' | 'history';
+type Tab = 'console' | 'database' | 'history';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('console');
@@ -60,8 +57,6 @@ export default function App() {
   });
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const stats = useRef(getOntologyStats());
-  
   const orchestrator = useRef(new SaraswatiOrchestrator());
 
   useEffect(() => {
@@ -172,7 +167,7 @@ export default function App() {
               <Rocket className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-display font-bold tracking-[0.2em] uppercase bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent">
+              <h1 className="text-xl font-display font-bold tracking-[0.2em] uppercase bg-linear-to-r from-white to-zinc-500 bg-clip-text text-transparent">
                 SARASWATI
               </h1>
               <p className="text-[10px] text-isro-orange font-mono tracking-widest uppercase">
@@ -185,7 +180,6 @@ export default function App() {
             {[
               { id: 'console', label: 'Console', icon: Terminal },
               { id: 'database', label: 'Nodes', icon: Database },
-              { id: 'guidelines', label: 'Protocols', icon: BookOpen },
               { id: 'history', label: 'History', icon: Clock }
             ].map((tab) => (
               <button
@@ -197,19 +191,12 @@ export default function App() {
                     : 'text-zinc-500 hover:text-zinc-300'
                 }`}
               >
-                <tab.icon className="w-3.5 h-3.5 md:w-4 h-4" />
+                <tab.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
                 <span className="sm:hidden">{tab.id === 'database' ? 'DB' : tab.label}</span>
               </button>
             ))}
           </nav>
-
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex flex-col items-end">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-tighter">Instance Status</span>
-              <span className="text-xs font-bold text-emerald-500 uppercase">Operational / SECURE</span>
-            </div>
-          </div>
         </div>
       </header>
 
@@ -224,7 +211,7 @@ export default function App() {
               className="flex flex-col lg:grid lg:grid-cols-12 gap-8"
             >
               {/* Sidebar / Controls (Order Last on Mobile) */}
-              <div className="order-last lg:order-none lg:col-span-4 space-y-6">
+              <div className="order-last lg:order-0 lg:col-span-4 space-y-6">
                 <section className="isro-glass p-6 rounded-2xl">
                   
                   <div className="grid grid-cols-1 gap-3">
@@ -246,7 +233,7 @@ export default function App() {
                           <div>
                             <p className="text-xs font-bold uppercase tracking-tight">{d}</p>
                             <p className="text-[10px] opacity-60">
-                              {d === Domain.AEROSPACE ? `${stats.current[Domain.AEROSPACE].nodes} Nodes Verified` : `${stats.current[Domain.GOVERNMENT].nodes} Rules Mapped`}
+                              {d === Domain.AEROSPACE ? 'Live Chroma Aerospace Index' : 'Live Chroma GFR Index'}
                             </p>
                           </div>
                         </div>
@@ -359,7 +346,7 @@ export default function App() {
                   )}
                 </section>
 
-                <section className="isro-glass p-6 rounded-2xl h-[400px] flex flex-col">
+                <section className="isro-glass p-6 rounded-2xl h-100 flex flex-col">
                   <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 mb-6 flex items-center gap-2">
                     <Terminal className="w-4 h-4" />
                     Agent Swarm Activity
@@ -388,13 +375,13 @@ export default function App() {
               </div>
 
               {/* Main Interface (Order First on Mobile) */}
-              <div className="order-first lg:order-none lg:col-span-8 space-y-6">
+              <div className="order-first lg:order-0 lg:col-span-8 space-y-6">
                 {/* Query Input */}
                 <form 
                   onSubmit={handleQuery}
                   className="relative group block"
                 >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-isro-orange to-isro-blue rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                  <div className="absolute -inset-0.5 bg-linear-to-r from-isro-orange to-isro-blue rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
                   <div className="relative isro-glass rounded-2xl flex items-center gap-2 md:gap-4 p-2 pl-4 md:pl-6">
                     <Search className="w-5 h-5 md:w-6 md:h-6 text-zinc-600 shrink-0" />
                     <input 
@@ -432,7 +419,7 @@ export default function App() {
                       exit={{ opacity: 0, scale: 0.95 }}
                       className="space-y-6"
                     >
-                      <section className="isro-glass p-4 md:p-8 rounded-2xl bg-gradient-to-br from-zinc-900/80 to-black">
+                      <section className="isro-glass p-4 md:p-8 rounded-2xl bg-linear-to-br from-zinc-900/80 to-black">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
@@ -531,17 +518,6 @@ export default function App() {
             </motion.div>
           )}
 
-          {activeTab === 'guidelines' && (
-            <motion.div
-              key="guidelines"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <GuidelinesView />
-            </motion.div>
-          )}
-
           {activeTab === 'history' && (
             <motion.div
               key="history"
@@ -568,19 +544,19 @@ export default function App() {
             </div>
             <div className="flex items-center gap-4 opacity-40 grayscale h-5 md:h-6">
               <img src="https://upload.wikimedia.org/wikipedia/commons/b/bd/Indian_Space_Research_Organisation_Logo.svg" alt="ISRO" className="h-full" />
-              <div className="h-4 w-[1px] bg-zinc-800" />
-              <img src="https://upload.wikimedia.org/wikipedia/en/thumb/9/9c/Digital_India_logo.svg/512px-Digital_India_logo.svg.png" alt="Digital India" className="h-full" />
+              <div className="h-4 w-px" />
+              <img src="https://indiadesignsystem.bombaydc.com/assets/india-designs/display/Digital-India/color.svg" alt="Digital India" className="h-full" />
             </div>
           </div>
           
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-8 pt-8 border-t border-zinc-900">
             <div className="space-y-1">
-              <p className="text-[10px] font-bold text-zinc-700 uppercase">AEROSPACE_NODES</p>
-              <p className="text-xs font-mono text-isro-orange">{stats.current[Domain.AEROSPACE].nodes}</p>
+              <p className="text-[10px] font-bold text-zinc-700 uppercase">AEROSPACE_INDEX</p>
+              <p className="text-xs font-mono text-isro-orange">LIVE</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-bold text-zinc-700 uppercase">GFR_CLAUSES</p>
-              <p className="text-xs font-mono text-isro-orange">{stats.current[Domain.GOVERNMENT].nodes}</p>
+              <p className="text-[10px] font-bold text-zinc-700 uppercase">GFR_INDEX</p>
+              <p className="text-xs font-mono text-isro-orange">LIVE</p>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-bold text-zinc-700 uppercase">ZK_VERIFIED</p>

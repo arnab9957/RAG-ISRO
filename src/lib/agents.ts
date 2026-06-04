@@ -39,8 +39,8 @@ export class SaraswatiOrchestrator {
     onUpdate(preAction);
 
     // 1. Paging-Based Retrieval (BM25 + TF-IDF)
-    addAction(AgentRole.EXECUTOR, `Executing Keyword BM25 retrieval from indexed text pages (${domain})...`);
-    const nodes = searchOntology(query, domain, filters);
+    addAction(AgentRole.EXECUTOR, `Executing vector retrieval from ChromaDB (${domain})...`);
+    const nodes = await searchOntology(query, domain, filters);
     
     // Check for expanded context (neighbors)
     const originalNodes = nodes.filter(n => (n.score || 0) >= 1.0);
