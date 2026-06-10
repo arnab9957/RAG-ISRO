@@ -3,10 +3,16 @@ import cors from 'cors';
 import { ChromaClient } from 'chromadb';
 import { pipeline } from '@xenova/transformers';
 import type { Request, Response } from 'express';
+import path from 'path';
+import { randomUUID } from 'crypto';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const pdfParse = require('pdf-parse');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
 
 const chroma = new ChromaClient({
   host: process.env.CHROMADB_HOST || 'localhost',
@@ -31,6 +37,41 @@ async function embedText(text: string) {
   return Array.from(output.data) as number[];
 }
 
+function chunkText(text: string, chunkSize: number = 300): string[] {
+  const words = text.split(/\s+/);
+  const chunks: string[] = [];
+
+  for (let i = 0; i < words.length; i += chunkSize) {
+    chunks.push(words.slice(i, i + chunkSize).join(' '));
+  }
+
+  return chunks;
+}
+
+async function extractTextFromUpload(filename: string, mimeType: string, dataBase64: string) {
+  const buffer = Buffer.from(dataBase64, 'base64');
+  const extension = path.extname(filename).toLowerCase();
+  const normalizedMimeType = mimeType.toLowerCase();
+
+  if (normalizedMimeType.includes('pdf') || extension === '.pdf') {
+    const data = await pdfParse(buffer);
+    return data.text as string;
+  }
+
+  if (normalizedMimeType.startsWith('text/') || ['.txt', '.md', '.csv'].includes(extension)) {
+    return buffer.toString('utf8');
+  }
+
+  return '';
+}
+
+async function getKnowledgeBaseCollection() {
+  return chroma.getOrCreateCollection({
+    name: 'saraswati_knowledge_base',
+    embeddingFunction: null,
+  });
+}
+
 app.post('/api/search', async (req: Request, res: Response) => {
   try {
     const { query, domain, filters } = req.body;
@@ -39,7 +80,7 @@ app.post('/api/search', async (req: Request, res: Response) => {
     }
 
     const collection = await chroma.getOrCreateCollection({
-      name: "saraswati_knowledge_base",
+      name: 'saraswati_knowledge_base',
       embeddingFunction: null,
     });
     
@@ -87,6 +128,72 @@ app.post('/api/search', async (req: Request, res: Response) => {
     res.json({ nodes });
   } catch (error) {
     console.error('Search error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/ingest', async (req: Request, res: Response) => {
+  try {
+    const {
+      filename,
+      mimeType,
+      dataBase64,
+      domain,
+    } = req.body ?? {};
+
+    if (!filename || !dataBase64) {
+      return res.status(400).json({ error: 'filename and dataBase64 are required' });
+    }
+
+    const content = await extractTextFromUpload(filename, mimeType || '', dataBase64);
+
+    if (!content.trim()) {
+      return res.status(400).json({ error: 'Unable to extract readable text from the uploaded file' });
+    }
+
+    const collection = await getKnowledgeBaseCollection();
+    const chunks = chunkText(content, 300);
+    const normalizedDomain = String(domain || 'AEROSPACE').toUpperCase().includes('GOVERN')
+      ? 'GOVERNMENT'
+      : 'AEROSPACE';
+    const timestamp = new Date().toISOString();
+    let insertedChunks = 0;
+
+    for (let i = 0; i < chunks.length; i += 1) {
+      const chunk = chunks[i];
+      if (chunk.trim().length < 10) {
+        continue;
+      }
+
+      const embedding = await embedText(chunk);
+      const id = `${path.basename(filename)}-upload-${i}-${randomUUID()}`;
+
+      await collection.add({
+        ids: [id],
+        embeddings: [embedding],
+        metadatas: [{
+          filename: path.basename(filename),
+          source: 'frontend-upload',
+          chunk_index: i,
+          domain: normalizedDomain,
+          uploaded_at: timestamp,
+          label: `${path.basename(filename)} chunk ${i + 1}`,
+          type: 'UserUpload',
+        }],
+        documents: [chunk],
+      });
+
+      insertedChunks += 1;
+    }
+
+    res.json({
+      message: 'File ingested successfully',
+      filename: path.basename(filename),
+      domain: normalizedDomain,
+      chunksInserted: insertedChunks,
+    });
+  } catch (error) {
+    console.error('Ingest error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

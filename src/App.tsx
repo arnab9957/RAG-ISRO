@@ -15,6 +15,7 @@ import {
   Activity,
   ArrowRight,
   RefreshCcw,
+  Upload,
   Info,
   Clock,
   Download,
@@ -26,14 +27,14 @@ import {
   Gauge,
   AlertTriangle
 } from 'lucide-react';
-import { AgentAction, Domain, SaraswatiResponse, AdvancedFilters, HistoryItem } from './types';
+import { AgentAction, Domain, SaraswatiResponse, AdvancedFilters, HistoryItem, ChatMessage } from './types';
 import { SaraswatiOrchestrator } from './lib/agents';
 import AgentActionItem from './components/AgentActionItem';
 import TraceAudit from './components/TraceAudit';
 import KnowledgeBaseView from './components/KnowledgeBaseView';
 import HistoryView from './components/HistoryView';
 
-type Tab = 'console' | 'database' | 'history';
+type Tab = 'console' | 'database' | 'ingest' | 'history';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('console');
@@ -41,7 +42,11 @@ export default function App() {
   const [domain, setDomain] = useState<Domain>(Domain.AEROSPACE);
   const [isQuerying, setIsQuerying] = useState(false);
   const [actions, setActions] = useState<AgentAction[]>([]);
-  const [response, setResponse] = useState<SaraswatiResponse | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const saved = localStorage.getItem('saraswati_chat_messages');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>(() => {
     const saved = localStorage.getItem('saraswati_history');
     return saved ? JSON.parse(saved) : [];
@@ -55,6 +60,11 @@ export default function App() {
     dateStart: '',
     dateEnd: ''
   });
+  const [ingestFile, setIngestFile] = useState<File | null>(null);
+  const [ingestDomain, setIngestDomain] = useState<Domain>(Domain.AEROSPACE);
+  const [isIngesting, setIsIngesting] = useState(false);
+  const [ingestStatus, setIngestStatus] = useState<string | null>(null);
+  const [ingestError, setIngestError] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const orchestrator = useRef(new SaraswatiOrchestrator());
@@ -64,19 +74,45 @@ export default function App() {
   }, [history]);
 
   useEffect(() => {
+    localStorage.setItem('saraswati_chat_messages', JSON.stringify(messages));
+  }, [messages]);
+
+  const activeMessage = messages.find(m => m.id === activeMessageId);
+  const activeResponse = activeMessage?.response || null;
+  const displayedActions = isQuerying ? actions : (activeResponse?.agentActions || actions);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [actions]);
+  }, [displayedActions]);
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isQuerying]);
 
   const handleQuery = async (e: FormEvent) => {
     e.preventDefault();
     if (!query.trim() || isQuerying) return;
 
+    const currentQuery = query;
+    setQuery('');
     setActiveTab('console');
     setIsQuerying(true);
     setActions([]);
-    setResponse(null);
+
+    const userMessageId = Math.random().toString(36).substring(7).toUpperCase();
+    const userMsg: ChatMessage = {
+      id: userMessageId,
+      sender: 'user',
+      text: currentQuery,
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, userMsg]);
 
     // Prepare active filters
     const activeFilters: AdvancedFilters = {};
@@ -85,24 +121,47 @@ export default function App() {
     if (filters.dateStart) activeFilters.dateStart = filters.dateStart;
     if (filters.dateEnd) activeFilters.dateEnd = filters.dateEnd;
 
+    // Get simple representation of history for LLM context (excluding current userMsg which we just added)
+    const currentHistory = messages.map(msg => ({
+      sender: msg.sender,
+      text: msg.text
+    }));
+
     try {
-      const result = await orchestrator.current.runQuery(query, domain, Object.keys(activeFilters).length > 0 ? activeFilters : undefined, (newAction) => {
-        setActions(prev => {
-          const index = prev.findIndex(a => a.id === newAction.id);
-          if (index !== -1) {
-            const updated = [...prev];
-            updated[index] = newAction;
-            return updated;
-          }
-          return [...prev, newAction];
-        });
-      });
-      setResponse(result);
+      const result = await orchestrator.current.runQuery(
+        currentQuery,
+        domain,
+        Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
+        currentHistory,
+        (newAction) => {
+          setActions(prev => {
+            const index = prev.findIndex(a => a.id === newAction.id);
+            if (index !== -1) {
+              const updated = [...prev];
+              updated[index] = newAction;
+              return updated;
+            }
+            return [...prev, newAction];
+          });
+        }
+      );
+
+      const saraswatiMessageId = Math.random().toString(36).substring(7).toUpperCase();
+      const saraswatiMsg: ChatMessage = {
+        id: saraswatiMessageId,
+        sender: 'saraswati',
+        text: result.answer,
+        timestamp: new Date().toISOString(),
+        response: result
+      };
+
+      setMessages(prev => [...prev, saraswatiMsg]);
+      setActiveMessageId(saraswatiMessageId);
       
       // Save to history
       const historyItem: HistoryItem = {
         id: Math.random().toString(36).substring(7).toUpperCase(),
-        query,
+        query: currentQuery,
         domain,
         timestamp: new Date().toISOString(),
         response: result
@@ -110,38 +169,61 @@ export default function App() {
       setHistory(prev => [historyItem, ...prev]);
     } catch (error) {
       console.error(error);
+      const errorMsg: ChatMessage = {
+        id: Math.random().toString(36).substring(7).toUpperCase(),
+        sender: 'saraswati',
+        text: `Error: Execution failed. Verification engine returned invalid output.`,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsQuerying(false);
     }
   };
 
   const handleSelectHistory = (item: HistoryItem) => {
-    setQuery(item.query);
+    const userMsg: ChatMessage = {
+      id: `${item.id}-u`,
+      sender: 'user',
+      text: item.query,
+      timestamp: item.timestamp
+    };
+    const saraswatiMsg: ChatMessage = {
+      id: `${item.id}-s`,
+      sender: 'saraswati',
+      text: item.response.answer,
+      timestamp: item.timestamp,
+      response: item.response
+    };
+    setMessages([userMsg, saraswatiMsg]);
+    setActiveMessageId(saraswatiMsg.id);
+    setQuery('');
     setDomain(item.domain);
-    setResponse(item.response);
-    setActions([]);
+    setActions(item.response.agentActions);
     setActiveTab('console');
   };
 
   const handleExport = () => {
-    if (!response) return;
+    const activeMsg = messages.find(m => m.id === activeMessageId);
+    const activeResp = activeMsg?.response;
+    if (!activeResp) return;
     
     const exportData = {
       metadata: {
         timestamp: new Date().toISOString(),
         domain,
-        query,
+        query: activeMsg.text,
         system: "SARASWATI_FRAMEWORK_V2",
         node: "NIC_SECURED_NODE_882"
       },
-      ...response
+      ...activeResp
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     
-    const safeQuery = query.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+    const safeQuery = activeMsg.text.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
     const defaultName = `SARASWATI_${domain.toUpperCase()}_${safeQuery}`;
     const customName = window.prompt("Enter filename for export:", defaultName);
     
@@ -155,6 +237,64 @@ export default function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const readFileAsBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') {
+          reject(new Error('Unable to read file'));
+          return;
+        }
+
+        const commaIndex = result.indexOf(',');
+        resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
+      };
+      reader.onerror = () => reject(reader.error || new Error('Unable to read file'));
+      reader.readAsDataURL(file);
+    });
+
+  const handleIngest = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (!ingestFile || isIngesting) {
+      return;
+    }
+
+    setIsIngesting(true);
+    setIngestError(null);
+    setIngestStatus(null);
+
+    try {
+      const dataBase64 = await readFileAsBase64(ingestFile);
+      const response = await fetch('http://localhost:3001/api/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename: ingestFile.name,
+          mimeType: ingestFile.type,
+          domain: ingestDomain,
+          dataBase64,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || `Ingest failed with status ${response.status}`);
+      }
+
+      const result = await response.json();
+      setIngestStatus(`${result.message} ${result.chunksInserted} chunks from ${result.filename}.`);
+      setIngestFile(null);
+    } catch (error) {
+      setIngestError(error instanceof Error ? error.message : 'Upload failed');
+    } finally {
+      setIsIngesting(false);
+    }
   };
 
   return (
@@ -180,6 +320,7 @@ export default function App() {
             {[
               { id: 'console', label: 'Console', icon: Terminal },
               { id: 'database', label: 'Nodes', icon: Database },
+              { id: 'ingest', label: 'Ingest', icon: Upload },
               { id: 'history', label: 'History', icon: Clock }
             ].map((tab) => (
               <button
@@ -357,12 +498,12 @@ export default function App() {
                     className="flex-1 overflow-y-auto pr-2 terminal-scroll space-y-1"
                   >
                     <AnimatePresence mode="popLayout">
-                      {actions.map((action) => (
+                      {displayedActions.map((action) => (
                         <AgentActionItem key={action.id} action={action} />
                       ))}
                     </AnimatePresence>
                     
-                    {!isQuerying && actions.length === 0 && (
+                    {!isQuerying && displayedActions.length === 0 && (
                       <div className="h-full flex flex-col items-center justify-center opacity-20 grayscale">
                         <Cpu className="w-12 h-12 mb-4" />
                         <p className="text-[10px] font-mono tracking-widest uppercase text-center">
@@ -410,77 +551,178 @@ export default function App() {
                   </div>
                 </form>
 
-                {/* Results Area */}
+                {/* Chat & Results Area */}
                 <AnimatePresence mode="wait">
-                  {response ? (
+                  {messages.length > 0 ? (
                     <motion.div
+                      key="chat-results"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       className="space-y-6"
                     >
-                      <section className="isro-glass p-4 md:p-8 rounded-2xl bg-linear-to-br from-zinc-900/80 to-black">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                              <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                            </div>
-                            <h2 className="text-lg md:text-xl font-display font-medium text-white tracking-tight">Verified Technical Synthesis</h2>
+                      {/* Chat Container */}
+                      <div className="isro-glass rounded-2xl flex flex-col h-[480px] border border-zinc-800 bg-linear-to-br from-zinc-950 to-black overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800/80 bg-zinc-900/30">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">SECURE_COMMUNICATION_LINK</span>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <button 
-                              onClick={handleExport}
-                              className="flex items-center gap-2 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-full border border-zinc-700 text-[10px] font-mono transition-colors"
-                            >
-                              <Download className="w-3 h-3" />
-                              EXPORT_JSON
-                            </button>
-                            <div className="px-3 py-1 bg-zinc-800 rounded-full border border-zinc-700 text-[10px] font-mono text-zinc-400">
-                              TOKEN_ID: {Math.random().toString(36).substring(7).toUpperCase()}
-                            </div>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMessages([]);
+                              setActiveMessageId(null);
+                              setActions([]);
+                            }}
+                            className="text-[9px] font-mono text-zinc-500 hover:text-red-400 transition-colors uppercase tracking-widest cursor-pointer"
+                          >
+                            CLEAR CONVERSATION
+                          </button>
                         </div>
 
-                        <div className="prose prose-invert max-w-none text-zinc-300 leading-relaxed space-y-4">
-                          <p className="border-l-2 border-emerald-500 pl-4 md:pl-6 italic text-zinc-400 text-xs md:text-sm mb-8 bg-emerald-500/5 py-4 rounded-r-lg">
-                            "Grounded in verified {domain} ontologies and formally verified via neuro-symbolic swarm validation."
-                          </p>
-                          <div className="whitespace-pre-wrap font-sans text-base md:text-lg">
-                            {response.answer}
-                          </div>
-                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+                          {messages.map((msg) => {
+                            const isUser = msg.sender === 'user';
+                            const isSelected = activeMessageId === msg.id;
+                            
+                            return (
+                              <div
+                                key={msg.id}
+                                className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
+                              >
+                                <div
+                                  className={`max-w-[85%] rounded-2xl p-4 transition-all duration-300 ${
+                                    isUser 
+                                      ? 'bg-zinc-900/80 border border-zinc-800 text-zinc-200 rounded-tr-none' 
+                                      : `bg-zinc-950/60 border ${isSelected ? 'border-isro-orange shadow-[0_0_15px_rgba(242,116,32,0.15)]' : 'border-zinc-800'} text-zinc-300 rounded-tl-none hover:border-zinc-700 cursor-pointer`
+                                  }`}
+                                  onClick={() => {
+                                    if (!isUser && msg.response) {
+                                      setActiveMessageId(msg.id);
+                                    }
+                                  }}
+                                >
+                                  {/* Header */}
+                                  <div className="flex items-center justify-between gap-4 mb-2 text-[9px] font-mono text-zinc-500 uppercase tracking-wider">
+                                    <div className="flex items-center gap-1">
+                                      {isUser ? (
+                                        <span>MISSION_OPERATOR</span>
+                                      ) : (
+                                        <span className="text-isro-orange font-bold">SARASWATI_AGENT</span>
+                                      )}
+                                    </div>
+                                    <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                                  </div>
 
-                        <div className="mt-8 pt-8 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-4 gap-4">
-                          {[
-                            { label: 'Retrieval Accuracy', value: response.metrics?.retrievalAccuracy, icon: Database, color: 'text-isro-blue' },
-                            { label: 'Grounding Fidelity', value: response.metrics?.groundingFidelity, icon: ShieldCheck, color: 'text-emerald-500' },
-                            { label: 'Hallucination Risk', value: response.metrics?.hallucinationRisk, icon: AlertTriangle, color: 'text-red-500', inverse: true },
-                            { label: 'Overall Confidence', value: response.metrics?.overallConfidence, icon: Gauge, color: 'text-isro-orange' },
-                          ].map((item) => (
-                            <div key={item.label} className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 flex flex-col gap-2">
-                              <div className="flex items-center gap-2">
-                                <item.icon className={`w-3.5 h-3.5 ${item.color}`} />
-                                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-tighter">{item.label}</span>
+                                  {/* Text Content */}
+                                  <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                                    {msg.text}
+                                  </div>
+
+                                  {/* Sub-status bar for Saraswati message */}
+                                  {!isUser && msg.response && (
+                                    <div className="mt-3 pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[8px] font-mono text-zinc-500 gap-4">
+                                      <div className="flex items-center gap-2">
+                                        <span className="flex items-center gap-1 text-emerald-500">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> ZK-PROOF VERIFIED
+                                        </span>
+                                        <span>|</span>
+                                        <span className={msg.response.traceLog.every(t => t.smtApproval) ? 'text-emerald-500' : 'text-rose-400'}>
+                                          SMT: {msg.response.traceLog.every(t => t.smtApproval) ? 'SATISFIED' : 'UNSATISFIABLE'}
+                                        </span>
+                                      </div>
+                                      <span className="text-isro-blue hover:text-isro-orange font-bold uppercase text-[9px]">
+                                        {isSelected ? 'ACTIVE INSPECTION' : 'CLICK TO AUDIT'}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-end justify-between">
-                                <span className="text-xl font-display font-medium text-white">
-                                  {item.value !== undefined ? `${(item.value * 100).toFixed(1)}%` : 'N/A'}
-                                </span>
-                                <div className="w-12 h-1 bg-zinc-800 rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full ${item.inverse ? ((item.value ?? 0) > 0.2 ? 'bg-red-500' : 'bg-emerald-500') : ((item.value ?? 0) > 0.8 ? 'bg-emerald-500' : 'bg-isro-orange')}`} 
-                                    style={{ width: `${(item.value ?? 0) * 100}%` }}
-                                  />
+                            );
+                          })}
+                          
+                          {isQuerying && (
+                            <div className="flex items-start">
+                              <div className="bg-zinc-950/60 border border-zinc-800 rounded-2xl rounded-tl-none p-4 max-w-[85%] flex items-center gap-3">
+                                <RefreshCcw className="w-4 h-4 text-isro-orange animate-spin" />
+                                <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest animate-pulse font-bold">SARASWATI IS ORCHESTRATING SWARM...</span>
+                              </div>
+                            </div>
+                          )}
+                          <div ref={chatEndRef} />
+                        </div>
+                      </div>
+
+                      {/* Selected Message Verification Detail */}
+                      {activeResponse && (
+                        <motion.div
+                          key={`inspector-${activeMessageId}`}
+                          initial={{ opacity: 0, y: 15 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-6"
+                        >
+                          <section className="isro-glass p-4 md:p-8 rounded-2xl bg-linear-to-br from-zinc-900/80 to-black">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                                  <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                                </div>
+                                <h2 className="text-lg md:text-xl font-display font-medium text-white tracking-tight">Verified Technical Synthesis</h2>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <button 
+                                  onClick={handleExport}
+                                  className="flex items-center gap-2 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-full border border-zinc-700 text-[10px] font-mono transition-colors cursor-pointer"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  EXPORT_JSON
+                                </button>
+                                <div className="px-3 py-1 bg-zinc-800 rounded-full border border-zinc-700 text-[10px] font-mono text-zinc-400">
+                                  TOKEN_ID: {activeMessageId}
                                 </div>
                               </div>
                             </div>
-                          ))}
-                        </div>
 
-                        <div className="mt-8 pt-8 border-t border-zinc-800">
-                          <TraceAudit traces={response.traceLog} />
-                        </div>
-                      </section>
+                            <div className="prose prose-invert max-w-none text-zinc-300 leading-relaxed space-y-4">
+                              <p className="border-l-2 border-emerald-500 pl-4 md:pl-6 italic text-zinc-400 text-xs md:text-sm mb-8 bg-emerald-500/5 py-4 rounded-r-lg">
+                                "Grounded in verified {domain} ontologies and formally verified via neuro-symbolic swarm validation."
+                              </p>
+                            </div>
+
+                            <div className="mt-8 pt-8 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-4 gap-4">
+                              {[
+                                { label: 'Retrieval Accuracy', value: activeResponse.metrics?.retrievalAccuracy, icon: Database, color: 'text-isro-blue' },
+                                { label: 'Grounding Fidelity', value: activeResponse.metrics?.groundingFidelity, icon: ShieldCheck, color: 'text-emerald-500' },
+                                { label: 'Hallucination Risk', value: activeResponse.metrics?.hallucinationRisk, icon: AlertTriangle, color: 'text-red-500', inverse: true },
+                                { label: 'Overall Confidence', value: activeResponse.metrics?.overallConfidence, icon: Gauge, color: 'text-isro-orange' },
+                              ].map((item) => (
+                                <div key={item.label} className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 flex flex-col gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <item.icon className={`w-3.5 h-3.5 ${item.color}`} />
+                                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-tighter">{item.label}</span>
+                                  </div>
+                                  <div className="flex items-end justify-between">
+                                    <span className="text-xl font-display font-medium text-white">
+                                      {item.value !== undefined ? `${(item.value * 100).toFixed(1)}%` : 'N/A'}
+                                    </span>
+                                    <div className="w-12 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                      <div 
+                                        className={`h-full ${item.inverse ? ((item.value ?? 0) > 0.2 ? 'bg-red-500' : 'bg-emerald-500') : ((item.value ?? 0) > 0.8 ? 'bg-emerald-500' : 'bg-isro-orange')}`} 
+                                        style={{ width: `${(item.value ?? 0) * 100}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="mt-8 pt-8 border-t border-zinc-800">
+                              <TraceAudit traces={activeResponse.traceLog} />
+                            </div>
+                          </section>
+                        </motion.div>
+                      )}
                     </motion.div>
                   ) : isQuerying ? (
                     <div className="flex flex-col items-center justify-center py-24 space-y-6 opacity-60">
@@ -515,6 +757,136 @@ export default function App() {
               exit={{ opacity: 0, x: -20 }}
             >
               <KnowledgeBaseView />
+            </motion.div>
+          )}
+
+          {activeTab === 'ingest' && (
+            <motion.div
+              key="ingest"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6 max-w-4xl mx-auto"
+            >
+              <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                  <div className="space-y-2">
+                    <div className="inline-flex items-center gap-2 text-isro-orange text-xs font-mono uppercase tracking-widest">
+                      <Upload className="w-4 h-4" />
+                      Frontend Ingestion
+                    </div>
+                    <h2 className="text-2xl font-display font-bold text-white">Upload data and ingest it into ChromaDB</h2>
+                    <p className="text-sm text-zinc-400 max-w-2xl">
+                      Upload a PDF, TXT, MD, or CSV file. The backend will extract text, split it into chunks, embed it, and store it in the shared knowledge base.
+                    </p>
+                  </div>
+                  <div className="px-4 py-3 rounded-xl border border-zinc-800 bg-zinc-900/60 text-xs font-mono text-zinc-400">
+                    Accepts: .pdf, .txt, .md, .csv
+                  </div>
+                </div>
+
+                <form onSubmit={handleIngest} className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="space-y-2">
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Target Domain</span>
+                      <select
+                        value={ingestDomain}
+                        onChange={(e) => setIngestDomain(e.target.value as Domain)}
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-sm text-zinc-200 outline-none focus:border-isro-orange"
+                      >
+                        <option value={Domain.AEROSPACE}>{Domain.AEROSPACE}</option>
+                        <option value={Domain.GOVERNMENT}>{Domain.GOVERNMENT}</option>
+                      </select>
+                    </label>
+
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Selected File</span>
+                      <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="text-sm text-zinc-200 truncate">
+                            {ingestFile ? ingestFile.name : 'No file selected'}
+                          </p>
+                          <p className="text-[10px] text-zinc-500 truncate">
+                            {ingestFile ? `${Math.ceil(ingestFile.size / 1024)} KB` : 'Choose a file to send to the backend'}
+                          </p>
+                        </div>
+                        <label className="shrink-0 cursor-pointer inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-bold uppercase tracking-wider text-zinc-200 hover:border-isro-orange hover:text-isro-orange transition-colors">
+                          <Upload className="w-3.5 h-3.5" />
+                          Browse
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".pdf,.txt,.md,.csv"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] || null;
+                              setIngestFile(file);
+                              setIngestStatus(null);
+                              setIngestError(null);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {ingestError && (
+                    <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                      {ingestError}
+                    </div>
+                  )}
+
+                  {ingestStatus && (
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                      {ingestStatus}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                    <p className="text-xs text-zinc-500">
+                      The backend will chunk the file and insert it into the existing knowledge collection.
+                    </p>
+                    <button
+                      type="submit"
+                      disabled={!ingestFile || isIngesting}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-isro-orange px-5 py-3 text-sm font-bold uppercase tracking-wider text-white transition-colors hover:bg-orange-500 disabled:bg-zinc-800 disabled:text-zinc-600"
+                    >
+                      {isIngesting ? (
+                        <>
+                          <RefreshCcw className="w-4 h-4 animate-spin" />
+                          Uploading
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4" />
+                          Upload and ingest
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <section className="grid gap-4 md:grid-cols-3">
+                {[
+                  {
+                    title: 'Frontend',
+                    body: 'File is read in the browser and sent as base64 JSON to the backend.',
+                  },
+                  {
+                    title: 'Backend',
+                    body: 'Server decodes the file, extracts text, chunks it, and embeds each chunk.',
+                  },
+                  {
+                    title: 'Storage',
+                    body: 'Chunks are stored in the shared ChromaDB collection and become searchable immediately.',
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="isro-glass rounded-2xl border border-zinc-800 p-5">
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-isro-orange mb-2">{item.title}</p>
+                    <p className="text-sm text-zinc-400 leading-relaxed">{item.body}</p>
+                  </div>
+                ))}
+              </section>
             </motion.div>
           )}
 

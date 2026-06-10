@@ -15,7 +15,13 @@ export class SaraswatiOrchestrator {
     this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
   }
 
-  async runQuery(query: string, domain: Domain, filters: AdvancedFilters | undefined, onUpdate: (action: AgentAction) => void): Promise<SaraswatiResponse> {
+  async runQuery(
+    query: string,
+    domain: Domain,
+    filters: AdvancedFilters | undefined,
+    chatHistory: { sender: 'user' | 'saraswati'; text: string }[],
+    onUpdate: (action: AgentAction) => void
+  ): Promise<SaraswatiResponse> {
     const actions: AgentAction[] = [];
     const addAction = (role: AgentRole, action: string, status: AgentAction['status'] = 'active', output?: string) => {
       const newAction: AgentAction = {
@@ -60,11 +66,16 @@ export class SaraswatiOrchestrator {
     rerankAction.output = `SELECTED: ${filteredNodes.length}/${nodes.length} nodes for generation layer.`;
     onUpdate(rerankAction);
 
+    // Format chat history for text-based context inclusion
+    const formattedHistory = chatHistory.length > 0
+      ? chatHistory.map(h => `${h.sender === 'user' ? 'User' : 'SARASWATI'}: ${h.text}`).join('\n')
+      : "No previous conversation history.";
+
     // 3. Generation Layer (Peirce LNN / SDO Standards)
     const executorAction = addAction(AgentRole.EXECUTOR, `Grounded generation via PEIRCE LNN logic...`);
     const executorResponse = await this.ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Context:\n${context}\n\nQuery: ${query}\n\nSystem: You are the SARASWATI Executor. Provide a precise, technical answer based ONLY on the provided context. If information is missing, state it clearly. Adhere to ISRO mission-critical standards.`,
+      contents: `Conversation History:\n${formattedHistory}\n\nRetrieved Context:\n${context}\n\nFollow-up User Query: ${query}\n\nSystem: You are the SARASWATI Executor. Provide a precise, technical answer based ONLY on the provided context and the conversation history above. Refer back to prior context if the user asks follow-up questions. If information is missing, state it clearly. Adhere to ISRO mission-critical standards.`,
     });
     const draftContent = executorResponse.text || "No response generated.";
     executorAction.status = 'completed';
@@ -75,7 +86,7 @@ export class SaraswatiOrchestrator {
     const criticAction = addAction(AgentRole.CRITIC, `Adversarial audit & Hallucination detection...`);
     const criticResponse = await this.ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Draft Answer: ${draftContent}\n\nRetrieved Context: ${context}\n\nSystem: You are the SARASWATI Critic. Analyze the draft for hallucinations, logical flaws, or missing required technical details from the context. Output your critique clearly.`,
+      contents: `Conversation History:\n${formattedHistory}\n\nDraft Answer: ${draftContent}\n\nRetrieved Context: ${context}\n\nSystem: You are the SARASWATI Critic. Analyze the draft answer for hallucinations, logical flaws, or missing required technical details from the retrieved context or conversation history. Output your critique clearly.`,
     });
     const critique = criticResponse.text || "No critique generated.";
     criticAction.status = 'completed';

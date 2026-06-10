@@ -26,6 +26,12 @@ export interface GroundedNode {
     chunkId: string;
     subsystem?: string;
     timestamp?: string;
+    domain?: string;
+    source?: string;
+    chunk_index?: number;
+    uploaded_at?: string;
+    label?: string;
+    type?: string;
   };
   score?: number;
   neighborIds?: string[];
@@ -79,3 +85,12 @@ export interface SaraswatiResponse {
   metrics: ConfidenceMetrics;
   groundingSources: string[];
 }
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'saraswati';
+  text: string;
+  timestamp: string;
+  response?: SaraswatiResponse;
+}
+
