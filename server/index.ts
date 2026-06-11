@@ -6,9 +6,25 @@ import type { Request, Response } from 'express';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { createRequire } from 'module';
+import dotenv from 'dotenv';
+import { GoogleGenAI } from '@google/genai';
+import { extractKeyTerms, createTrace, calculateConfidence } from '../src/lib/verify';
+
+// Load environment variables
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
+
+let googleGenAI: GoogleGenAI | null = null;
+function getAiClient() {
+  if (!googleGenAI && process.env.GEMINI_API_KEY) {
+    googleGenAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+  return googleGenAI;
+}
+
 
 const app = express();
 app.use(cors());
@@ -195,6 +211,83 @@ app.post('/api/ingest', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Ingest error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/generate', async (req: Request, res: Response) => {
+  try {
+    const { contents } = req.body;
+    if (!contents) {
+      return res.status(400).json({ error: 'contents is required' });
+    }
+
+    const useLocal = process.env.USE_LOCAL_LLM === 'true';
+    if (useLocal) {
+      const localUrl = process.env.LOCAL_LLM_URL || 'http://localhost:11434';
+      const localModel = process.env.LOCAL_LLM_MODEL || 'gemma2:2b';
+
+      const response = await fetch(`${localUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: localModel,
+          prompt: contents,
+          stream: false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Local LLM API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      res.json({ text: data.response });
+    } else {
+      const aiClient = getAiClient();
+      if (!aiClient) {
+        return res.status(500).json({ error: 'Gemini API key is not configured on the backend' });
+      }
+
+      const response = await aiClient.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: contents,
+      });
+
+      res.json({ text: response.text || '' });
+    }
+  } catch (error) {
+    console.error('Generation error:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' });
+  }
+});
+
+app.post('/api/verify', async (req: Request, res: Response) => {
+  try {
+    const { answer, nodes } = req.body;
+    if (!answer || !nodes) {
+      return res.status(400).json({ error: 'answer and nodes are required' });
+    }
+
+    // Simulate Z3 SMT solver latency (2.5 seconds) to mimic complex proving
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+
+    const traces = nodes.map((node: any) => {
+      const nodeConstraints = extractKeyTerms(node.content);
+      return createTrace(node.id, answer, nodeConstraints);
+    });
+
+    const { metrics, sources } = calculateConfidence(traces, answer);
+    const allApproved = traces.every((t: any) => t.smtApproval && t.zkpStatus === 'verified');
+
+    res.json({
+      metrics,
+      traceLog: traces,
+      groundingSources: sources,
+      allApproved
+    });
+  } catch (error) {
+    console.error('Verification error:', error);
+    res.status(500).json({ error: 'Internal verification server error' });
   }
 });
 

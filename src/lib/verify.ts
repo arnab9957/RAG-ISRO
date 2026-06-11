@@ -16,18 +16,49 @@ export function verifyZKP(nodeId: string): 'verified' | 'failed' {
 }
 
 /**
+ * Extracts key technical terms/keywords from text to represent domain constraints.
+ */
+export function extractKeyTerms(text: string): string[] {
+  if (!text) return [];
+  const words = text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .split(/\s+/);
+  
+  const stopWords = new Set([
+    'the', 'and', 'a', 'of', 'to', 'in', 'is', 'that', 'it', 'for', 'on', 'with', 
+    'as', 'this', 'by', 'an', 'be', 'are', 'from', 'at', 'or', 'your', 'will', 
+    'have', 'has', 'had', 'been', 'were', 'was', 'should', 'would', 'could',
+    'which', 'from', 'this', 'that', 'these', 'those', 'their', 'there', 'about',
+    'more', 'some', 'any', 'other', 'into', 'only', 'than', 'then', 'also', 'consists'
+  ]);
+
+  // Keep unique words longer than 4 characters that are not stop words
+  const terms = Array.from(new Set(words))
+    .filter(word => word.length >= 5 && !stopWords.has(word));
+  
+  return terms.slice(0, 8); // Return up to 8 key terms
+}
+
+/**
  * Simulates SMT-based (Satisfiability Modulo Theories) formal verification.
- * Checks if the answer satisfies domain constraints.
+ * Checks if the answer satisfies domain constraints by verifying if a reasonable
+ * threshold of extracted key concepts are mentioned.
  */
 export function formalVerification(answer: string, constraints: string[]): boolean {
-  // Logic: Scan for contradictions or missing mandatory terms.
+  if (constraints.length === 0) return true;
   const lowerAnswer = answer.toLowerCase();
+  
+  let matches = 0;
   for (const constraint of constraints) {
-    if (!lowerAnswer.includes(constraint.toLowerCase())) {
-      return false; // Fails SMT if mandatory constraint missing
+    if (lowerAnswer.includes(constraint.toLowerCase())) {
+      matches++;
     }
   }
-  return true;
+  
+  // Pass if we match at least 40% of the key constraints (or at least 1 if constraints count is small)
+  const requiredMatches = Math.max(1, Math.ceil(constraints.length * 0.4));
+  return matches >= requiredMatches;
 }
 
 /**

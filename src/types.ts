@@ -84,6 +84,9 @@ export interface SaraswatiResponse {
   domain: Domain;
   metrics: ConfidenceMetrics;
   groundingSources: string[];
+  isPendingVerification?: boolean;
+  retrievedNodes?: GroundedNode[];
+  validatorActionId?: string;
 }
 
 export interface ChatMessage {

@@ -8,9 +8,10 @@ import { Shield, Key, Hash, FileCheck, Clock } from "lucide-react";
 
 interface Props {
   traces: SecurityTrace[];
+  isVerifying?: boolean;
 }
 
-export default function TraceAudit({ traces }: Props) {
+export default function TraceAudit({ traces, isVerifying }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-6">
@@ -20,7 +21,52 @@ export default function TraceAudit({ traces }: Props) {
         </h3>
       </div>
       
-      {traces.length === 0 && (
+      {isVerifying && (
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <div key={i} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-zinc-900/10 border border-zinc-800/50 rounded-lg animate-pulse">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-4 h-4 bg-zinc-800 rounded-full mt-1" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-2 bg-zinc-800 rounded w-1/3" />
+                    <div className="h-3.5 bg-zinc-800 rounded w-2/3" />
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-4 h-4 bg-zinc-800 rounded-full mt-1" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-2 bg-zinc-800 rounded w-1/3" />
+                    <div className="h-4 bg-zinc-800 rounded w-1/4" />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-4 h-4 bg-zinc-800 rounded-full mt-1" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-2 bg-zinc-800 rounded w-1/3" />
+                    <div className="h-3 bg-zinc-800 rounded w-3/4" />
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-4 h-4 bg-zinc-800 rounded-full mt-1" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-2 bg-zinc-800 rounded w-1/3" />
+                    <div className="h-4 bg-zinc-800 rounded w-1/3" />
+                  </div>
+                </div>
+              </div>
+              <div className="col-span-full pt-2 mt-2 border-t border-zinc-800/30 flex justify-between items-center">
+                <div className="h-3 bg-zinc-800 rounded w-1/4" />
+                <div className="h-5 bg-zinc-800/50 rounded w-28 border border-zinc-800" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {!isVerifying && traces.length === 0 && (
         <div className="text-zinc-500 text-xs text-center py-8 border border-dashed border-zinc-800 rounded-lg">
           No audit data available. Execute query to generate trace logs.
         </div>

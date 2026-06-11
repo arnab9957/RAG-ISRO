@@ -6,7 +6,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { AgentAction, AgentRole, Domain, SaraswatiResponse, SecurityTrace, AdvancedFilters } from "../types";
 import { searchOntology } from "./ontology";
-import { createTrace, generateQueryProof, calculateConfidence } from "./verify";
+import { createTrace, generateQueryProof, calculateConfidence, extractKeyTerms } from "./verify";
 
 export class SaraswatiOrchestrator {
   private ai: GoogleGenAI;
@@ -14,6 +14,36 @@ export class SaraswatiOrchestrator {
   constructor() {
     this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
   }
+
+  async generateText(contents: string): Promise<string> {
+    try {
+      const response = await fetch('http://localhost:3001/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ contents }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Generation API failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.text || '';
+    } catch (error) {
+      console.warn('Backend LLM generation failed, falling back to direct frontend Google GenAI:', error);
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error('Gemini API key is not configured and local generation failed.');
+      }
+      const response = await this.ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents,
+      });
+      return response.text || '';
+    }
+  }
+
 
   async runQuery(
     query: string,
@@ -73,45 +103,93 @@ export class SaraswatiOrchestrator {
 
     // 3. Generation Layer (Peirce LNN / SDO Standards)
     const executorAction = addAction(AgentRole.EXECUTOR, `Grounded generation via PEIRCE LNN logic...`);
-    const executorResponse = await this.ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Conversation History:\n${formattedHistory}\n\nRetrieved Context:\n${context}\n\nFollow-up User Query: ${query}\n\nSystem: You are the SARASWATI Executor. Provide a precise, technical answer based ONLY on the provided context and the conversation history above. Refer back to prior context if the user asks follow-up questions. If information is missing, state it clearly. Adhere to ISRO mission-critical standards.`,
-    });
-    const draftContent = executorResponse.text || "No response generated.";
+    const draftContent = await this.generateText(
+      `Conversation History:\n${formattedHistory}\n\nRetrieved Context:\n${context}\n\nFollow-up User Query: ${query}\n\nSystem: You are the SARASWATI Executor. Provide a precise, technical answer based ONLY on the provided context and the conversation history above. Refer back to prior context if the user asks follow-up questions. If information is missing, state it clearly. Adhere to ISRO mission-critical standards.`
+    ) || "No response generated.";
     executorAction.status = 'completed';
     executorAction.output = draftContent;
     onUpdate(executorAction);
 
     // 4. Grounding & Hallucination Audit
     const criticAction = addAction(AgentRole.CRITIC, `Adversarial audit & Hallucination detection...`);
-    const criticResponse = await this.ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Conversation History:\n${formattedHistory}\n\nDraft Answer: ${draftContent}\n\nRetrieved Context: ${context}\n\nSystem: You are the SARASWATI Critic. Analyze the draft answer for hallucinations, logical flaws, or missing required technical details from the retrieved context or conversation history. Output your critique clearly.`,
-    });
-    const critique = criticResponse.text || "No critique generated.";
+    const critique = await this.generateText(
+      `Conversation History:\n${formattedHistory}\n\nDraft Answer: ${draftContent}\n\nRetrieved Context: ${context}\n\nSystem: You are the SARASWATI Critic. Analyze the draft answer for hallucinations, logical flaws, or missing required technical details from the retrieved context or conversation history. Output your critique clearly.`
+    ) || "No critique generated.";
     criticAction.status = 'completed';
     criticAction.output = critique;
     onUpdate(criticAction);
 
     // 5. Formal Verification & Confidence Scoring
     const validatorAction = addAction(AgentRole.VALIDATOR, `Executing Z3 SMT & Confidence Scoring...`);
-    const constraints = nodes.map(n => n.id);
-    const traces: SecurityTrace[] = nodes.map(node => createTrace(node.id, draftContent, constraints));
-    
-    const { metrics, sources } = calculateConfidence(traces, draftContent);
-    const allApproved = traces.every(t => t.smtApproval && t.zkpStatus === 'verified');
-    
-    validatorAction.status = allApproved ? 'completed' : 'failed';
-    validatorAction.output = `OVERALL_CONFIDENCE: ${(metrics.overallConfidence * 100).toFixed(2)}%\nGROUNDING_FIDELITY: ${(metrics.groundingFidelity * 100).toFixed(2)}%\nHALLUCINATION_RISK: ${(metrics.hallucinationRisk * 100).toFixed(2)}%`;
     onUpdate(validatorAction);
 
     return {
       answer: draftContent,
-      traceLog: traces,
+      traceLog: [],
       agentActions: actions,
       domain,
-      metrics,
-      groundingSources: sources
+      metrics: {
+        retrievalAccuracy: 0,
+        groundingFidelity: 0,
+        hallucinationRisk: 0,
+        overallConfidence: 0
+      },
+      groundingSources: [],
+      isPendingVerification: true,
+      retrievedNodes: nodes,
+      validatorActionId: validatorAction.id
     };
+  }
+
+  async verifyQuery(
+    answer: string,
+    nodes: any[],
+    validatorActionId: string,
+    onUpdate: (action: AgentAction) => void
+  ): Promise<{ metrics: any; traceLog: SecurityTrace[]; groundingSources: string[]; validatorAction: AgentAction }> {
+    try {
+      const response = await fetch('http://localhost:3001/api/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ answer, nodes }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Verification API failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      const updatedAction: AgentAction = {
+        id: validatorActionId,
+        role: AgentRole.VALIDATOR,
+        action: `Executing Z3 SMT & Confidence Scoring...`,
+        status: data.allApproved ? 'completed' : 'failed',
+        output: `OVERALL_CONFIDENCE: ${(data.metrics.overallConfidence * 100).toFixed(2)}%\nGROUNDING_FIDELITY: ${(data.metrics.groundingFidelity * 100).toFixed(2)}%\nHALLUCINATION_RISK: ${(data.metrics.hallucinationRisk * 100).toFixed(2)}%`,
+        timestamp: new Date().toISOString(),
+      };
+      onUpdate(updatedAction);
+
+      return {
+        metrics: data.metrics,
+        traceLog: data.traceLog,
+        groundingSources: data.groundingSources,
+        validatorAction: updatedAction
+      };
+    } catch (error) {
+      console.error('Verification query failed:', error);
+      const failedAction: AgentAction = {
+        id: validatorActionId,
+        role: AgentRole.VALIDATOR,
+        action: `Executing Z3 SMT & Confidence Scoring...`,
+        status: 'failed',
+        output: 'Verification computation failed on backend.',
+        timestamp: new Date().toISOString(),
+      };
+      onUpdate(failedAction);
+      throw error;
+    }
   }
 }

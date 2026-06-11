@@ -33,6 +33,7 @@ import AgentActionItem from './components/AgentActionItem';
 import TraceAudit from './components/TraceAudit';
 import KnowledgeBaseView from './components/KnowledgeBaseView';
 import HistoryView from './components/HistoryView';
+import ReactMarkdown from 'react-markdown';
 
 type Tab = 'console' | 'database' | 'ingest' | 'history';
 
@@ -158,15 +159,85 @@ export default function App() {
       setMessages(prev => [...prev, saraswatiMsg]);
       setActiveMessageId(saraswatiMessageId);
       
-      // Save to history
+      // Save to history (initially pending verification if applicable)
+      const historyItemId = Math.random().toString(36).substring(7).toUpperCase();
       const historyItem: HistoryItem = {
-        id: Math.random().toString(36).substring(7).toUpperCase(),
+        id: historyItemId,
         query: currentQuery,
         domain,
         timestamp: new Date().toISOString(),
         response: result
       };
       setHistory(prev => [historyItem, ...prev]);
+
+      if (result.isPendingVerification && result.retrievedNodes && result.validatorActionId) {
+        orchestrator.current.verifyQuery(
+          result.answer,
+          result.retrievedNodes,
+          result.validatorActionId,
+          (updatedAction) => {
+            setActions(prev => {
+              const index = prev.findIndex(a => a.id === updatedAction.id);
+              if (index !== -1) {
+                const updated = [...prev];
+                updated[index] = updatedAction;
+                return updated;
+              }
+              return [...prev, updatedAction];
+            });
+          }
+        ).then((verifyResult) => {
+          // Update messages state with completed metrics and traces
+          setMessages(prev => prev.map(msg => {
+            if (msg.id === saraswatiMessageId) {
+              const updatedResponse: SaraswatiResponse = {
+                ...msg.response!,
+                traceLog: verifyResult.traceLog,
+                metrics: verifyResult.metrics,
+                groundingSources: verifyResult.groundingSources,
+                isPendingVerification: false,
+                agentActions: msg.response!.agentActions.map(action => {
+                  if (action.id === result.validatorActionId) {
+                    return verifyResult.validatorAction;
+                  }
+                  return action;
+                })
+              };
+              return {
+                ...msg,
+                response: updatedResponse
+              };
+            }
+            return msg;
+          }));
+
+          // Update history state
+          setHistory(prev => prev.map(h => {
+            if (h.id === historyItemId) {
+              const updatedResponse: SaraswatiResponse = {
+                ...h.response,
+                traceLog: verifyResult.traceLog,
+                metrics: verifyResult.metrics,
+                groundingSources: verifyResult.groundingSources,
+                isPendingVerification: false,
+                agentActions: h.response.agentActions.map(action => {
+                  if (action.id === result.validatorActionId) {
+                    return verifyResult.validatorAction;
+                  }
+                  return action;
+                })
+              };
+              return {
+                ...h,
+                response: updatedResponse
+              };
+            }
+            return h;
+          }));
+        }).catch(err => {
+          console.error("Async verification failed:", err);
+        });
+      }
     } catch (error) {
       console.error(error);
       const errorMsg: ChatMessage = {
@@ -296,6 +367,8 @@ export default function App() {
       setIsIngesting(false);
     }
   };
+
+  const hasPendingVerification = messages.some(msg => msg.response?.isPendingVerification);
 
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-isro-orange selection:text-white">
@@ -564,9 +637,30 @@ export default function App() {
                       {/* Chat Container */}
                       <div className="isro-glass rounded-2xl flex flex-col h-[480px] border border-zinc-800 bg-linear-to-br from-zinc-950 to-black overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800/80 bg-zinc-900/30">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">SECURE_COMMUNICATION_LINK</span>
+                          <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full shadow-lg ${
+                                isQuerying 
+                                  ? 'bg-isro-orange animate-pulse shadow-orange-500/50' 
+                                  : hasPendingVerification 
+                                    ? 'bg-isro-blue animate-bounce shadow-blue-500/50' 
+                                    : 'bg-emerald-500 animate-pulse shadow-emerald-500/50'
+                              }`} />
+                              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest font-bold">
+                                {isQuerying 
+                                  ? 'ESTABLISHING SHIELDED TUNNEL...' 
+                                  : hasPendingVerification 
+                                    ? 'Z3 SMT FORMAL AUDIT IN PROGRESS...' 
+                                    : 'SECURE LINK STABLE // NODE_882'}
+                              </span>
+                            </div>
+                            
+                            {/* Telemetry Badge details */}
+                            <div className="hidden sm:flex items-center gap-3 text-[8px] font-mono text-zinc-600">
+                              <span className="px-1.5 py-0.5 rounded border border-zinc-800 bg-zinc-900/40">CIPHER: AES-256</span>
+                              <span className="px-1.5 py-0.5 rounded border border-zinc-800 bg-zinc-900/40">ZK-STARK: RISC0</span>
+                              <span className="px-1.5 py-0.5 rounded border border-zinc-800 bg-zinc-900/40">LNN: PEIRCE</span>
+                            </div>
                           </div>
                           <button
                             type="button"
@@ -616,8 +710,14 @@ export default function App() {
                                   </div>
 
                                   {/* Text Content */}
-                                  <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                                    {msg.text}
+                                  <div className="text-sm leading-relaxed font-sans">
+                                    {isUser ? (
+                                      <div className="whitespace-pre-wrap">{msg.text}</div>
+                                    ) : (
+                                      <div className="markdown-content">
+                                        <ReactMarkdown>{formatMarkdownSpacing(msg.text)}</ReactMarkdown>
+                                      </div>
+                                    )}
                                   </div>
 
                                   {/* Sub-status bar for Saraswati message */}
@@ -628,9 +728,15 @@ export default function App() {
                                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> ZK-PROOF VERIFIED
                                         </span>
                                         <span>|</span>
-                                        <span className={msg.response.traceLog.every(t => t.smtApproval) ? 'text-emerald-500' : 'text-rose-400'}>
-                                          SMT: {msg.response.traceLog.every(t => t.smtApproval) ? 'SATISFIED' : 'UNSATISFIABLE'}
-                                        </span>
+                                        {msg.response.isPendingVerification ? (
+                                          <span className="text-isro-orange animate-pulse flex items-center gap-1 font-bold">
+                                            <RefreshCcw className="w-2 h-2 animate-spin" /> SMT: VERIFYING...
+                                          </span>
+                                        ) : (
+                                          <span className={msg.response.traceLog.every(t => t.smtApproval) ? 'text-emerald-500' : 'text-rose-400'}>
+                                            SMT: {msg.response.traceLog.every(t => t.smtApproval) ? 'SATISFIED' : 'UNSATISFIABLE'}
+                                          </span>
+                                        )}
                                       </div>
                                       <span className="text-isro-blue hover:text-isro-orange font-bold uppercase text-[9px]">
                                         {isSelected ? 'ACTIVE INSPECTION' : 'CLICK TO AUDIT'}
@@ -690,7 +796,7 @@ export default function App() {
                               </p>
                             </div>
 
-                            <div className="mt-8 pt-8 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-4 gap-4">
+                             <div className="mt-8 pt-8 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-4 gap-4">
                               {[
                                 { label: 'Retrieval Accuracy', value: activeResponse.metrics?.retrievalAccuracy, icon: Database, color: 'text-isro-blue' },
                                 { label: 'Grounding Fidelity', value: activeResponse.metrics?.groundingFidelity, icon: ShieldCheck, color: 'text-emerald-500' },
@@ -704,12 +810,18 @@ export default function App() {
                                   </div>
                                   <div className="flex items-end justify-between">
                                     <span className="text-xl font-display font-medium text-white">
-                                      {item.value !== undefined ? `${(item.value * 100).toFixed(1)}%` : 'N/A'}
+                                      {activeResponse.isPendingVerification ? (
+                                        <span className="text-xs text-zinc-500 animate-pulse uppercase">Computing...</span>
+                                      ) : item.value !== undefined ? (
+                                        `${(item.value * 100).toFixed(1)}%`
+                                      ) : (
+                                        'N/A'
+                                      )}
                                     </span>
                                     <div className="w-12 h-1 bg-zinc-800 rounded-full overflow-hidden">
                                       <div 
-                                        className={`h-full ${item.inverse ? ((item.value ?? 0) > 0.2 ? 'bg-red-500' : 'bg-emerald-500') : ((item.value ?? 0) > 0.8 ? 'bg-emerald-500' : 'bg-isro-orange')}`} 
-                                        style={{ width: `${(item.value ?? 0) * 100}%` }}
+                                        className={`h-full ${item.inverse ? ((item.value ?? 0) > 0.2 ? 'bg-red-500' : 'bg-emerald-500') : ((item.value ?? 0) > 0.8 ? 'bg-emerald-500' : 'bg-isro-orange')} ${activeResponse.isPendingVerification ? 'animate-pulse bg-zinc-700 w-full' : ''}`} 
+                                        style={{ width: activeResponse.isPendingVerification ? '100%' : `${(item.value ?? 0) * 100}%` }}
                                       />
                                     </div>
                                   </div>
@@ -718,7 +830,7 @@ export default function App() {
                             </div>
 
                             <div className="mt-8 pt-8 border-t border-zinc-800">
-                              <TraceAudit traces={activeResponse.traceLog} />
+                              <TraceAudit traces={activeResponse.traceLog} isVerifying={activeResponse.isPendingVerification} />
                             </div>
                           </section>
                         </motion.div>
@@ -756,7 +868,10 @@ export default function App() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <KnowledgeBaseView />
+              <KnowledgeBaseView onQueryChunk={(content) => {
+                setQuery(content);
+                setActiveTab('console');
+              }} />
             </motion.div>
           )}
 
@@ -953,4 +1068,49 @@ export default function App() {
       </footer>
     </div>
   );
+}
+
+export function formatMarkdownSpacing(text: string): string {
+  if (!text) return '';
+  
+  const lines = text.split('\n');
+  const result: string[] = [];
+  
+  const isListLine = (line: string) => /^\s*([-*+]\s|\d+\.\s)/.test(line);
+  const isHeaderLine = (line: string) => /^\s*#+\s/.test(line);
+  const isEmptyLine = (line: string) => line.trim() === '';
+  
+  for (let i = 0; i < lines.length; i++) {
+    const current = lines[i];
+    const prev = i > 0 ? lines[i - 1] : null;
+    const next = i < lines.length - 1 ? lines[i + 1] : null;
+    
+    // Header formatting
+    if (isHeaderLine(current)) {
+      if (prev !== null && !isEmptyLine(prev) && result.length > 0 && result[result.length - 1] !== '') {
+        result.push('');
+      }
+      result.push(current);
+      if (next !== null && !isEmptyLine(next)) {
+        result.push('');
+      }
+      continue;
+    }
+    
+    // List block start/end formatting
+    if (isListLine(current)) {
+      if (prev !== null && !isListLine(prev) && !isEmptyLine(prev) && result.length > 0 && result[result.length - 1] !== '') {
+        result.push('');
+      }
+      result.push(current);
+      if (next !== null && !isListLine(next) && !isEmptyLine(next)) {
+        result.push('');
+      }
+      continue;
+    }
+    
+    result.push(current);
+  }
+  
+  return result.join('\n');
 }
