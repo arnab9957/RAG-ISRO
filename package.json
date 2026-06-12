@@ -14,10 +14,11 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
+    "@milkdown/crepe": "^7.21.2",
     "@tailwindcss/vite": "^4.1.14",
     "@types/cors": "^2.8.19",
     "@vitejs/plugin-react": "^5.0.4",
-    "@xenova/transformers": "^2.17.2",
+    "@xenova/transformers": "^2.0.1",
     "chromadb": "^3.4.3",
     "cors": "^2.8.6",
     "csv-parse": "^6.2.1",
@@ -26,6 +27,7 @@
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "pdf-parse": "^1.1.1",
+    "puppeteer-core": "^25.1.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-markdown": "^10.1.0",
@@ -41,5 +43,12 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3"
+  },
+  "allowScripts": {
+    "@google/genai@1.52.0": true,
+    "esbuild@0.28.0": true,
+    "esbuild@0.25.12": true,
+    "protobufjs@7.5.9": true,
+    "sharp@0.32.6": true
   }
 }

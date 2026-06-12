@@ -93,14 +93,14 @@ function scoreNode(node: GroundedNode, queryTerms: string[]): number {
   return score;
 }
 
-export async function searchOntology(query: string, domain: Domain, filters?: AdvancedFilters): Promise<GroundedNode[]> {
+export async function searchOntology(query: string, domain: Domain, filters?: AdvancedFilters, userGroups?: string[]): Promise<GroundedNode[]> {
   try {
     const response = await fetch('http://localhost:3001/api/search', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ query, domain, filters }),
+      body: JSON.stringify({ query, domain, filters, userGroups }),
     });
 
     if (!response.ok) {

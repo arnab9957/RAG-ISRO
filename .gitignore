@@ -1,8 +1,47 @@
+# Generated .gitignore file for: Node, Python, JavaScript, TypeScript
+# Created with FOSSA's DevOps Tools
+
+# Node
 node_modules/
-build/
-dist/
-coverage/
+npm-debug.log
+yarn-error.log
+.env
 .DS_Store
+dist/
+.cache/
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+venv/
+env/
+.env
+*.so
+
+# JavaScript
+# Add JavaScript-specific ignores here
+
+# TypeScript
+# Add TypeScript-specific ignores here
+
+# Common
+.DS_Store
+Thumbs.db
 *.log
-.env*
-!.env.example
+*.bak
+*.tmp
+*.swp
+*~
+
+# IDE and editor generated files
+.idea/
+*.sublime-*
+
+# Local environment files
+.env
+.env.local
+.env.*.local

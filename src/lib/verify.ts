@@ -84,21 +84,40 @@ export function generateQueryProof(query: string): string {
   return `zkstark_${timestamp}_${Math.abs(queryDigest).toString(16)}_risc0_v2`;
 }
 
-export function calculateConfidence(traces: SecurityTrace[], answer: string): { metrics: any, sources: string[] } {
+export function calculateConfidence(traces: SecurityTrace[], answer: string, queryText: string = ''): { metrics: any, sources: string[] } {
+  const totalTraces = traces.length || 1;
   const verifiedTracesCount = traces.filter(t => t.zkpStatus === 'verified' && t.smtApproval).length;
-  const avgRelevance = traces.reduce((acc, t) => acc + t.relevanceScore, 0) / (traces.length || 1);
+  const avgRelevance = traces.reduce((acc, t) => acc + t.relevanceScore, 0) / totalTraces;
   
-  // Simulated grounding metrics
-  const retrievalAccuracy = avgRelevance * 0.95;
-  const groundingFidelity = (verifiedTracesCount / (traces.length || 1)) * 0.98;
-  const hallucinationRisk = 1.0 - (groundingFidelity * 0.9);
-  
+  // 1. Context Relevance: Average similarity score of retrieved nodes
+  const contextRelevance = avgRelevance;
+
+  // 2. Groundedness: Ratio of traces that passed formal SMT constraints
+  const groundedness = verifiedTracesCount / totalTraces;
+
+  // 3. Answer Relevance: overlap between answer and original query key terms
+  const queryTerms = queryText ? extractKeyTerms(queryText) : [];
+  let matchedQueryTerms = 0;
+  if (queryTerms.length > 0) {
+    const lowerAnswer = answer.toLowerCase();
+    for (const term of queryTerms) {
+      if (lowerAnswer.includes(term.toLowerCase())) {
+        matchedQueryTerms++;
+      }
+    }
+  }
+  const answerRelevance = queryTerms.length > 0 ? (matchedQueryTerms / queryTerms.length) : 0.85;
+
+  // Calculate overall confidence based on RAG Triad average
+  const overallConfidence = (contextRelevance + groundedness + answerRelevance) / 3;
+  const hallucinationRisk = 1.0 - groundedness;
+
   return {
     metrics: {
-      retrievalAccuracy: Math.min(retrievalAccuracy, 1.0),
-      groundingFidelity: Math.min(groundingFidelity, 1.0),
+      retrievalAccuracy: Math.min(contextRelevance, 1.0),
+      groundingFidelity: Math.min(groundedness, 1.0),
       hallucinationRisk: Math.max(hallucinationRisk, 0.0),
-      overallConfidence: (retrievalAccuracy + groundingFidelity) / 2
+      overallConfidence: Math.min(overallConfidence, 1.0)
     },
     sources: traces.map(t => t.nodeId)
   };

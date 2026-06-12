@@ -34,8 +34,60 @@ import TraceAudit from './components/TraceAudit';
 import KnowledgeBaseView from './components/KnowledgeBaseView';
 import HistoryView from './components/HistoryView';
 import ReactMarkdown from 'react-markdown';
+import OutputEditor from './components/OutputEditor';
 
 type Tab = 'console' | 'database' | 'ingest' | 'history';
+
+/**
+ * Output Sanitization (Anti-Exfiltration):
+ * Strips markdown image tags and unapproved external links from the generated response.
+ * Cross-checks generated links against source node metadata.
+ */
+export function sanitizeOutput(text: string, sourceNodes: any[] = []): string {
+  if (!text) return '';
+  
+  // 1. Remove markdown image tags: ![alt](url) -> replace with blocked placeholder
+  let sanitized = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+    return `[Blocked Image Exfiltration Channel: ${alt || 'untrusted resource'}]`;
+  });
+  
+  // 2. Validate standard markdown links: [label](url)
+  sanitized = sanitized.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
+    const isInternalOrSource = sourceNodes.some(node => {
+      const contentMatch = node.content && node.content.includes(url);
+      const fileMatch = node.metadata?.filename && url.includes(node.metadata.filename);
+      const sourceMatch = node.metadata?.source && url.includes(node.metadata.source);
+      return contentMatch || fileMatch || sourceMatch;
+    });
+    
+    const isAnchor = url.startsWith('#');
+    
+    if (isInternalOrSource || isAnchor) {
+      return match;
+    } else {
+      return `${label} [Link Redacted: Exfiltration Risk]`;
+    }
+  });
+
+  // 3. Scan and redact plain text HTTP/HTTPS URLs not matching source nodes
+  const urlRegex = /(https?:\/\/[^\s)<>]+)/gi;
+  sanitized = sanitized.replace(urlRegex, (url) => {
+    const isInternalOrSource = sourceNodes.some(node => {
+      const contentMatch = node.content && node.content.includes(url);
+      const fileMatch = node.metadata?.filename && url.includes(node.metadata.filename);
+      const sourceMatch = node.metadata?.source && url.includes(node.metadata.source);
+      return contentMatch || fileMatch || sourceMatch;
+    });
+    
+    if (isInternalOrSource) {
+      return url;
+    } else {
+      return '[Link Redacted: Exfiltration Risk]';
+    }
+  });
+  
+  return sanitized;
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('console');
@@ -66,6 +118,28 @@ export default function App() {
   const [isIngesting, setIsIngesting] = useState(false);
   const [ingestStatus, setIngestStatus] = useState<string | null>(null);
   const [ingestError, setIngestError] = useState<string | null>(null);
+
+  // User Access State
+  const [userRole, setUserRole] = useState<'Administrator' | 'Operator' | 'Guest'>(() => {
+    const saved = localStorage.getItem('saraswati_user_role');
+    return (saved as 'Administrator' | 'Operator' | 'Guest') || 'Operator';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('saraswati_user_role', userRole);
+  }, [userRole]);
+
+  const getGroupsForRole = (role: 'Administrator' | 'Operator' | 'Guest'): string[] => {
+    switch (role) {
+      case 'Administrator':
+        return ['admin', 'everyone'];
+      case 'Guest':
+        return ['guest', 'everyone'];
+      case 'Operator':
+      default:
+        return ['everyone'];
+    }
+  };
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const orchestrator = useRef(new SaraswatiOrchestrator());
@@ -144,7 +218,8 @@ export default function App() {
             }
             return [...prev, newAction];
           });
-        }
+        },
+        getGroupsForRole(userRole)
       );
 
       const saraswatiMessageId = Math.random().toString(36).substring(7).toUpperCase();
@@ -175,6 +250,7 @@ export default function App() {
           result.answer,
           result.retrievedNodes,
           result.validatorActionId,
+          currentQuery,
           (updatedAction) => {
             setActions(prev => {
               const index = prev.findIndex(a => a.id === updatedAction.id);
@@ -287,7 +363,8 @@ export default function App() {
         system: "SARASWATI_FRAMEWORK_V2",
         node: "NIC_SECURED_NODE_882"
       },
-      ...activeResp
+      ...activeResp,
+      answer: sanitizeOutput(activeResp.answer, activeResp.retrievedNodes || [])
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -454,6 +531,54 @@ export default function App() {
                         {domain === d && <ArrowRight className="w-4 h-4 text-isro-orange" />}
                       </button>
                     ))}
+                  </div>
+                </section>
+
+                {/* Identity & Access Control */}
+                <section className="isro-glass p-6 rounded-2xl">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2 mb-6">
+                    <ShieldCheck className="w-4 h-4 text-isro-orange" />
+                    Identity & Access Control (DACL)
+                  </h2>
+                  <div className="space-y-4">
+                    <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-zinc-800">
+                      {(['Administrator', 'Operator', 'Guest'] as const).map((role) => (
+                        <button
+                          key={role}
+                          type="button"
+                          onClick={() => setUserRole(role)}
+                          className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                            userRole === role
+                              ? 'bg-zinc-800 text-isro-orange border border-zinc-700 shadow-md'
+                              : 'text-zinc-500 hover:text-zinc-300'
+                          }`}
+                        >
+                          {role}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="bg-black/40 border border-zinc-900 rounded-xl p-3.5 space-y-2.5 font-mono text-[10px]">
+                      <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
+                        <span className="text-zinc-500">RESOLVED SIDs:</span>
+                        <span className="text-zinc-300 font-bold">{getGroupsForRole(userRole).join(', ')}</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
+                        <span className="text-zinc-500">CLEARANCE:</span>
+                        <span className={`font-bold ${
+                          userRole === 'Administrator' ? 'text-emerald-500' :
+                          userRole === 'Operator' ? 'text-isro-blue' : 'text-zinc-400'
+                        }`}>
+                          {userRole === 'Administrator' ? 'LEVEL-1 CONFIDENTIAL' :
+                           userRole === 'Operator' ? 'LEVEL-2 PUBLIC' : 'LEVEL-3 UNTRUSTED'}
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-zinc-500 leading-normal font-sans italic pt-1">
+                        {userRole === 'Administrator' && 'Granted access to all standard and confidential aerospace engineering & procurement files.'}
+                        {userRole === 'Operator' && 'Standard operator profile. Access limited to public/shared mission datasets.'}
+                        {userRole === 'Guest' && 'Restricted guest profile. Subject to active exfiltration filtering and strict document denial rules.'}
+                      </p>
+                    </div>
                   </div>
                 </section>
 
@@ -715,7 +840,7 @@ export default function App() {
                                       <div className="whitespace-pre-wrap">{msg.text}</div>
                                     ) : (
                                       <div className="markdown-content">
-                                        <ReactMarkdown>{formatMarkdownSpacing(msg.text)}</ReactMarkdown>
+                                        <ReactMarkdown>{formatMarkdownSpacing(sanitizeOutput(msg.text, msg.response?.retrievedNodes || []))}</ReactMarkdown>
                                       </div>
                                     )}
                                   </div>
@@ -794,6 +919,10 @@ export default function App() {
                               <p className="border-l-2 border-emerald-500 pl-4 md:pl-6 italic text-zinc-400 text-xs md:text-sm mb-8 bg-emerald-500/5 py-4 rounded-r-lg">
                                 "Grounded in verified {domain} ontologies and formally verified via neuro-symbolic swarm validation."
                               </p>
+                            </div>
+
+                            <div className="mt-6 mb-8">
+                              <OutputEditor key={activeMessageId} content={sanitizeOutput(activeResponse.answer, activeResponse.retrievedNodes || [])} />
                             </div>
 
                              <div className="mt-8 pt-8 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-4 gap-4">

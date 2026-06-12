@@ -60,7 +60,7 @@
   @apply font-bold text-white;
 }
 .markdown-content code {
-  @apply font-mono bg-zinc-900 border border-zinc-850 text-isro-orange px-1 py-0.5 rounded text-[11px];
+  @apply font-mono bg-zinc-900 border border-zinc-800 text-isro-orange px-1 py-0.5 rounded text-[11px];
 }
 .markdown-content pre {
   @apply font-mono bg-zinc-950/80 border border-zinc-800 p-3 rounded-lg overflow-x-auto my-3 text-xs leading-relaxed;
@@ -76,5 +76,43 @@
 .markdown-content h3 { @apply text-xs; }
 .markdown-content a {
   @apply text-isro-orange hover:underline;
+}
+
+/* Milkdown Crepe Theme Overrides */
+.milkdown {
+  --crepe-color-background: transparent !important;
+  --crepe-color-surface: #18181b !important;
+  --crepe-color-surface-low: #09090b !important;
+  --crepe-color-on-background: #e4e4e7 !important;
+  --crepe-color-on-surface: #d4d4d8 !important;
+  --crepe-color-on-surface-variant: #71717a !important;
+  --crepe-color-outline: #27272a !important;
+  --crepe-color-primary: #f27420 !important;
+  --crepe-color-secondary: #27272a !important;
+  --crepe-color-inline-code: #f27420 !important;
+  --crepe-color-hover: #27272a !important;
+  --crepe-color-selected: #3f3f46 !important;
+  --crepe-color-inline-area: #18181b !important;
+  
+  --crepe-font-default: "Inter", ui-sans-serif, system-ui, sans-serif !important;
+  --crepe-font-title: "Space Grotesk", sans-serif !important;
+  --crepe-font-code: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace !important;
+}
+
+.milkdown .crepe-editor {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Override Milkdown font and color defaults to align with space design */
+.milkdown h1, .milkdown h2, .milkdown h3, .milkdown h4, .milkdown h5, .milkdown h6 {
+  color: #ffffff !important;
+  font-family: "Space Grotesk", sans-serif !important;
+  font-weight: 700 !important;
+}
+
+.milkdown p, .milkdown li {
+  color: #d4d4d8 !important;
+  font-family: "Inter", sans-serif !important;
 }
 

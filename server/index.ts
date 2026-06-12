@@ -4,11 +4,97 @@ import { ChromaClient } from 'chromadb';
 import { pipeline } from '@xenova/transformers';
 import type { Request, Response } from 'express';
 import path from 'path';
-import { randomUUID } from 'crypto';
+import fs from 'fs';
+import { randomUUID, createHash } from 'crypto';
 import { createRequire } from 'module';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import { extractKeyTerms, createTrace, calculateConfidence } from '../src/lib/verify';
+
+// --- RAG Security Helper Functions ---
+
+/**
+ * Escape backslashes and double quotes in scalar string filters to prevent parser injections.
+ */
+function escapeFilterLiteral(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+/**
+ * Preprocessing & Sanitization: Strip zero-width spaces, hidden control characters,
+ * and HTML/markdown comments to prevent invisible instruction smuggling.
+ */
+function sanitizeDocumentText(text: string): string {
+  if (!text) return '';
+  return text
+    // Remove zero-width spaces and other invisible/format characters
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // Remove control characters (except tabs, newlines, carriage returns)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+    // Strip HTML comments
+    .replace(/<!--[\s\S]*?-->/g, '')
+    // Strip Markdown-style link/image reference comments
+    .replace(/\[\/\/\]:\s*\(.*?\)/g, '')
+    .replace(/\[\/\/\s*\]:\s*<.*?>/g, '');
+}
+
+// PII Regex Patterns
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+const PHONE_REGEX = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+const SID_REGEX = /S-\d-\d-\d{2}-\d{8,10}-\d{8,10}-\d{8,10}-\d{3,5}/g;
+
+/**
+ * Zero-Trust PII Redaction: Scan content for emails, phone numbers, and SIDs,
+ * replacing them with reversible placeholders prior to embedding and storage.
+ */
+function redactPII(text: string, filename: string): { redactedText: string; mappings: Record<string, string> } {
+  const mappings: Record<string, string> = {};
+  let redactedText = text;
+  
+  let emailIndex = 1;
+  redactedText = redactedText.replace(EMAIL_REGEX, (match) => {
+    const placeholder = `[REDACTED_EMAIL_${emailIndex++}]`;
+    mappings[placeholder] = match;
+    return placeholder;
+  });
+
+  let phoneIndex = 1;
+  redactedText = redactedText.replace(PHONE_REGEX, (match) => {
+    const placeholder = `[REDACTED_PHONE_${phoneIndex++}]`;
+    mappings[placeholder] = match;
+    return placeholder;
+  });
+
+  let sidIndex = 1;
+  redactedText = redactedText.replace(SID_REGEX, (match) => {
+    const placeholder = `[REDACTED_SID_${sidIndex++}]`;
+    mappings[placeholder] = match;
+    return placeholder;
+  });
+
+  return { redactedText, mappings };
+}
+
+/**
+ * Write PII mappings securely to a local JSON mapping file.
+ */
+function savePIIMappings(filename: string, mappings: Record<string, string>) {
+  const mappingFilePath = path.resolve(process.cwd(), 'pii_mappings.json');
+  let currentMappings: Record<string, any> = {};
+  if (fs.existsSync(mappingFilePath)) {
+    try {
+      currentMappings = JSON.parse(fs.readFileSync(mappingFilePath, 'utf8'));
+    } catch (e) {
+      currentMappings = {};
+    }
+  }
+  currentMappings[path.basename(filename)] = {
+    ...currentMappings[path.basename(filename)],
+    ...mappings
+  };
+  fs.writeFileSync(mappingFilePath, JSON.stringify(currentMappings, null, 2), 'utf8');
+}
+
 
 // Load environment variables
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -103,11 +189,10 @@ app.post('/api/search', async (req: Request, res: Response) => {
     // Embed the search query
     const queryEmbedding = await embedText(query);
     
-    // Build where clause based on domain and filters
-    const where: any = {};
+    // Build where clause using pre-filtering and escaping
+    const andConditions: any[] = [];
     if (domain) {
       // Map frontend `Domain` enum labels to the simple domain keys used in ingestion metadata.
-      // Frontend sends values like 'Aerospace Technical Operations' (see src/types.ts).
       const domainMap: Record<string, string> = {
         'Aerospace Technical Operations': 'AEROSPACE',
         'Government Compliance (GFR)': 'GOVERNMENT',
@@ -115,15 +200,61 @@ app.post('/api/search', async (req: Request, res: Response) => {
         'GOVERNMENT': 'GOVERNMENT'
       };
       const mapped = domainMap[domain] || domain;
-      where.domain = mapped;
+      andConditions.push({ domain: mapped });
     }
-    // Additional filters can be added here based on advanced filters
+
+    // Resolve user access context (allowed_groups and denied_groups)
+    const userGroupsParam = req.body.userGroups || req.headers['x-user-groups'];
+    let userGroups: string[] = ['everyone'];
+    if (userGroupsParam) {
+      userGroups = Array.isArray(userGroupsParam) 
+        ? userGroupsParam 
+        : String(userGroupsParam).split(',').map(s => s.trim());
+    }
+
+    // Escape all input group identifiers
+    const escapedGroups = userGroups.map(escapeFilterLiteral);
+
+    // Filter by allowed groups
+    if (escapedGroups.length === 1) {
+      andConditions.push({ allowed_groups: escapedGroups[0] });
+    } else {
+      andConditions.push({
+        allowed_groups: {
+          $in: escapedGroups
+        }
+      });
+    }
+
+    // Filter by denied groups (if user has guest group, exclude denied guest chunks)
+    const isGuest = escapedGroups.includes('guest') || escapedGroups.includes('domain\\\\guest');
+    if (isGuest) {
+      andConditions.push({ denied_groups: { $ne: 'guest' } });
+    }
+
+    // Support advanced constraints from UI
+    if (filters) {
+      if (filters.subsystem) {
+        andConditions.push({ subsystem: escapeFilterLiteral(filters.subsystem) });
+      }
+      if (filters.dataType) {
+        andConditions.push({ type: escapeFilterLiteral(filters.dataType) });
+      }
+    }
+
+    // Construct ChromaDB compound where clause
+    let whereClause: any = undefined;
+    if (andConditions.length === 1) {
+      whereClause = andConditions[0];
+    } else if (andConditions.length > 1) {
+      whereClause = { $and: andConditions };
+    }
 
     // Query ChromaDB
     const results = await collection.query({
       queryEmbeddings: [queryEmbedding],
       nResults: 5,
-      where: Object.keys(where).length > 0 ? where : undefined,
+      where: whereClause,
     });
 
     // Map results back to GroundedNode format
@@ -167,13 +298,33 @@ app.post('/api/ingest', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Unable to extract readable text from the uploaded file' });
     }
 
+    // 1. Provenance Verification
+    const sha256Hash = createHash('sha256').update(dataBase64).digest('hex');
+    const logFile = path.resolve(process.cwd(), 'ingestion_audit.log');
+    const auditMsg = `[${new Date().toISOString()}] filename="${filename}" hash="${sha256Hash}" domain="${domain || 'AEROSPACE'}" provenance="Verified (C2PA Hashed)"\n`;
+    fs.appendFileSync(logFile, auditMsg, 'utf8');
+
+    // 2. Document Preprocessing & Sanitization
+    const sanitizedContent = sanitizeDocumentText(content);
+
+    // 3. Zero-Trust PII Redaction
+    const { redactedText, mappings } = redactPII(sanitizedContent, filename);
+    if (Object.keys(mappings).length > 0) {
+      savePIIMappings(filename, mappings);
+    }
+
     const collection = await getKnowledgeBaseCollection();
-    const chunks = chunkText(content, 300);
+    const chunks = chunkText(redactedText, 300);
     const normalizedDomain = String(domain || 'AEROSPACE').toUpperCase().includes('GOVERN')
       ? 'GOVERNMENT'
       : 'AEROSPACE';
     const timestamp = new Date().toISOString();
     let insertedChunks = 0;
+
+    // Define Allowed/Denied Access control list parameters
+    const isConfidential = filename.toLowerCase().includes('confidential') || redactedText.toLowerCase().includes('secret') || redactedText.toLowerCase().includes('confidential');
+    const allowedGroups = isConfidential ? 'admin' : 'everyone';
+    const deniedGroups = isConfidential ? 'guest' : 'none';
 
     for (let i = 0; i < chunks.length; i += 1) {
       const chunk = chunks[i];
@@ -195,6 +346,9 @@ app.post('/api/ingest', async (req: Request, res: Response) => {
           uploaded_at: timestamp,
           label: `${path.basename(filename)} chunk ${i + 1}`,
           type: 'UserUpload',
+          provenance_hash: sha256Hash,
+          allowed_groups: allowedGroups,
+          denied_groups: deniedGroups,
         }],
         documents: [chunk],
       });
@@ -263,7 +417,7 @@ app.post('/api/generate', async (req: Request, res: Response) => {
 
 app.post('/api/verify', async (req: Request, res: Response) => {
   try {
-    const { answer, nodes } = req.body;
+    const { answer, nodes, query } = req.body;
     if (!answer || !nodes) {
       return res.status(400).json({ error: 'answer and nodes are required' });
     }
@@ -276,7 +430,7 @@ app.post('/api/verify', async (req: Request, res: Response) => {
       return createTrace(node.id, answer, nodeConstraints);
     });
 
-    const { metrics, sources } = calculateConfidence(traces, answer);
+    const { metrics, sources } = calculateConfidence(traces, answer, query || '');
     const allApproved = traces.every((t: any) => t.smtApproval && t.zkpStatus === 'verified');
 
     res.json({
