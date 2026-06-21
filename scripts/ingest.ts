@@ -67,32 +67,55 @@ async function processFile(filePath: string, collection: any) {
   const chunks = chunkText(content, 300);
   console.log(`Split into ${chunks.length} chunks`);
 
+  const ids: string[] = [];
+  const embeddings: number[][] = [];
+  const metadatas: any[] = [];
+  const documents: string[] = [];
+
+  const baseName = path.basename(filePath);
+
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
     if (chunk.trim().length < 10) continue; // Skip very short chunks
 
     const embedding = await embedText(chunk);
-    
-    // Create unique ID
-    const baseName = path.basename(filePath);
     const id = `${baseName}-chunk-${i}`;
 
-    await collection.add({
-      ids: [id],
-      embeddings: [embedding],
-      metadatas: [{
-        filename: baseName,
-        source: filePath,
-        chunk_index: i,
-        domain: baseName.toLowerCase().includes('gfr') ? 'GOVERNMENT' : 'AEROSPACE'
-      }],
-      documents: [chunk],
+    ids.push(id);
+    embeddings.push(embedding);
+    metadatas.push({
+      filename: baseName,
+      source: filePath,
+      chunk_index: i,
+      domain: baseName.toLowerCase().includes('gfr') ? 'GOVERNMENT' : 'AEROSPACE'
     });
-    
-    if (i > 0 && i % 50 === 0) {
-      console.log(`  Inserted ${i}/${chunks.length} chunks...`);
+    documents.push(chunk);
+
+    if (ids.length >= 50) {
+      await collection.add({
+        ids,
+        embeddings,
+        metadatas,
+        documents,
+      });
+      console.log(`  Inserted ${i + 1}/${chunks.length} chunks...`);
+      ids.length = 0;
+      embeddings.length = 0;
+      metadatas.length = 0;
+      documents.length = 0;
     }
   }
+
+  if (ids.length > 0) {
+    await collection.add({
+      ids,
+      embeddings,
+      metadatas,
+      documents,
+    });
+    console.log(`  Inserted all remaining chunks (${chunks.length}/${chunks.length})`);
+  }
+
   console.log(`Finished processing: ${filePath}`);
 }
 

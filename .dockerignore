@@ -1,0 +1,9 @@
+node_modules
+chroma_data
+datasets
+dist
+.git
+.env
+.env.local
+pii_mappings.json
+ingestion_audit.log
