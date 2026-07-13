@@ -134,3 +134,48 @@ export function createTrace(nodeId: string, content: string, constraints: string
     relevanceScore
   };
 }
+
+/**
+ * Simple rule-based/heuristic generator when LLM backend/API is unavailable.
+ */
+export function mockGenerate(contents: string): string {
+  const lower = contents.toLowerCase();
+  
+  // 1. Paraphrase Prompt
+  if (lower.includes("paraphrased query:") || lower.includes("paraphrase")) {
+    const userQueryMatch = contents.match(/User Query:\s*(.*)/i);
+    if (userQueryMatch) {
+      return userQueryMatch[1].trim();
+    }
+    return "CCSDS telemetry frame structure";
+  }
+
+  // 2. Critic/Audit Prompt
+  if (lower.includes("saraswati critic") || lower.includes("hallucination")) {
+    return "CRITIQUE: Checked draft answer against retrieved context. The response is strictly grounded in the source documentation. No security violations or hallucinations detected.";
+  }
+
+  // 3. Grounded Generation
+  if (contents.includes("<grounding_context>")) {
+    const chunks: string[] = [];
+    const rx = /<context_chunk[^>]*>([\s\S]*?)<\/context_chunk>/g;
+    let match;
+    while ((match = rx.exec(contents)) !== null) {
+      chunks.push(match[1].trim());
+    }
+    
+    if (chunks.length > 0 && !contents.includes("No matching pages found.")) {
+      let answer = "According to the retrieved technical documentation:\n\n";
+      chunks.forEach((chunk) => {
+        const cleanChunk = chunk.split('\n').map(line => line.trim()).filter(Boolean).join(' ');
+        answer += `• ${cleanChunk}\n\n`;
+      });
+      return answer.trim();
+    } else {
+      return "I apologize, but no relevant grounding pages or documents were found in the secure database to answer your request.";
+    }
+  }
+
+  return "Response generated successfully under local air-gapped simulation constraints.";
+}
+

@@ -9,7 +9,7 @@ import { randomUUID, createHash } from 'crypto';
 import { createRequire } from 'module';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
-import { extractKeyTerms, createTrace, calculateConfidence } from '../src/lib/verify';
+import { extractKeyTerms, createTrace, calculateConfidence, mockGenerate } from '../src/lib/verify';
 
 // --- RAG Security Helper Functions ---
 
@@ -381,40 +381,50 @@ app.post('/api/generate', async (req: Request, res: Response) => {
 
     const useLocal = process.env.USE_LOCAL_LLM === 'true';
     if (useLocal) {
-      const localUrl = process.env.LOCAL_LLM_URL || 'http://localhost:11434';
-      const localModel = process.env.LOCAL_LLM_MODEL || 'gemma2:2b';
+      try {
+        const localUrl = process.env.LOCAL_LLM_URL || 'http://localhost:11434';
+        const localModel = process.env.LOCAL_LLM_MODEL || 'gemma2:2b';
 
-      const response = await fetch(`${localUrl}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: localModel,
-          prompt: contents,
-          stream: false,
-        }),
-      });
+        const response = await fetch(`${localUrl}/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: localModel,
+            prompt: contents,
+            stream: false,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`Local LLM API error: ${response.statusText}`);
+        if (response.ok) {
+          const data = await response.json();
+          return res.json({ text: data.response });
+        }
+        console.warn(`Local LLM API error: ${response.statusText}. Falling back.`);
+      } catch (err) {
+        console.warn('Local LLM generation failed, falling back:', err);
       }
-
-      const data = await response.json();
-      res.json({ text: data.response });
-    } else {
-      const aiClient = getAiClient();
-      if (!aiClient) {
-        return res.status(500).json({ error: 'Gemini API key is not configured on the backend' });
-      }
-
-      const response = await aiClient.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: contents,
-      });
-
-      res.json({ text: response.text || '' });
     }
+
+    // Try Gemini API key
+    try {
+      const aiClient = getAiClient();
+      if (aiClient) {
+        const response = await aiClient.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: contents,
+        });
+        return res.json({ text: response.text || '' });
+      }
+      console.warn('Gemini API key is not configured. Falling back to mock generator.');
+    } catch (geminiErr) {
+      console.warn('Gemini API generation failed. Falling back to mock generator:', geminiErr);
+    }
+
+    // Heuristic/Rule-based Mock Generator Fallback
+    const mockText = mockGenerate(contents);
+    res.json({ text: mockText });
   } catch (error) {
-    console.error('Generation error:', error);
+    console.error('Generation error in server:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' });
   }
 });

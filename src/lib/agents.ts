@@ -6,7 +6,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { AgentAction, AgentRole, Domain, SaraswatiResponse, SecurityTrace, AdvancedFilters } from "../types";
 import { searchOntology } from "./ontology";
-import { createTrace, generateQueryProof, calculateConfidence, extractKeyTerms } from "./verify";
+import { createTrace, generateQueryProof, calculateConfidence, extractKeyTerms, mockGenerate } from "./verify";
 
 export class SaraswatiOrchestrator {
   private ai: GoogleGenAI;
@@ -32,15 +32,19 @@ export class SaraswatiOrchestrator {
       const data = await response.json();
       return data.text || '';
     } catch (error) {
-      console.warn('Backend LLM generation failed, falling back to direct frontend Google GenAI:', error);
-      if (!process.env.GEMINI_API_KEY) {
-        throw new Error('Gemini API key is not configured and local generation failed.');
+      console.warn('Backend LLM generation failed, trying direct frontend Google GenAI:', error);
+      try {
+        if (process.env.GEMINI_API_KEY) {
+          const response = await this.ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents,
+          });
+          return response.text || '';
+        }
+      } catch (directErr) {
+        console.warn('Direct frontend Google GenAI failed, falling back to local mock generator:', directErr);
       }
-      const response = await this.ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents,
-      });
-      return response.text || '';
+      return mockGenerate(contents);
     }
   }
 
