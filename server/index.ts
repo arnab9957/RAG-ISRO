@@ -262,7 +262,7 @@ function requireAuth(req: Request, res: Response, next: any) {
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '25mb' }));
+app.use(express.json({ limit: '100mb' }));
 app.use((req, res, next) => {
   console.log(`[REQUEST] ${req.method} ${req.url}`);
   next();

@@ -21,6 +21,7 @@ venv/
 env/
 .env
 *.so
+datasets/
 
 # JavaScript
 # Add JavaScript-specific ignores here

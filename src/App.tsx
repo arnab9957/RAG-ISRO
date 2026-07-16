@@ -88,7 +88,34 @@ export function sanitizeOutput(text: string, sourceNodes: any[] = []): string {
     }
   });
   
-  return sanitized;
+  return formatTechnicalReport(sanitized);
+}
+
+export function formatTechnicalReport(text: string): string {
+  if (!text) return '';
+
+  let formatted = text;
+
+  // 1. Replace literal bullet points with markdown bullet points (using unicode escapes for compatibility)
+  formatted = formatted.replace(/[\u2022\u25CF\u00B7\u25E6\u2043\u2219]\s*/g, '- ');
+
+  // 2. Format nested list items (a)-(z) when inside a paragraph
+  formatted = formatted.replace(/\s+\(([a-z])\)\s+/g, '\n    - ($1) ');
+
+  // 3. Format primary list items (i)-(v) and (I)-(V) when inside a paragraph
+  formatted = formatted.replace(/\s+\((i|ii|iii|iv|v|I|II|III|IV|V)\)\s+/g, '\n- ($1) ');
+
+  // 4. Format Rules (e.g., Rule 212 Hiring out of Fixed Assets.)
+  // Matches "Rule <number> <Title up to 50 characters>." and places it on new lines
+  formatted = formatted.replace(/(?:^|\s)(Rule\s+\d+[^.\n]{5,50}\.)/g, '\n\n**$1**\n\n');
+
+  // 5. Format Notes (e.g., Note: or Note -)
+  formatted = formatted.replace(/(Note:\s*)/gi, '\n\n**Note:** ');
+
+  // 6. Clean up duplicate or excess newlines
+  formatted = formatted.replace(/\n{3,}/g, '\n\n');
+
+  return formatted.trim();
 }
 
 // Predefined Personas description for UI
@@ -1125,6 +1152,7 @@ export default function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           filename: ingestFile.name,

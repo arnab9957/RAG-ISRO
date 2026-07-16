@@ -14,38 +14,24 @@ interface Props {
 
 export default function OutputEditor({ content }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const crepeRef = useRef<Crepe | null>(null);
-
   useEffect(() => {
     let active = true;
     let crepeInstance: Crepe | null = null;
+    let editorDiv: HTMLDivElement | null = null;
 
     const initEditor = async () => {
       if (!containerRef.current) return;
 
-      // Clean up any existing editor instance first
-      if (crepeRef.current) {
-        try {
-          await crepeRef.current.destroy();
-        } catch (e) {
-          console.warn("Error destroying previous crepe instance:", e);
-        }
-        crepeRef.current = null;
-      }
+      // Create a unique child div for this specific Crepe instance
+      editorDiv = document.createElement("div");
+      editorDiv.className = "milkdown markdown-content text-zinc-300 font-sans w-full";
+      containerRef.current.appendChild(editorDiv);
 
-      if (!active) return;
-
-      // Clear the container elements before initializing
-      containerRef.current.innerHTML = "";
-
-      // Initialize the Crepe editor directly on the container element
       console.log("IMPORTED Crepe is:", Crepe);
       const crepe = new Crepe({
-        root: containerRef.current,
+        root: editorDiv,
         defaultValue: content,
       });
-
-      crepeInstance = crepe;
 
       try {
         await crepe.create();
@@ -53,10 +39,13 @@ export default function OutputEditor({ content }: Props) {
         if (!active) {
           // If the effect was cleaned up while initializing, destroy it immediately
           await crepe.destroy();
+          if (editorDiv && containerRef.current?.contains(editorDiv)) {
+            containerRef.current.removeChild(editorDiv);
+          }
           return;
         }
         
-        crepeRef.current = crepe;
+        crepeInstance = crepe;
       } catch (err) {
         console.error("Failed to initialize Milkdown Crepe editor:", err);
       }
@@ -71,8 +60,11 @@ export default function OutputEditor({ content }: Props) {
           console.warn("Cleaned up Milkdown Crepe editor during unmount:", err);
         });
       }
+      if (editorDiv && containerRef.current?.contains(editorDiv)) {
+        containerRef.current.removeChild(editorDiv);
+      }
     };
-  }, [content]);
+  }, []);
 
   return (
     <div className="relative border border-zinc-800 bg-zinc-950/40 rounded-xl p-6 min-h-[250px] max-h-[550px] overflow-y-auto isro-glass">
@@ -80,7 +72,7 @@ export default function OutputEditor({ content }: Props) {
         <span className="w-1.5 h-1.5 rounded-full bg-isro-orange animate-pulse" />
         Interactive Synthesis Editor
       </div>
-      <div ref={containerRef} className="milkdown text-zinc-300 font-sans" />
+      <div ref={containerRef} className="milkdown markdown-content text-zinc-300 font-sans" />
     </div>
   );
 }

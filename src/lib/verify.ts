@@ -165,11 +165,60 @@ export function mockGenerate(contents: string): string {
     }
 
     if (chunks.length > 0 && !contents.includes("No matching pages found.")) {
-      let answer = "According to the retrieved technical documentation:\n\n";
-      chunks.forEach((chunk) => {
-        const cleanChunk = chunk.split('\n').map(line => line.trim()).filter(Boolean).join(' ');
-        answer += `• ${cleanChunk}\n\n`;
-      });
+      // Clean up chunks
+      const cleanChunks = chunks.map(chunk => 
+        chunk.split('\n').map(line => line.trim()).filter(Boolean).join(' ')
+      );
+
+      // Extract query to customize mock synthesis
+      const queryMatch = contents.match(/User Query:\s*(.*)/i);
+      const query = queryMatch ? queryMatch[1].trim() : '';
+      const queryLower = query.toLowerCase();
+
+      let answer = '';
+
+      if (queryLower.includes('asset') || queryLower.includes('gfr') || queryLower.includes('record') || queryLower.includes('rule')) {
+        answer = `Based on the General Financial Rules (GFR) retrieved from the technical database, here is the synthesis of rules regarding asset management and stock accounts:\n\n`;
+        
+        // Find and structure specific rules if present
+        const hasGfr22 = cleanChunks.some(c => c.includes('GFR-22'));
+        const hasGfr23 = cleanChunks.some(c => c.includes('GFR-23'));
+        const hasRule212 = cleanChunks.some(c => c.includes('Rule 212'));
+
+        if (hasGfr22 || hasGfr23) {
+          answer += `1. **Stock Accounts & Forms Requirements:**\n`;
+          answer += `   - **Fixed Assets:** Must be maintained in Form GFR-22 (covering plant, machinery, equipment, furniture, fixtures, etc.).\n`;
+          answer += `   - **Consumables:** Must be maintained in Form GFR-23 (covering stationery, chemicals, spare parts, etc.).\n`;
+          answer += `   - **Library Books:** Maintained in Form GFR-18.\n`;
+          answer += `   - **Assets of Historical/Artistic Value:** Maintained in Form GFR-24.\n\n`;
+        }
+
+        if (hasRule212) {
+          answer += `2. **Rule 212 (Hiring out of Fixed Assets):**\n`;
+          answer += `   - When a fixed asset is hired out to local bodies, contractors, or others, a proper record of the assets and the hire charges must be kept.\n`;
+          answer += `   - The hire and other charges, as prescribed by the competent authority, must be recovered regularly.\n\n`;
+        }
+
+        // Fallback or additional info
+        const otherInfo = cleanChunks.filter(c => !c.includes('GFR-22') && !c.includes('Rule 212'));
+        if (otherInfo.length > 0) {
+          answer += `3. **Additional Operational Guidelines:**\n`;
+          otherInfo.forEach(info => {
+            const shortInfo = info.substring(0, 150) + (info.length > 150 ? '...' : '');
+            answer += `   - ${shortInfo}\n`;
+          });
+        }
+      } else {
+        // Generic synthesized summary
+        answer = `Based on the retrieved operational and technical documentation, here is a synthesized summary:\n\n`;
+        cleanChunks.forEach((chunk, index) => {
+          // Try to split into sentences and take the first two sentences for a clean summary
+          const sentences = chunk.match(/[^.!?]+[.!?]+(\s|$)/g) || [chunk];
+          const summarySentences = sentences.slice(0, 2).map(s => s.trim()).join(' ');
+          answer += `- **Document Source [Node #${index + 1}]:** ${summarySentences}\n\n`;
+        });
+      }
+
       return answer.trim();
     } else {
       return "I apologize, but no relevant grounding pages or documents were found in the secure database to answer your request.";
