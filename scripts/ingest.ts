@@ -83,11 +83,19 @@ async function processFile(filePath: string, collection: any) {
 
     ids.push(id);
     embeddings.push(embedding);
+    const isConfidential = baseName.toLowerCase().includes('confidential') || baseName.toLowerCase().includes('secret') || chunk.toLowerCase().includes('secret') || chunk.toLowerCase().includes('confidential');
+    const allowedGroups = isConfidential ? 'admin' : 'everyone';
+    const deniedGroups = isConfidential ? 'guest' : 'none';
+
     metadatas.push({
       filename: baseName,
       source: filePath,
       chunk_index: i,
-      domain: baseName.toLowerCase().includes('gfr') ? 'GOVERNMENT' : 'AEROSPACE'
+      domain: baseName.toLowerCase().includes('gfr') ? 'GOVERNMENT' : 'AEROSPACE',
+      label: `${baseName} chunk ${i + 1}`,
+      type: 'Document',
+      allowed_groups: allowedGroups,
+      denied_groups: deniedGroups
     });
     documents.push(chunk);
 
@@ -143,14 +151,14 @@ async function run() {
   }
 
   try {
-    await chroma.deleteCollection({ name: "saraswati_knowledge_base" });
-    console.log("Deleted existing collection 'saraswati_knowledge_base'");
+    await chroma.deleteCollection({ name: "IRSARGO_knowledge_base" });
+    console.log("Deleted existing collection 'IRSARGO_knowledge_base'");
   } catch (e) {
     console.log("No existing collection to delete or failed to delete.");
   }
 
   const collection = await chroma.getOrCreateCollection({
-    name: "saraswati_knowledge_base",
+    name: "IRSARGO_knowledge_base",
     embeddingFunction: null,
   });
   console.log("Connected to ChromaDB Collection");

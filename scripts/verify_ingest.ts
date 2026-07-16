@@ -22,7 +22,7 @@ async function embedText(text: string) {
 
 async function run() {
     try {
-        const name = "saraswati_knowledge_base";
+        const name = "IRSARGO_knowledge_base";
         const collection = await chroma.getOrCreateCollection({
             name,
             embeddingFunction: null,

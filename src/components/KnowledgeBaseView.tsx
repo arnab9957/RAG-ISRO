@@ -27,9 +27,13 @@ export default function KnowledgeBaseView({ onQueryChunk }: KnowledgeBaseViewPro
     setLiveError(null);
 
     try {
+      const token = localStorage.getItem('irsargo_token');
       const response = await fetch("http://localhost:3001/api/search", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           query: trimmed,
           domain: "Aerospace Technical Operations",

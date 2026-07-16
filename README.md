@@ -1,6 +1,6 @@
-# SARASWATI: Zero-Trust Multi-Agent RAG Engine
+# IRSARGO: Zero-Trust Multi-Agent RAG Engine
 
-**SARASWATI** (Secure and Accurate Retrieval-Augmented Generation for Aerospace & Government Compliance) is a mission-critical, self-contained RAG system tailored for Indian Space Research Organisation (ISRO) aerospace technical specifications and government procurement guidelines (GFR 2017). 
+**IRSARGO** (Secure and Accurate Retrieval-Augmented Generation for Aerospace & Government Compliance) is a mission-critical, self-contained RAG system tailored for Indian Space Research Organisation (ISRO) aerospace technical specifications and government procurement guidelines (GFR 2017). 
 
 Designed to operate in secure, air-gapped environments, the system features a zero-trust multi-agent security pipeline, local embedding computation, dynamic access control lists (DACL), anti-exfiltration output filtering, and simulated hybrid formal verification (ZK-STARK + Z3 SMT) to guarantee groundedness and data safety.
 
@@ -190,7 +190,7 @@ Queries made by users assigned to different roles will automatically inject grou
 ---
 
 ## 🛠️ Verification Console
-The SARASWATI Console provides tabs for:
+The IRSARGO Console provides tabs for:
 1.  **Console**: Standard chatbot interface with live tracking of the agent swarm's execution steps and the validation metrics dashboard.
 2.  **Nodes (Database)**: Dynamic graph-based and tabular visualization of chunk relations and database parameters.
 3.  **Ingest**: Web interface to upload documents and log automated C2PA SHA-256 provenance hashes.

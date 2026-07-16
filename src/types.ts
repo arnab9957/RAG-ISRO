@@ -74,10 +74,10 @@ export interface HistoryItem {
   query: string;
   domain: Domain;
   timestamp: string;
-  response: SaraswatiResponse;
+  response: IRSARGOResponse;
 }
 
-export interface SaraswatiResponse {
+export interface IRSARGOResponse {
   answer: string;
   traceLog: SecurityTrace[];
   agentActions: AgentAction[];
@@ -91,9 +91,9 @@ export interface SaraswatiResponse {
 
 export interface ChatMessage {
   id: string;
-  sender: 'user' | 'saraswati';
+  sender: 'user' | 'IRSARGO';
   text: string;
   timestamp: string;
-  response?: SaraswatiResponse;
+  response?: IRSARGOResponse;
 }
 

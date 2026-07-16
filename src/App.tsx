@@ -27,14 +27,16 @@ import {
   Gauge,
   AlertTriangle
 } from 'lucide-react';
-import { AgentAction, Domain, SaraswatiResponse, AdvancedFilters, HistoryItem, ChatMessage } from './types';
-import { SaraswatiOrchestrator } from './lib/agents';
+import { AgentAction, Domain, IRSARGOResponse, AdvancedFilters, HistoryItem, ChatMessage } from './types';
+import { IRSARGOOrchestrator } from './lib/agents';
 import AgentActionItem from './components/AgentActionItem';
 import TraceAudit from './components/TraceAudit';
 import KnowledgeBaseView from './components/KnowledgeBaseView';
 import HistoryView from './components/HistoryView';
 import ReactMarkdown from 'react-markdown';
 import OutputEditor from './components/OutputEditor';
+import BackgroundPixelStars from './components/BackgroundPixelStars';
+import { Lock, Eye, EyeOff, Shield, LogOut, CheckCircle2 } from 'lucide-react';
 
 type Tab = 'console' | 'database' | 'ingest' | 'history';
 
@@ -89,6 +91,713 @@ export function sanitizeOutput(text: string, sourceNodes: any[] = []): string {
   return sanitized;
 }
 
+// Predefined Personas description for UI
+const PERSONAS_INFO = {
+  vikram: {
+    name: 'Dr. Vikram Sarabhai',
+    username: 'vikram',
+    role: 'Administrator',
+    clearance: 'Level 5 (Top Secret)',
+    department: 'PROPULSION',
+    projects: 'GSAT-24, LVM3-M4, ADITYA-L1',
+    description: 'Lead Mission Director. Unrestricted clearance across all space operations telemetry indexes.'
+  },
+  satish: {
+    name: 'Satish Dhawan',
+    username: 'satish',
+    role: 'Operator',
+    clearance: 'Level 3 (Confidential)',
+    department: 'AVIONICS',
+    projects: 'GSAT-24',
+    description: 'Avionics Operator. Scoped project access. Excluded from propulsion engineering secrets.'
+  },
+  guest: {
+    name: 'Guest Auditor',
+    username: 'guest',
+    role: 'Guest',
+    clearance: 'Level 1 (Public)',
+    department: 'None',
+    projects: 'None',
+    description: 'External administrative reviewer. Access confined strictly to public GFR files.'
+  }
+};
+
+interface LoginPortalProps {
+  onLoginSuccess: (token: string, user: any) => void;
+}
+
+interface LoginPortalProps {
+  onLoginSuccess: (token: string, user: any) => void;
+}
+
+function LoginPortal({ onLoginSuccess }: LoginPortalProps) {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [isSignUp, setIsSignUp] = useState(false);
+
+  // Login States
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [sessionId, setSessionId] = useState('');
+  const [contactInfo, setContactInfo] = useState('');
+  const [otp, setOtp] = useState('');
+  const [resendTimer, setResendTimer] = useState(60);
+  const [registeredContact, setRegisteredContact] = useState<{ email: string | null; phone: string | null } | null>(null);
+  const [devOtpCode, setDevOtpCode] = useState<string | null>(null);
+  const [isSimulated, setIsSimulated] = useState(true);
+
+  // Sign Up States
+  const [signUpUsername, setSignUpUsername] = useState('');
+  const [signUpPassword, setSignUpPassword] = useState('');
+  const [signUpDisplayName, setSignUpDisplayName] = useState('');
+  const [signUpEmail, setSignUpEmail] = useState('');
+  const [signUpPhone, setSignUpPhone] = useState('');
+  const [signUpRole, setSignUpRole] = useState<'Administrator' | 'Operator' | 'Guest'>('Operator');
+  const [signUpClearance, setSignUpClearance] = useState<number>(3);
+
+  // Status/Loader States
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [attestationSteps, setAttestationSteps] = useState<string[]>([]);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const attSteps = [
+    'Connecting to Secure OIDC Identity Gateway (Keycloak)...',
+    'Requesting TPM 2.0 hardware attestation challenge...',
+    'Attesting container SPIRE workload SVID credentials...',
+    'Decrypting session credential vault...',
+    'Authenticating operator PKI credentials...'
+  ];
+
+  // OTP Resend Timer countdown effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (step === 3 && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [step, resendTimer]);
+
+  const handleCredentialsSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) return;
+    setError(null);
+    setSuccessMessage(null);
+    setLoading(true);
+    setAttestationSteps([]);
+    setCurrentStep(0);
+
+    // Run attestation animation
+    for (let i = 0; i < attSteps.length; i++) {
+      setCurrentStep(i);
+      setAttestationSteps(prev => [...prev, attSteps[i]]);
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || 'Invalid credentials');
+      }
+
+      const data = await response.json();
+      
+      if (data.token) {
+        onLoginSuccess(data.token, data.user);
+        setLoading(false);
+        return;
+      }
+
+      setSessionId(data.sessionId);
+      setRegisteredContact(data.registeredContact || null);
+      
+      // Auto-fill contact method if registered on backend
+      const regContact = data.registeredContact;
+      if (regContact?.email) {
+        setContactInfo(regContact.email);
+      } else if (regContact?.phone) {
+        setContactInfo(regContact.phone);
+      } else {
+        setContactInfo('');
+      }
+
+      setStep(2); // Go to Contact Info
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please verify credentials.');
+      setLoading(false);
+    }
+  };
+
+  const handleSignUpSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!signUpUsername || !signUpPassword || !signUpDisplayName || !signUpEmail || !signUpPhone) return;
+    setError(null);
+    setSuccessMessage(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: signUpUsername,
+          password: signUpPassword,
+          displayName: signUpDisplayName,
+          role: signUpRole,
+          clearanceLevel: signUpClearance,
+          email: signUpEmail,
+          phone: signUpPhone
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || 'Registration failed');
+      }
+
+      setSuccessMessage('Operator SVID registered successfully! Enter credentials to log in.');
+      setIsSignUp(false);
+      setUsername(signUpUsername);
+      setPassword(signUpPassword);
+      setContactInfo(signUpEmail);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Contact network security.');
+      setLoading(false);
+    }
+  };
+
+  const handleContactSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!contactInfo) return;
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/login/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, contactInfo })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || 'Failed to dispatch OTP');
+      }
+
+      const data = await response.json();
+      setDevOtpCode(data.devOtpCode || null);
+      setIsSimulated(data.isSimulated !== false);
+      setStep(3); // Go to OTP Entry
+      setResendTimer(60);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Unable to register contact. Please check format.');
+      setLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!otp) return;
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/login/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, otp })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || 'Invalid OTP code');
+      }
+
+      const data = await response.json();
+      onLoginSuccess(data.token, data.user);
+    } catch (err: any) {
+      setError(err.message || 'OTP validation failed. Access denied.');
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0) return;
+    setError(null);
+    try {
+      const response = await fetch('http://localhost:3001/api/login/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, contactInfo })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to dispatch code');
+      }
+      const data = await response.json();
+      setDevOtpCode(data.devOtpCode || null);
+      setIsSimulated(data.isSimulated !== false);
+      setResendTimer(60);
+    } catch (err: any) {
+      setError(err.message || 'Resend failed.');
+    }
+  };
+
+  const handlePersonaSelect = (userKey: string) => {
+    setUsername(userKey);
+    setPassword(userKey === 'guest' ? 'guest123' : 'isro123');
+    if (userKey === 'vikram') {
+      setContactInfo('v.sarabhai@isro.gov.in');
+    } else if (userKey === 'satish') {
+      setContactInfo('+91 9876543210');
+    } else {
+      setContactInfo('auditor@nic.in');
+    }
+  };
+
+  return (
+    <div className="relative min-h-screen bg-black flex flex-col justify-center items-center overflow-hidden font-sans select-none selection:bg-isro-orange selection:text-white">
+      <BackgroundPixelStars />
+      
+      <div className="relative z-10 w-full max-w-lg p-8 mx-4">
+        <div className="absolute -inset-1 bg-linear-to-r from-isro-orange to-isro-blue rounded-3xl blur-md opacity-25"></div>
+        <div className="relative isro-glass border border-zinc-800 rounded-3xl p-8 bg-zinc-950/90 shadow-2xl flex flex-col items-center">
+          
+          {/* Logo & Title */}
+          <div className="flex flex-col items-center gap-3 mb-6">
+            <div className="p-4 bg-isro-orange rounded-2xl shadow-[0_0_30px_rgba(242,116,32,0.4)] animate-pulse">
+              <Rocket className="w-8 h-8 text-white" />
+            </div>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold tracking-[0.25em] text-white uppercase font-display bg-linear-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
+                IRSARGO
+              </h1>
+              <p className="text-[10px] text-isro-orange font-mono tracking-[0.2em] uppercase mt-1">
+                Zero-Trust Secure Access Portal
+              </p>
+            </div>
+          </div>
+
+          {/* Tab Selector */}
+          {step === 1 && !loading && (
+            <div className="flex w-full mb-6 border-b border-zinc-800 font-mono text-[10px] uppercase tracking-widest">
+              <button
+                type="button"
+                onClick={() => { setIsSignUp(false); setError(null); setSuccessMessage(null); }}
+                className={`flex-1 pb-2 border-b-2 font-bold transition-all cursor-pointer ${!isSignUp ? 'border-isro-orange text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+              >
+                🔑 Login Session
+              </button>
+              <button
+                type="button"
+                onClick={() => { setIsSignUp(true); setError(null); setSuccessMessage(null); }}
+                className={`flex-1 pb-2 border-b-2 font-bold transition-all cursor-pointer ${isSignUp ? 'border-isro-orange text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+              >
+                🛰️ Sign Up
+              </button>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="w-full space-y-4 py-8 font-mono text-xs">
+              <div className="flex items-center gap-3 text-isro-orange font-bold animate-pulse mb-4">
+                <RefreshCcw className="w-4 h-4 animate-spin" />
+                <span>CRYPTOGRAPHIC VERIFICATION IN PROGRESS...</span>
+              </div>
+              <div className="bg-black/50 border border-zinc-900 rounded-xl p-4 space-y-2 h-44 overflow-y-auto">
+                {attestationSteps.map((s, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-emerald-500">
+                    <span className="text-[10px]">✔</span>
+                    <span>{s}</span>
+                  </div>
+                ))}
+                {currentStep < attSteps.length && (
+                  <div className="flex items-center gap-2 text-zinc-500 animate-pulse">
+                    <span className="animate-spin text-[10px]">⟳</span>
+                    <span>{attSteps[currentStep]}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="w-full space-y-5">
+              {error && (
+                <div className="flex items-center gap-3 bg-red-950/30 border border-red-950 rounded-xl p-3 text-xs text-red-400 font-mono">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="flex items-center gap-3 bg-emerald-950/30 border border-emerald-950 rounded-xl p-3 text-xs text-emerald-400 font-mono">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                  <span>{successMessage}</span>
+                </div>
+              )}
+
+              {/* Step 1: Login Form */}
+              {step === 1 && !isSignUp && (
+                <form onSubmit={handleCredentialsSubmit} className="space-y-5">
+                  {/* Persona Selector */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Select Security Persona</label>
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {[
+                        { id: 'vikram', label: 'Vikram', role: 'Admin', color: 'text-emerald-500' },
+                        { id: 'satish', label: 'Satish', role: 'Operator', color: 'text-isro-blue' },
+                        { id: 'guest', label: 'Guest', role: 'Auditor', color: 'text-zinc-400' }
+                      ].map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => handlePersonaSelect(p.id)}
+                          className={`flex flex-col items-center p-3 rounded-xl border transition-all duration-300 ${
+                            username === p.id 
+                              ? 'bg-zinc-900 border-isro-orange shadow-[0_0_10px_rgba(242,116,32,0.1)] text-white' 
+                              : 'bg-zinc-950/40 border-zinc-900 hover:border-zinc-800 text-zinc-500 hover:text-zinc-300'
+                          }`}
+                        >
+                          <Shield className={`w-5 h-5 mb-1.5 ${username === p.id ? 'text-isro-orange' : 'text-zinc-500'}`} />
+                          <span className="text-[11px] font-bold">{p.label}</span>
+                          <span className="text-[9px] opacity-60 font-mono">{p.role}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Selected Persona description banner */}
+                  {username && PERSONAS_INFO[username as keyof typeof PERSONAS_INFO] && (
+                    <div className="bg-zinc-900/40 border border-zinc-900 rounded-xl p-3 text-[10px] text-zinc-400 font-sans italic leading-normal">
+                      {PERSONAS_INFO[username as keyof typeof PERSONAS_INFO].description}
+                    </div>
+                  )}
+
+                  {/* Inputs */}
+                  <div className="space-y-3 pt-1">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Operator ID / Username</label>
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Enter username"
+                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 placeholder:text-zinc-700 outline-none focus:border-isro-orange transition"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Cryptographic PIN / Password</label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 placeholder:text-zinc-700 outline-none focus:border-isro-orange transition"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={!username || !password}
+                    className="w-full bg-isro-orange hover:bg-orange-500 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(242,116,32,0.25)] hover:shadow-[0_0_25px_rgba(242,116,32,0.35)] flex items-center justify-center gap-2 mt-2 font-mono text-xs uppercase tracking-widest cursor-pointer disabled:bg-zinc-900/50 disabled:text-zinc-700 disabled:shadow-none"
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span>Verify Credentials</span>
+                  </button>
+                </form>
+              )}
+
+              {/* Step 1: Sign Up Form */}
+              {step === 1 && isSignUp && (
+                <form onSubmit={handleSignUpSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Operator Username</label>
+                      <input
+                        type="text"
+                        value={signUpUsername}
+                        onChange={(e) => setSignUpUsername(e.target.value)}
+                        placeholder="e.g. arnab"
+                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Cryptographic Password</label>
+                      <input
+                        type="password"
+                        value={signUpPassword}
+                        onChange={(e) => setSignUpPassword(e.target.value)}
+                        placeholder="PIN or phrase"
+                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Full Name (Display Name)</label>
+                    <input
+                      type="text"
+                      value={signUpDisplayName}
+                      onChange={(e) => setSignUpDisplayName(e.target.value)}
+                      placeholder="e.g. Arnab Sengupta"
+                      className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Email Address</label>
+                      <input
+                        type="email"
+                        value={signUpEmail}
+                        onChange={(e) => setSignUpEmail(e.target.value)}
+                        placeholder="e.g. user@isro.gov.in"
+                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Mobile Number</label>
+                      <input
+                        type="text"
+                        value={signUpPhone}
+                        onChange={(e) => setSignUpPhone(e.target.value)}
+                        placeholder="e.g. +91 9999888877"
+                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Security Role</label>
+                      <select
+                        value={signUpRole}
+                        onChange={(e) => {
+                          const r = e.target.value as 'Administrator' | 'Operator' | 'Guest';
+                          setSignUpRole(r);
+                          setSignUpClearance(r === 'Administrator' ? 5 : r === 'Operator' ? 3 : 1);
+                        }}
+                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
+                      >
+                        <option value="Administrator">Administrator</option>
+                        <option value="Operator">Operator</option>
+                        <option value="Guest">Guest Auditor</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Clearance level</label>
+                      <select
+                        value={signUpClearance}
+                        onChange={(e) => setSignUpClearance(Number(e.target.value))}
+                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
+                      >
+                        <option value={5}>Level 5 (Top Secret)</option>
+                        <option value={3}>Level 3 (Confidential)</option>
+                        <option value={1}>Level 1 (Public)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-isro-orange hover:bg-orange-500 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-[0_0_15px_rgba(242,116,32,0.25)] flex items-center justify-center gap-2 mt-2 font-mono text-xs uppercase tracking-wider cursor-pointer"
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span>Create Operator Profile</span>
+                  </button>
+                </form>
+              )}
+
+              {/* Step 2: Contact Info */}
+              {step === 2 && (
+                <form onSubmit={handleContactSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase">Step 2: Multifactor Authentication</label>
+                    <p className="text-zinc-500 text-xs leading-relaxed font-sans">
+                      Select or enter your email address or mobile number. An OTP code will be dispatched to confirm your secure token credentials.
+                    </p>
+                  </div>
+
+                  {registeredContact && (registeredContact.email || registeredContact.phone) && (
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-mono tracking-wider text-zinc-650 uppercase">Registered Methods</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {registeredContact.email && (
+                          <button
+                            type="button"
+                            onClick={() => setContactInfo(registeredContact.email!)}
+                            className={`p-2.5 text-[10px] font-mono rounded-xl border transition-all text-left truncate ${
+                              contactInfo === registeredContact.email
+                                ? 'bg-zinc-900 border-isro-orange text-white'
+                                : 'bg-zinc-950/40 border-zinc-900 text-zinc-500 hover:text-zinc-400'
+                            }`}
+                          >
+                            📧 {registeredContact.email.replace(/(?<=.{2}).(?=.*@)/g, '*')}
+                          </button>
+                        )}
+                        {registeredContact.phone && (
+                          <button
+                            type="button"
+                            onClick={() => setContactInfo(registeredContact.phone!)}
+                            className={`p-2.5 text-[10px] font-mono rounded-xl border transition-all text-left truncate ${
+                              contactInfo === registeredContact.phone
+                                ? 'bg-zinc-900 border-isro-orange text-white'
+                                : 'bg-zinc-950/40 border-zinc-900 text-zinc-500 hover:text-zinc-400'
+                            }`}
+                          >
+                            📱 {registeredContact.phone.replace(/(?<=\+91 \d{2})\d(?=\d{2})/g, '*')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Email or Mobile Number</label>
+                    <input
+                      type="text"
+                      value={contactInfo}
+                      onChange={(e) => setContactInfo(e.target.value)}
+                      placeholder="e.g. operator@isro.gov.in or +91 XXXXXXXXXX"
+                      className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 placeholder:text-zinc-700 outline-none focus:border-isro-orange transition"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold py-3.5 px-4 rounded-xl border border-zinc-800 hover:border-zinc-700 transition font-mono text-xs uppercase tracking-wider cursor-pointer"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!contactInfo}
+                      className="flex-2 bg-isro-orange hover:bg-orange-500 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-[0_0_15px_rgba(242,116,32,0.25)] flex items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider cursor-pointer disabled:bg-zinc-900/50 disabled:text-zinc-700"
+                    >
+                      <Lock className="w-4 h-4" />
+                      <span>Send OTP Code</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Step 3: OTP Verification */}
+              {step === 3 && (
+                <form onSubmit={handleOtpSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase">Step 3: Verify OTP Credentials</label>
+                    <p className="text-zinc-500 text-xs leading-normal font-sans">
+                      Enter the 6-digit verification code sent to <strong className="text-zinc-300">{contactInfo}</strong>.
+                    </p>
+                  </div>
+
+                  {/* Developer guidance helper banner */}
+                  <div className={`${isSimulated ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-400' : 'bg-blue-950/25 border-blue-900/40 text-blue-300'} border rounded-xl p-3.5 text-[10px] font-mono flex flex-col gap-2.5 leading-normal`}>
+                    <div className="flex items-start gap-2.5">
+                      {isSimulated ? (
+                        <Terminal className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
+                      ) : (
+                        <Terminal className="w-4 h-4 shrink-0 text-blue-500 mt-0.5" />
+                      )}
+                      <div>
+                        {isSimulated ? (
+                          <>
+                            <span className="font-bold text-emerald-500 uppercase tracking-widest block mb-0.5">📟 SECURE OTP CODE LOGGED (SIMULATION)</span>
+                            Since IRSARGO operates in a self-contained air-gapped system, check the backend server command terminal logs, open the file <strong className="text-zinc-200">otp_code.txt</strong> in your workspace, or view the on-screen simulated code below.
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-bold text-blue-400 uppercase tracking-widest block mb-0.5">📧 SECURE OTP CODE SENT (SMTP)</span>
+                            An actual OTP code has been dispatched to your email address <strong className="text-zinc-200">{contactInfo}</strong> via the configured SMTP server. Please check your inbox and enter the 6-digit code below.
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {devOtpCode && isSimulated && (
+                      <div className="mt-1 p-2 bg-isro-orange/10 border border-isro-orange/30 rounded-lg text-isro-orange font-bold text-center text-xs tracking-wider animate-pulse uppercase">
+                        🔑 Simulated Delivery Code: {devOtpCode}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">6-Digit verification code</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="e.g. 123456"
+                      className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-center tracking-[0.7em] font-mono font-bold text-lg text-isro-orange outline-none focus:border-isro-orange transition"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex justify-between items-center text-[10px] font-mono">
+                    <span className="text-zinc-600">Didn't receive code?</span>
+                    <button
+                      type="button"
+                      disabled={resendTimer > 0}
+                      onClick={handleResendOtp}
+                      className={`font-bold transition ${resendTimer > 0 ? 'text-zinc-650 cursor-not-allowed' : 'text-isro-orange hover:text-orange-400 cursor-pointer'}`}
+                    >
+                      {resendTimer > 0 ? `Resend Code (${resendTimer}s)` : 'Resend Code Now'}
+                    </button>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold py-3.5 px-4 rounded-xl border border-zinc-800 hover:border-zinc-700 transition font-mono text-xs uppercase tracking-wider cursor-pointer"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={otp.length !== 6}
+                      className="flex-2 bg-isro-orange hover:bg-orange-500 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-[0_0_15px_rgba(242,116,32,0.25)] flex items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider cursor-pointer disabled:bg-zinc-900/50 disabled:text-zinc-700"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Confirm & Login</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          <div className="mt-8 text-[9px] font-mono text-zinc-700 text-center leading-normal">
+            <p>WARNING: THIS SYSTEM IS MONITORED. UNAUTHORIZED ACCESS IS STRICTLY PROHIBITED.</p>
+            <p className="mt-1">SECURED BY NIC & GOVT OF INDIA OFF-GRID CRYPTO PLATFORM</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('console');
   const [query, setQuery] = useState('');
@@ -96,12 +805,12 @@ export default function App() {
   const [isQuerying, setIsQuerying] = useState(false);
   const [actions, setActions] = useState<AgentAction[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const saved = localStorage.getItem('saraswati_chat_messages');
+    const saved = localStorage.getItem('IRSARGO_chat_messages');
     return saved ? JSON.parse(saved) : [];
   });
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>(() => {
-    const saved = localStorage.getItem('saraswati_history');
+    const saved = localStorage.getItem('IRSARGO_history');
     return saved ? JSON.parse(saved) : [];
   });
   
@@ -120,36 +829,27 @@ export default function App() {
   const [ingestError, setIngestError] = useState<string | null>(null);
 
   // User Access State
-  const [userRole, setUserRole] = useState<'Administrator' | 'Operator' | 'Guest'>(() => {
-    const saved = localStorage.getItem('saraswati_user_role');
-    return (saved as 'Administrator' | 'Operator' | 'Guest') || 'Operator';
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('irsargo_token'));
+  const [user, setUser] = useState<any>(() => {
+    const saved = localStorage.getItem('irsargo_user');
+    return saved ? JSON.parse(saved) : null;
   });
-
-  useEffect(() => {
-    localStorage.setItem('saraswati_user_role', userRole);
-  }, [userRole]);
-
-  const getGroupsForRole = (role: 'Administrator' | 'Operator' | 'Guest'): string[] => {
-    switch (role) {
-      case 'Administrator':
-        return ['admin', 'everyone'];
-      case 'Guest':
-        return ['guest', 'everyone'];
-      case 'Operator':
-      default:
-        return ['everyone'];
-    }
-  };
+  const [simulateOutage, setSimulateOutage] = useState<boolean>(() => localStorage.getItem('irsargo_simulate_outage') === 'true');
+  const [lastSecurityContext, setLastSecurityContext] = useState<any>(() => {
+    const saved = localStorage.getItem('irsargo_last_security_context');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [showTokenDecoder, setShowTokenDecoder] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const orchestrator = useRef(new SaraswatiOrchestrator());
+  const orchestrator = useRef(new IRSARGOOrchestrator());
 
   useEffect(() => {
-    localStorage.setItem('saraswati_history', JSON.stringify(history));
+    localStorage.setItem('IRSARGO_history', JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
-    localStorage.setItem('saraswati_chat_messages', JSON.stringify(messages));
+    localStorage.setItem('IRSARGO_chat_messages', JSON.stringify(messages));
   }, [messages]);
 
   const activeMessage = messages.find(m => m.id === activeMessageId);
@@ -219,20 +919,20 @@ export default function App() {
             return [...prev, newAction];
           });
         },
-        getGroupsForRole(userRole)
+        user ? (user.role === 'Administrator' ? ['admin', 'everyone'] : user.role === 'Guest' ? ['guest', 'everyone'] : ['everyone']) : ['everyone']
       );
 
-      const saraswatiMessageId = Math.random().toString(36).substring(7).toUpperCase();
-      const saraswatiMsg: ChatMessage = {
-        id: saraswatiMessageId,
-        sender: 'saraswati',
+      const IRSARGOMessageId = Math.random().toString(36).substring(7).toUpperCase();
+      const IRSARGOMsg: ChatMessage = {
+        id: IRSARGOMessageId,
+        sender: 'IRSARGO',
         text: result.answer,
         timestamp: new Date().toISOString(),
         response: result
       };
 
-      setMessages(prev => [...prev, saraswatiMsg]);
-      setActiveMessageId(saraswatiMessageId);
+      setMessages(prev => [...prev, IRSARGOMsg]);
+      setActiveMessageId(IRSARGOMessageId);
       
       // Save to history (initially pending verification if applicable)
       const historyItemId = Math.random().toString(36).substring(7).toUpperCase();
@@ -265,8 +965,8 @@ export default function App() {
         ).then((verifyResult) => {
           // Update messages state with completed metrics and traces
           setMessages(prev => prev.map(msg => {
-            if (msg.id === saraswatiMessageId) {
-              const updatedResponse: SaraswatiResponse = {
+            if (msg.id === IRSARGOMessageId) {
+              const updatedResponse: IRSARGOResponse = {
                 ...msg.response!,
                 traceLog: verifyResult.traceLog,
                 metrics: verifyResult.metrics,
@@ -290,7 +990,7 @@ export default function App() {
           // Update history state
           setHistory(prev => prev.map(h => {
             if (h.id === historyItemId) {
-              const updatedResponse: SaraswatiResponse = {
+              const updatedResponse: IRSARGOResponse = {
                 ...h.response,
                 traceLog: verifyResult.traceLog,
                 metrics: verifyResult.metrics,
@@ -318,13 +1018,17 @@ export default function App() {
       console.error(error);
       const errorMsg: ChatMessage = {
         id: Math.random().toString(36).substring(7).toUpperCase(),
-        sender: 'saraswati',
+        sender: 'IRSARGO',
         text: `Error: Execution failed. Verification engine returned invalid output.`,
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsQuerying(false);
+      const updatedContext = localStorage.getItem('irsargo_last_security_context');
+      if (updatedContext) {
+        setLastSecurityContext(JSON.parse(updatedContext));
+      }
     }
   };
 
@@ -335,15 +1039,15 @@ export default function App() {
       text: item.query,
       timestamp: item.timestamp
     };
-    const saraswatiMsg: ChatMessage = {
+    const IRSARGOMsg: ChatMessage = {
       id: `${item.id}-s`,
-      sender: 'saraswati',
+      sender: 'IRSARGO',
       text: item.response.answer,
       timestamp: item.timestamp,
       response: item.response
     };
-    setMessages([userMsg, saraswatiMsg]);
-    setActiveMessageId(saraswatiMsg.id);
+    setMessages([userMsg, IRSARGOMsg]);
+    setActiveMessageId(IRSARGOMsg.id);
     setQuery('');
     setDomain(item.domain);
     setActions(item.response.agentActions);
@@ -360,7 +1064,7 @@ export default function App() {
         timestamp: new Date().toISOString(),
         domain,
         query: activeMsg.text,
-        system: "SARASWATI_FRAMEWORK_V2",
+        system: "IRSARGO_FRAMEWORK_V2",
         node: "NIC_SECURED_NODE_882"
       },
       ...activeResp,
@@ -372,7 +1076,7 @@ export default function App() {
     const link = document.createElement('a');
     
     const safeQuery = activeMsg.text.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
-    const defaultName = `SARASWATI_${domain.toUpperCase()}_${safeQuery}`;
+    const defaultName = `IRSARGO_${domain.toUpperCase()}_${safeQuery}`;
     const customName = window.prompt("Enter filename for export:", defaultName);
     
     if (customName === null) return; // Cancelled
@@ -447,10 +1151,24 @@ export default function App() {
 
   const hasPendingVerification = messages.some(msg => msg.response?.isPendingVerification);
 
+  if (!token || !user) {
+    return (
+      <LoginPortal
+        onLoginSuccess={(newToken, newUser) => {
+          localStorage.setItem('irsargo_token', newToken);
+          localStorage.setItem('irsargo_user', JSON.stringify(newUser));
+          setToken(newToken);
+          setUser(newUser);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen flex flex-col font-sans selection:bg-isro-orange selection:text-white">
+    <div className="relative min-h-screen flex flex-col font-sans selection:bg-isro-orange selection:text-white bg-black overflow-hidden">
+      <BackgroundPixelStars />
       {/* Header */}
-      <header className="border-b border-zinc-800 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
+      <header className="relative z-10 border-b border-zinc-800 bg-black/60 backdrop-blur-xl sticky top-0">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="p-2 bg-isro-orange rounded-lg shadow-[0_0_20px_rgba(242,116,32,0.3)]">
@@ -458,7 +1176,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-xl font-display font-bold tracking-[0.2em] uppercase bg-linear-to-r from-white to-zinc-500 bg-clip-text text-transparent">
-                SARASWATI
+                IRSARGO
               </h1>
               <p className="text-[10px] text-isro-orange font-mono tracking-widest uppercase">
                 Zero-Trust Multi-Agent RAG Engine
@@ -466,32 +1184,57 @@ export default function App() {
             </div>
           </div>
           
-          <nav className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-xl border border-zinc-800 overflow-x-auto no-scrollbar max-w-[calc(100vw-12rem)] md:max-w-none">
-            {[
-              { id: 'console', label: 'Console', icon: Terminal },
-              { id: 'database', label: 'Nodes', icon: Database },
-              { id: 'ingest', label: 'Ingest', icon: Upload },
-              { id: 'history', label: 'History', icon: Clock }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as Tab)}
-                className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all shrink-0 ${
-                  activeTab === tab.id 
-                    ? 'bg-zinc-800 text-isro-orange border border-zinc-700 shadow-xl' 
-                    : 'text-zinc-500 hover:text-zinc-300'
-                }`}
-              >
-                <tab.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.id === 'database' ? 'DB' : tab.label}</span>
-              </button>
-            ))}
-          </nav>
+          <div className="flex items-center gap-4">
+            <nav className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-xl border border-zinc-800 overflow-x-auto no-scrollbar max-w-[calc(100vw-12rem)] md:max-w-none">
+              {[
+                { id: 'console', label: 'Console', icon: Terminal },
+                { id: 'database', label: 'Nodes', icon: Database },
+                { id: 'ingest', label: 'Ingest', icon: Upload },
+                { id: 'history', label: 'History', icon: Clock }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as Tab)}
+                  className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all shrink-0 ${
+                    activeTab === tab.id 
+                      ? 'bg-zinc-800 text-isro-orange border border-zinc-700 shadow-xl' 
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <tab.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.id === 'database' ? 'DB' : tab.label}</span>
+                </button>
+              ))}
+            </nav>
+
+            {user && (
+              <div className="hidden sm:flex items-center gap-3 border-l border-zinc-800 pl-4 h-10">
+                <div className="text-right">
+                  <p className="text-[11px] font-bold text-zinc-300 tracking-wide">{user.displayName}</p>
+                  <p className="text-[8px] font-mono text-isro-orange uppercase tracking-wider">{user.role}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('irsargo_token');
+                    localStorage.removeItem('irsargo_user');
+                    localStorage.removeItem('irsargo_last_security_context');
+                    setToken(null);
+                    setUser(null);
+                    setLastSecurityContext(null);
+                  }}
+                  className="p-1.5 bg-zinc-900 border border-zinc-800 hover:border-red-950 hover:bg-red-950/20 hover:text-red-400 rounded-lg text-zinc-500 transition cursor-pointer"
+                  title="Logout operator session"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
+      <main className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-6 py-10">
         <AnimatePresence mode="wait">
           {activeTab === 'console' && (
             <motion.div
@@ -535,50 +1278,110 @@ export default function App() {
                 </section>
 
                 {/* Identity & Access Control */}
-                <section className="isro-glass p-6 rounded-2xl">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2 mb-6">
+                <section className="isro-glass p-6 rounded-2xl space-y-4">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2 mb-4">
                     <ShieldCheck className="w-4 h-4 text-isro-orange" />
-                    Identity & Access Control (DACL)
+                    Security Session & FGA Console
                   </h2>
-                  <div className="space-y-4">
-                    <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-zinc-800">
-                      {(['Administrator', 'Operator', 'Guest'] as const).map((role) => (
-                        <button
-                          key={role}
-                          type="button"
-                          onClick={() => setUserRole(role)}
-                          className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                            userRole === role
-                              ? 'bg-zinc-800 text-isro-orange border border-zinc-700 shadow-md'
-                              : 'text-zinc-500 hover:text-zinc-300'
-                          }`}
-                        >
-                          {role}
-                        </button>
-                      ))}
-                    </div>
 
-                    <div className="bg-black/40 border border-zinc-900 rounded-xl p-3.5 space-y-2.5 font-mono text-[10px]">
-                      <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
-                        <span className="text-zinc-500">RESOLVED SIDs:</span>
-                        <span className="text-zinc-300 font-bold">{getGroupsForRole(userRole).join(', ')}</span>
+                  {/* Outage Warning */}
+                  {simulateOutage && (
+                    <div className="bg-red-950/20 border border-red-900/50 rounded-xl p-3 animate-pulse text-[10px] font-mono text-red-400 flex items-start gap-2.5 leading-normal">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+                      <div>
+                        <span className="font-bold text-red-500 uppercase tracking-widest block mb-0.5">⚠️ IDP DISCONNECTED</span>
+                        RAG server failed OIDC token-exchange. Fallback Guest clearance active. Auditing alert logged.
                       </div>
-                      <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
-                        <span className="text-zinc-500">CLEARANCE:</span>
-                        <span className={`font-bold ${
-                          userRole === 'Administrator' ? 'text-emerald-500' :
-                          userRole === 'Operator' ? 'text-isro-blue' : 'text-zinc-400'
-                        }`}>
-                          {userRole === 'Administrator' ? 'LEVEL-1 CONFIDENTIAL' :
-                           userRole === 'Operator' ? 'LEVEL-2 PUBLIC' : 'LEVEL-3 UNTRUSTED'}
-                        </span>
-                      </div>
-                      <p className="text-[9px] text-zinc-500 leading-normal font-sans italic pt-1">
-                        {userRole === 'Administrator' && 'Granted access to all standard and confidential aerospace engineering & procurement files.'}
-                        {userRole === 'Operator' && 'Standard operator profile. Access limited to public/shared mission datasets.'}
-                        {userRole === 'Guest' && 'Restricted guest profile. Subject to active exfiltration filtering and strict document denial rules.'}
-                      </p>
                     </div>
+                  )}
+
+                  {/* Active Profile Info */}
+                  <div className="bg-black/40 border border-zinc-900 rounded-xl p-4 space-y-3 font-mono text-[10px]">
+                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
+                      <span className="text-zinc-500">SESSION IDENTIFIER:</span>
+                      <span className="text-zinc-300 font-bold">{user.sid}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
+                      <span className="text-zinc-500">ACTIVE WORKLOAD ID:</span>
+                      <span className="text-zinc-400 break-all select-all">spiffe://IRSARGO.isro/sa/{user.sub}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
+                      <span className="text-zinc-500">CLEARANCE:</span>
+                      <span className={`font-bold ${
+                        simulateOutage ? 'text-zinc-400' :
+                        user.role === 'Administrator' ? 'text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.15)]' :
+                        user.role === 'Operator' ? 'text-isro-blue' : 'text-zinc-400'
+                      }`}>
+                        {simulateOutage ? 'LEVEL 1 (RESTRICTED)' :
+                         user.role === 'Administrator' ? 'LEVEL 5 (TOP SECRET)' :
+                         user.role === 'Operator' ? 'LEVEL 3 (CONFIDENTIAL)' : 'LEVEL 1 (PUBLIC)'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-500">TOKEN EXCHANGE (RFC 8693):</span>
+                      <span className={`font-bold ${simulateOutage ? 'text-red-500' : 'text-emerald-500'}`}>
+                        {simulateOutage ? 'FAILED / OUTAGE' : 'COMPLETED'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Simulate IDP Outage Control */}
+                  <div className="flex items-center justify-between p-3.5 rounded-xl border border-zinc-900 bg-black/40">
+                    <div>
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Simulate IDP Outage</p>
+                      <p className="text-[8px] text-zinc-600 mt-0.5 leading-normal">Forces token exchange failure & tests graceful degradation fallback.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newVal = !simulateOutage;
+                        localStorage.setItem('irsargo_simulate_outage', String(newVal));
+                        setSimulateOutage(newVal);
+                      }}
+                      className={`w-10 h-5 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${simulateOutage ? 'bg-red-600' : 'bg-zinc-800'}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${simulateOutage ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  {/* Collapsible JWT claims decoder */}
+                  <div className="border border-zinc-900 rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setShowTokenDecoder(!showTokenDecoder)}
+                      className="w-full flex items-center justify-between bg-zinc-900/30 px-3.5 py-2.5 text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-900"
+                    >
+                      <span>🔍 Decrypted JWT Claims</span>
+                      <span>{showTokenDecoder ? '▲' : '▼'}</span>
+                    </button>
+                    {showTokenDecoder && (
+                      <pre className="bg-black/80 p-3 text-[9px] font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap leading-normal select-all">
+                        {JSON.stringify({
+                          sub: user.sub,
+                          iss: 'keycloak.internal/realms/isro',
+                          aud: 'IRSARGO-rag-backend',
+                          displayName: user.displayName,
+                          role: user.role,
+                          clearanceLevel: simulateOutage ? 1 : user.clearanceLevel,
+                          departments: simulateOutage ? [] : user.departments,
+                          projects: simulateOutage ? [] : user.projects,
+                          sid: simulateOutage ? 'S-1-5-21-fallback-000' : user.sid,
+                          attestation: { method: 'PKI_SMARTCARD', trust_domain: 'isro.internal' }
+                        }, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+
+                  {/* FGA ChromaDB rewrite view */}
+                  <div className="border border-zinc-900 rounded-xl overflow-hidden">
+                    <div className="bg-zinc-900/30 px-3.5 py-2.5 text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-900">
+                      <span>🔗 ReBAC ChromaDB Filter Rewrite</span>
+                    </div>
+                    <pre className="bg-black/80 p-3 text-[9px] font-mono text-isro-orange overflow-x-auto whitespace-pre-wrap leading-normal select-all">
+                      {lastSecurityContext?.fgaQueryRewritten
+                        ? JSON.stringify(JSON.parse(lastSecurityContext.fgaQueryRewritten), null, 2)
+                        : '// Execute search to resolve OpenFGA permissions and generate ChromaDB query rewrite.'}
+                    </pre>
                   </div>
                 </section>
 
@@ -828,7 +1631,7 @@ export default function App() {
                                       {isUser ? (
                                         <span>MISSION_OPERATOR</span>
                                       ) : (
-                                        <span className="text-isro-orange font-bold">SARASWATI_AGENT</span>
+                                        <span className="text-isro-orange font-bold">IRSARGO_AGENT</span>
                                       )}
                                     </div>
                                     <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
@@ -845,7 +1648,7 @@ export default function App() {
                                     )}
                                   </div>
 
-                                  {/* Sub-status bar for Saraswati message */}
+                                  {/* Sub-status bar for IRSARGO message */}
                                   {!isUser && msg.response && (
                                     <div className="mt-3 pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[8px] font-mono text-zinc-500 gap-4">
                                       <div className="flex items-center gap-2">
@@ -877,7 +1680,7 @@ export default function App() {
                             <div className="flex items-start">
                               <div className="bg-zinc-950/60 border border-zinc-800 rounded-2xl rounded-tl-none p-4 max-w-[85%] flex items-center gap-3">
                                 <RefreshCcw className="w-4 h-4 text-isro-orange animate-spin" />
-                                <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest animate-pulse font-bold">SARASWATI IS ORCHESTRATING SWARM...</span>
+                                <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest animate-pulse font-bold">IRSARGO IS ORCHESTRATING SWARM...</span>
                               </div>
                             </div>
                           )}
@@ -981,7 +1784,7 @@ export default function App() {
                   ) : (
                     <div className="isro-glass p-12 rounded-2xl flex flex-col items-center justify-center text-center opacity-30">
                       <Info className="w-16 h-16 mb-6 text-zinc-500" />
-                      <h2 className="text-xl font-display uppercase tracking-[0.2em] mb-2">SARASWATI Operational Portal</h2>
+                      <h2 className="text-xl font-display uppercase tracking-[0.2em] mb-2">IRSARGO Operational Portal</h2>
                       <p className="text-sm max-w-md">Input a mission-critical query above to initiate the retrieval-augmented generation pipeline. All outputs are cryptographically verified.</p>
                     </div>
                   )}
@@ -1155,7 +1958,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 h-full space-y-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
-              <span className="text-[9px] md:text-[10px] font-mono text-zinc-600 uppercase tracking-widest leading-relaxed">© 2026 ISRO SARASWATI UNIT II</span>
+              <span className="text-[9px] md:text-[10px] font-mono text-zinc-600 uppercase tracking-widest leading-relaxed">© 2026 ISRO IRSARGO UNIT II</span>
               <span className="text-[9px] md:text-[10px] font-mono text-zinc-600 uppercase tracking-widest leading-relaxed">NIC SECURED NODE #882</span>
             </div>
             <div className="flex items-center gap-4 opacity-40 grayscale h-5 md:h-6">

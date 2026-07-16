@@ -3,7 +3,7 @@ version: '3.9'
 services:
   chromadb:
     image: chromadb/chroma:latest
-    container_name: saraswati-chromadb
+    container_name: IRSARGO-chromadb
     ports:
       - "8000:8000"
     volumes:
@@ -17,8 +17,8 @@ services:
     build:
       context: .
       dockerfile: ingest.Dockerfile
-    image: saraswati-ingest:latest
-    container_name: saraswati-ingest
+    image: IRSARGO-ingest:latest
+    container_name: IRSARGO-ingest
     working_dir: /app
     # Only mount datasets into the running container; code and node_modules are baked in the image
     volumes:

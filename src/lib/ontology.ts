@@ -95,12 +95,15 @@ function scoreNode(node: GroundedNode, queryTerms: string[]): number {
 
 export async function searchOntology(query: string, domain: Domain, filters?: AdvancedFilters, userGroups?: string[]): Promise<GroundedNode[]> {
   try {
+    const token = localStorage.getItem('irsargo_token');
+    const simulateOutage = localStorage.getItem('irsargo_simulate_outage') === 'true';
     const response = await fetch('http://localhost:3001/api/search', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ query, domain, filters, userGroups }),
+      body: JSON.stringify({ query, domain, filters, userGroups, simulateOutage }),
     });
 
     if (!response.ok) {
@@ -108,6 +111,9 @@ export async function searchOntology(query: string, domain: Domain, filters?: Ad
     }
 
     const data = await response.json();
+    if (data.securityContext) {
+      localStorage.setItem('irsargo_last_security_context', JSON.stringify(data.securityContext));
+    }
     return data.nodes || [];
   } catch (error) {
     console.error('Vector DB Search failed, falling back to local simulation:', error);

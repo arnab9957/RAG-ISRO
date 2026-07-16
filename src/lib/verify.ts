@@ -151,7 +151,7 @@ export function mockGenerate(contents: string): string {
   }
 
   // 2. Critic/Audit Prompt
-  if (lower.includes("saraswati critic") || lower.includes("hallucination")) {
+  if (lower.includes("IRSARGO critic") || lower.includes("hallucination")) {
     return "CRITIQUE: Checked draft answer against retrieved context. The response is strictly grounded in the source documentation. No security violations or hallucinations detected.";
   }
 
