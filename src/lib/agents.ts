@@ -103,22 +103,22 @@ Paraphrased Query:`;
     // 1. Paging-Based Retrieval (BM25 + TF-IDF)
     addAction(AgentRole.EXECUTOR, `Executing vector retrieval from ChromaDB (${domain})...`);
     const nodes = await searchOntology(paraphrasedQuery, domain, filters, userGroups);
-    
+
     // Check for expanded context (neighbors)
     const originalNodes = nodes.filter(n => (n.score || 0) >= 1.0);
     const expandedNodes = nodes.filter(n => (n.score || 0) < 1.0);
-    
+
     // Wrap retrieved context in structural delimiters
-    const context = nodes.length > 0 
-       ? `<grounding_context>\n` + nodes.map(n => `  <context_chunk id="${n.id}" filename="${n.metadata.filename}" page="${n.metadata.page || 1}">\n    ${n.content}\n  </context_chunk>`).join('\n') + `\n</grounding_context>`
-       : "No matching pages found.";
-       
+    const context = nodes.length > 0
+      ? `<grounding_context>\n` + nodes.map(n => `  <context_chunk id="${n.id}" filename="${n.metadata.filename}" page="${n.metadata.page || 1}">\n    ${n.content}\n  </context_chunk>`).join('\n') + `\n</grounding_context>`
+      : "No matching pages found.";
+
     addAction(AgentRole.EXECUTOR, `Retrieved ${originalNodes.length} primary pages. Expanded ${expandedNodes.length} neighboring pages for context continuity.`, 'completed');
 
     // 2. Context Aggregation & Reranking
     const rerankAction = addAction(AgentRole.EXECUTOR, `Merging paging context & applying TF-IDF relevance ranking...`);
     // Simulated re-ranking logic: filtering nodes
-    const filteredNodes = nodes.filter(() => Math.random() > 0.1); 
+    const filteredNodes = nodes.filter(() => Math.random() > 0.1);
     rerankAction.status = 'completed';
     rerankAction.output = `SELECTED: ${filteredNodes.length}/${nodes.length} nodes for generation layer.`;
     onUpdate(rerankAction);
@@ -130,7 +130,7 @@ Paraphrased Query:`;
 
     // 3. Generation Layer (Peirce LNN / SDO Standards with structural delimitation guardrails)
     const executorAction = addAction(AgentRole.EXECUTOR, `Grounded generation via PEIRCE LNN logic...`);
-    
+
     const draftContent = await this.generateText(`
 System instructions:
 You are the IRSARGO Executor. Provide a precise, technical answer to the User Query.
@@ -149,7 +149,7 @@ ${context}
 
 User Query: ${query}
 `) || "No response generated.";
-    
+
     executorAction.status = 'completed';
     executorAction.output = draftContent;
     onUpdate(executorAction);
@@ -170,7 +170,7 @@ ${draftContent}
 Retrieved Context:
 ${context}
 `) || "No critique generated.";
-    
+
     criticAction.status = 'completed';
     criticAction.output = critique;
     onUpdate(criticAction);
@@ -220,7 +220,7 @@ ${context}
       }
 
       const data = await response.json();
-      
+
       const updatedAction: AgentAction = {
         id: validatorActionId,
         role: AgentRole.VALIDATOR,

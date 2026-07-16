@@ -39,7 +39,7 @@ function chunkText(text: string, chunkSize: number = 300): string[] {
 
 async function extractTextFromFile(filePath: string): Promise<string> {
   const ext = path.extname(filePath).toLowerCase();
-  
+
   try {
     if (ext === '.pdf') {
       const dataBuffer = fs.readFileSync(filePath);
@@ -51,19 +51,19 @@ async function extractTextFromFile(filePath: string): Promise<string> {
   } catch (e) {
     console.error(`Failed to read or parse file ${filePath}`, e);
   }
-  
+
   return '';
 }
 
 async function processFile(filePath: string, collection: any) {
   console.log(`Processing file: ${filePath}`);
   const content = await extractTextFromFile(filePath);
-  
+
   if (!content.trim()) {
     console.log(`Skipping empty or unreadable file: ${filePath}`);
     return;
   }
-  
+
   const chunks = chunkText(content, 300);
   console.log(`Split into ${chunks.length} chunks`);
 
@@ -144,7 +144,7 @@ async function walkDir(dir: string): Promise<string[]> {
 
 async function run() {
   const datasetDir = path.join(process.cwd(), 'datasets');
-  
+
   if (!fs.existsSync(datasetDir)) {
     console.log(`Dataset directory not found at ${datasetDir}`);
     return;

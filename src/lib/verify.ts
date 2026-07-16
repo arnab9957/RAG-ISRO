@@ -24,10 +24,10 @@ export function extractKeyTerms(text: string): string[] {
     .toLowerCase()
     .replace(/[^\w\s-]/g, '')
     .split(/\s+/);
-  
+
   const stopWords = new Set([
-    'the', 'and', 'a', 'of', 'to', 'in', 'is', 'that', 'it', 'for', 'on', 'with', 
-    'as', 'this', 'by', 'an', 'be', 'are', 'from', 'at', 'or', 'your', 'will', 
+    'the', 'and', 'a', 'of', 'to', 'in', 'is', 'that', 'it', 'for', 'on', 'with',
+    'as', 'this', 'by', 'an', 'be', 'are', 'from', 'at', 'or', 'your', 'will',
     'have', 'has', 'had', 'been', 'were', 'was', 'should', 'would', 'could',
     'which', 'from', 'this', 'that', 'these', 'those', 'their', 'there', 'about',
     'more', 'some', 'any', 'other', 'into', 'only', 'than', 'then', 'also', 'consists'
@@ -36,7 +36,7 @@ export function extractKeyTerms(text: string): string[] {
   // Keep unique words longer than 4 characters that are not stop words
   const terms = Array.from(new Set(words))
     .filter(word => word.length >= 5 && !stopWords.has(word));
-  
+
   return terms.slice(0, 8); // Return up to 8 key terms
 }
 
@@ -48,14 +48,14 @@ export function extractKeyTerms(text: string): string[] {
 export function formalVerification(answer: string, constraints: string[]): boolean {
   if (constraints.length === 0) return true;
   const lowerAnswer = answer.toLowerCase();
-  
+
   let matches = 0;
   for (const constraint of constraints) {
     if (lowerAnswer.includes(constraint.toLowerCase())) {
       matches++;
     }
   }
-  
+
   // Pass if we match at least 40% of the key constraints (or at least 1 if constraints count is small)
   const requiredMatches = Math.max(1, Math.ceil(constraints.length * 0.4));
   return matches >= requiredMatches;
@@ -88,7 +88,7 @@ export function calculateConfidence(traces: SecurityTrace[], answer: string, que
   const totalTraces = traces.length || 1;
   const verifiedTracesCount = traces.filter(t => t.zkpStatus === 'verified' && t.smtApproval).length;
   const avgRelevance = traces.reduce((acc, t) => acc + t.relevanceScore, 0) / totalTraces;
-  
+
   // 1. Context Relevance: Average similarity score of retrieved nodes
   const contextRelevance = avgRelevance;
 
@@ -140,7 +140,7 @@ export function createTrace(nodeId: string, content: string, constraints: string
  */
 export function mockGenerate(contents: string): string {
   const lower = contents.toLowerCase();
-  
+
   // 1. Paraphrase Prompt
   if (lower.includes("paraphrased query:") || lower.includes("paraphrase")) {
     const userQueryMatch = contents.match(/User Query:\s*(.*)/i);
@@ -163,7 +163,7 @@ export function mockGenerate(contents: string): string {
     while ((match = rx.exec(contents)) !== null) {
       chunks.push(match[1].trim());
     }
-    
+
     if (chunks.length > 0 && !contents.includes("No matching pages found.")) {
       let answer = "According to the retrieved technical documentation:\n\n";
       chunks.forEach((chunk) => {

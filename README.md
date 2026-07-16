@@ -176,16 +176,19 @@ Open `http://localhost:3000` in your web browser to access the dashboard.
 *   **Guest**: Resolved SIDs: `guest, everyone`. Subject to active exfiltration checks, strict document denials, and link redaction filters.
 
 ### Dynamic Access Control Logic
-During ingestion, if a filename or content contains labels like `secret` or `confidential`, it is flagged with access metadata:
+During ingestion (via both the frontend **Ingest** interface and the command-line `npm run ingest` script), if a filename or content contains labels like `secret` or `confidential`, it is flagged with access metadata:
 ```json
 {
   "allowed_groups": "admin",
   "denied_groups": "guest"
 }
 ```
-Queries made by users assigned to different roles will automatically inject group-filtering clauses in ChromaDB:
+Non-confidential documents are marked with `everyone` / `none` security groups. Queries made by users assigned to different roles will automatically inject group-filtering clauses in ChromaDB:
 *   Users without `admin` roles cannot fetch chunks marked `allowed_groups: admin`.
 *   Users matching `guest` roles are filtered out from retrieving chunks marked `denied_groups: guest`.
+
+### 🔑 Developer Mode & Authentication Bypass
+For development and rapid testing convenience, the multi-factor authentication (MFA OTP) verification steps are bypassed. Entering valid password credentials on the login screen directly issues a JWT token and forwards you to the main dashboard.
 
 ---
 
