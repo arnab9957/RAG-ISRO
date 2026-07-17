@@ -41,6 +41,10 @@ export default function KnowledgeBaseView({ onQueryChunk }: KnowledgeBaseViewPro
         }),
       });
 
+      if (response.status === 401) {
+        window.dispatchEvent(new CustomEvent('irsargo-unauthorized'));
+      }
+
       if (!response.ok) {
         throw new Error(`Search failed with status ${response.status}`);
       }

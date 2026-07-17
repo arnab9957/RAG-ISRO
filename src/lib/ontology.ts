@@ -106,6 +106,10 @@ export async function searchOntology(query: string, domain: Domain, filters?: Ad
       body: JSON.stringify({ query, domain, filters, userGroups, simulateOutage }),
     });
 
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent('irsargo-unauthorized'));
+    }
+
     if (!response.ok) {
       throw new Error(`API Error: ${response.statusText}`);
     }

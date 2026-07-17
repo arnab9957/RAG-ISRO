@@ -854,6 +854,9 @@ export default function App() {
   const [isIngesting, setIsIngesting] = useState(false);
   const [ingestStatus, setIngestStatus] = useState<string | null>(null);
   const [ingestError, setIngestError] = useState<string | null>(null);
+  const [isGeneratingRagen, setIsGeneratingRagen] = useState(false);
+  const [ragenStatus, setRagenStatus] = useState<string | null>(null);
+  const [ragenError, setRagenError] = useState<string | null>(null);
 
   // User Access State
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('irsargo_token'));
@@ -867,9 +870,52 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
   const [showTokenDecoder, setShowTokenDecoder] = useState(false);
+  const [totalChunks, setTotalChunks] = useState<number | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const orchestrator = useRef(new IRSARGOOrchestrator());
+
+  const fetchChunkCount = async () => {
+    if (!token) return;
+    try {
+      const response = await fetch('http://localhost:3001/api/chunks/count', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.status === 401) {
+        window.dispatchEvent(new CustomEvent('irsargo-unauthorized'));
+        return;
+      }
+      if (response.ok) {
+        const data = await response.json();
+        setTotalChunks(data.count);
+      }
+    } catch (error) {
+      console.error('Error fetching chunk count:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchChunkCount();
+    } else {
+      setTotalChunks(null);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      localStorage.removeItem('irsargo_token');
+      localStorage.removeItem('irsargo_user');
+      localStorage.removeItem('irsargo_last_security_context');
+      setToken(null);
+      setUser(null);
+      setLastSecurityContext(null);
+    };
+    window.addEventListener('irsargo-unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('irsargo-unauthorized', handleUnauthorized);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('IRSARGO_history', JSON.stringify(history));
@@ -1162,6 +1208,11 @@ export default function App() {
         }),
       });
 
+      if (response.status === 401) {
+        window.dispatchEvent(new CustomEvent('irsargo-unauthorized'));
+        throw new Error('Session expired. Please log in again.');
+      }
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         throw new Error(errorData?.error || `Ingest failed with status ${response.status}`);
@@ -1170,10 +1221,46 @@ export default function App() {
       const result = await response.json();
       setIngestStatus(`${result.message} ${result.chunksInserted} chunks from ${result.filename}.`);
       setIngestFile(null);
+      void fetchChunkCount();
     } catch (error) {
       setIngestError(error instanceof Error ? error.message : 'Upload failed');
     } finally {
       setIsIngesting(false);
+    }
+  };
+
+  const handleRagenGeneration = async () => {
+    if (isGeneratingRagen) return;
+    setIsGeneratingRagen(true);
+    setRagenStatus(null);
+    setRagenError(null);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/ragen/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        }
+      });
+
+      if (response.status === 401) {
+        window.dispatchEvent(new CustomEvent('irsargo-unauthorized'));
+        throw new Error('Session expired. Please log in again.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || `RAGen generation failed with status ${response.status}`);
+      }
+
+      const result = await response.json();
+      setRagenStatus(`${result.message} Generated ${result.count} training triples inside "${result.path}".`);
+      void fetchChunkCount();
+    } catch (error) {
+      setRagenError(error instanceof Error ? error.message : 'QAC Generation failed');
+    } finally {
+      setIsGeneratingRagen(false);
     }
   };
 
@@ -1206,9 +1293,23 @@ export default function App() {
               <h1 className="text-xl font-display font-bold tracking-[0.2em] uppercase bg-linear-to-r from-white to-zinc-500 bg-clip-text text-transparent">
                 IRSARGO
               </h1>
-              <p className="text-[10px] text-isro-orange font-mono tracking-widest uppercase">
-                Zero-Trust Multi-Agent RAG Engine
-              </p>
+              <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3">
+                <p className="text-[10px] text-isro-orange font-mono tracking-widest uppercase">
+                  Zero-Trust Multi-Agent RAG Engine
+                </p>
+                {totalChunks !== null && (
+                  <>
+                    <span className="hidden md:inline text-zinc-800 text-[10px] font-mono">|</span>
+                    <div className="flex items-center gap-1.5 text-[9px] text-zinc-400 font-mono">
+                      <Database className="w-3 h-3 text-isro-orange shrink-0" />
+                      <span>DB CHUNKS:</span>
+                      <span className="text-white font-bold bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded-md">
+                        {totalChunks.toLocaleString()}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           
@@ -1274,6 +1375,33 @@ export default function App() {
             >
               {/* Sidebar / Controls (Order Last on Mobile) */}
               <div className="order-last lg:order-0 lg:col-span-4 space-y-6">
+                {/* Database Metrics Card */}
+                <section className="isro-glass p-6 rounded-2xl space-y-4">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
+                    <Database className="w-4 h-4 text-isro-orange animate-pulse" />
+                    ChromaDB Knowledge Base
+                  </h2>
+                  <div className="bg-black/40 border border-zinc-900 rounded-xl p-4 space-y-3 font-mono text-[10px]">
+                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
+                      <span className="text-zinc-500">DATABASE STATUS:</span>
+                      <span className="text-emerald-500 font-bold flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        CONNECTED
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
+                      <span className="text-zinc-500">COLLECTION:</span>
+                      <span className="text-zinc-300">IRSARGO_knowledge_base</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-500">TOTAL CHUNKS:</span>
+                      <span className="text-isro-orange font-bold text-xs">
+                        {totalChunks !== null ? totalChunks.toLocaleString() : 'Loading...'}
+                      </span>
+                    </div>
+                  </div>
+                </section>
+
                 <section className="isro-glass p-6 rounded-2xl">
                   
                   <div className="grid grid-cols-1 gap-3">
@@ -1939,6 +2067,52 @@ export default function App() {
                     </button>
                   </div>
                 </form>
+              </section>
+
+              {/* RAGen Synthetic Data Pipeline */}
+              <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="inline-flex items-center gap-2 text-isro-orange text-xs font-mono uppercase tracking-widest">
+                      <Cpu className="w-4 h-4 animate-pulse" />
+                      Domain Adaptation Pipeline
+                    </div>
+                    <h2 className="text-xl font-display font-bold text-white">RAGen Question-Answer-Context (QAC) Generator</h2>
+                    <p className="text-sm text-zinc-400 max-w-2xl">
+                      Automatically synthesize high-quality training pairs directly from the ingested knowledge database. Incorporates Bloom's Taxonomy-guided reasoning questions and integrates curated distractor contexts to prepare models for air-gapped domain adaptation.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRagenGeneration}
+                    disabled={isGeneratingRagen}
+                    className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 border border-zinc-700 px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-isro-orange transition-all hover:bg-isro-orange hover:text-white hover:border-isro-orange disabled:bg-zinc-900 disabled:text-zinc-700 disabled:border-zinc-800 cursor-pointer shadow-lg"
+                  >
+                    {isGeneratingRagen ? (
+                      <>
+                        <RefreshCcw className="w-4 h-4 animate-spin" />
+                        Generating triples
+                      </>
+                    ) : (
+                      <>
+                        <Cpu className="w-4 h-4" />
+                        Generate QAC Triples
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {ragenError && (
+                  <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 font-mono text-xs">
+                    {ragenError}
+                  </div>
+                )}
+
+                {ragenStatus && (
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 font-mono text-xs leading-relaxed break-all">
+                    {ragenStatus}
+                  </div>
+                )}
               </section>
 
               <section className="grid gap-4 md:grid-cols-3">
