@@ -1,0 +1,34 @@
+[
+  {
+    "timestamp": "2026-07-19T09:26:49.344Z",
+    "query": "propulsion system thrust",
+    "retrievalAccuracy": 0.9236250978282884,
+    "overallConfidence": 0.9745416992760961,
+    "groundingFidelity": 1,
+    "sourcesCount": 1
+  },
+  {
+    "timestamp": "2026-07-19T12:37:00.729Z",
+    "query": "propulsion system thrust",
+    "retrievalAccuracy": 0.9621217365119533,
+    "overallConfidence": 0.9873739121706512,
+    "groundingFidelity": 1,
+    "sourcesCount": 1
+  },
+  {
+    "timestamp": "2026-07-19T12:39:38.521Z",
+    "query": "propulsion system thrust",
+    "retrievalAccuracy": 0.9530021020425208,
+    "overallConfidence": 0.9843340340141736,
+    "groundingFidelity": 1,
+    "sourcesCount": 1
+  },
+  {
+    "timestamp": "2026-07-19T12:43:05.486Z",
+    "query": "propulsion system thrust",
+    "retrievalAccuracy": 0.9459483068298018,
+    "overallConfidence": 0.9819827689432673,
+    "groundingFidelity": 1,
+    "sourcesCount": 1
+  }
+]

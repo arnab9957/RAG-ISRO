@@ -42,7 +42,7 @@ export class IRSARGOOrchestrator {
       try {
         if (process.env.GEMINI_API_KEY) {
           const response = await this.ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-3.5-flash",
             contents,
           });
           return response.text || '';

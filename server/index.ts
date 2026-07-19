@@ -96,6 +96,70 @@ function savePIIMappings(filename: string, mappings: Record<string, string>) {
   fs.writeFileSync(mappingFilePath, JSON.stringify(currentMappings, null, 2), 'utf8');
 }
 
+/**
+ * Domain Relevance Measurer: Evaluates how relevant the retrieved context chunks are to the selected
+ * target domain (e.g. Space Research / Aerospace vs Government Compliance) using public term vocabularies.
+ */
+function calculateDomainRelevance(nodes: any[], queryText: string): number {
+  const AEROSPACE_KEYWORDS = [
+    'propulsion', 'satellite', 'payload', 'orbit', 'trajectory', 'spacecraft',
+    'launch', 'booster', 'cryogenic', 'avionics', 'telemetry', 'thruster',
+    'altitude', 'velocity', 'apogee', 'perigee', 'attitude', 'gslv', 'pslv',
+    'isro', 'nasa', 'esa', 'transponder', 'ignition', 'nozzle', 'combustion',
+    'fairing', 'staging', 'thermal', 'sensor', 'guidance', 'aerodynamic'
+  ];
+
+  const GOVERNMENT_KEYWORDS = [
+    'gfr', 'procurement', 'compliance', 'audit', 'tender', 'financial',
+    'bid', 'expenditure', 'contract', 'sanction', 'treasury', 'regulation',
+    'appropriation', 'allocation', 'disbursement', 'guideline', 'budget',
+    'billing', 'voucher', 'invoice', 'estimate', 'grants', 'auditor'
+  ];
+
+  if (!nodes || nodes.length === 0) return 0;
+
+  // Detect query/node domain
+  let isAerospace = false;
+  let isGovernment = false;
+
+  // 1. Check node metadata domains
+  nodes.forEach(node => {
+    const d = String(node.metadata?.domain || '').toUpperCase();
+    if (d.includes('AEROSPACE') || d.includes('SPACE') || d.includes('TECH')) {
+      isAerospace = true;
+    }
+    if (d.includes('GOVERN') || d.includes('GFR') || d.includes('COMPLIANCE')) {
+      isGovernment = true;
+    }
+  });
+
+  // 2. Fallback to keyword heuristics in query/content
+  if (!isAerospace && !isGovernment) {
+    const combinedText = (queryText + ' ' + nodes.map(n => n.content).join(' ')).toLowerCase();
+    const aeroCount = AEROSPACE_KEYWORDS.filter(kw => combinedText.includes(kw)).length;
+    const govtCount = GOVERNMENT_KEYWORDS.filter(kw => combinedText.includes(kw)).length;
+    if (aeroCount >= govtCount) {
+      isAerospace = true;
+    } else {
+      isGovernment = true;
+    }
+  }
+
+  const targetKeywords = isAerospace ? AEROSPACE_KEYWORDS : GOVERNMENT_KEYWORDS;
+  
+  // Calculate average score
+  let totalScore = 0;
+  nodes.forEach(node => {
+    const contentLower = (node.content || '').toLowerCase();
+    const matches = targetKeywords.filter(kw => contentLower.includes(kw)).length;
+    // Score based on finding at least 2 key terms in the chunk
+    const nodeScore = Math.min(1.0, matches / 2);
+    totalScore += nodeScore;
+  });
+
+  return totalScore / nodes.length;
+}
+
 
 // Load environment variables
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -1004,6 +1068,36 @@ app.post('/api/generate', requireAuth, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'contents is required' });
     }
 
+    // Try Groq API key first if configured
+    if (process.env.GROQ_API_KEY) {
+      try {
+        const groqApiKey = process.env.GROQ_API_KEY;
+        const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${groqApiKey}`,
+          },
+          body: JSON.stringify({
+            model: groqModel,
+            messages: [{ role: 'user', content: contents }],
+            temperature: 0.1,
+            max_tokens: 1024,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data.choices?.[0]?.message?.content || '';
+          return res.json({ text });
+        }
+        console.warn(`Groq API error: ${response.statusText}. Falling back.`);
+      } catch (groqErr) {
+        console.warn('Groq API generation failed, falling back:', groqErr);
+      }
+    }
+
     const useLocal = process.env.USE_LOCAL_LLM === 'true';
     if (useLocal) {
       try {
@@ -1035,7 +1129,7 @@ app.post('/api/generate', requireAuth, async (req: Request, res: Response) => {
       const aiClient = getAiClient();
       if (aiClient) {
         const response = await aiClient.models.generateContent({
-          model: "gemini-3-flash-preview",
+          model: "gemini-3.5-flash",
           contents: contents,
         });
         return res.json({ text: response.text || '' });
@@ -1071,6 +1165,108 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
 
     const { metrics, sources } = calculateConfidence(traces, answer, query || '');
     const allApproved = traces.every((t: any) => t.smtApproval && t.zkpStatus === 'verified');
+
+    // Measure retrieval accuracy and store it in a separate metrics file
+    try {
+      const accuracyLogPath = path.resolve(process.cwd(), 'retrieval_accuracy_metrics.json');
+      let accuracyLogs: any[] = [];
+      if (fs.existsSync(accuracyLogPath)) {
+        try {
+          accuracyLogs = JSON.parse(fs.readFileSync(accuracyLogPath, 'utf8'));
+        } catch (err) {
+          accuracyLogs = [];
+        }
+      }
+      accuracyLogs.push({
+        timestamp: new Date().toISOString(),
+        query: query || '',
+        retrievalAccuracy: metrics.retrievalAccuracy,
+        overallConfidence: metrics.overallConfidence,
+        groundingFidelity: metrics.groundingFidelity,
+        sourcesCount: sources.length
+      });
+      fs.writeFileSync(accuracyLogPath, JSON.stringify(accuracyLogs, null, 2), 'utf8');
+      console.log(`[METRICS] Logged retrieval accuracy (${metrics.retrievalAccuracy}) to ${accuracyLogPath}`);
+    } catch (logError) {
+      console.error('Failed to log retrieval accuracy metrics:', logError);
+    }
+
+    // Measure grounding fidelity and store it in a separate metrics file
+    try {
+      const groundingLogPath = path.resolve(process.cwd(), 'grounding_fidelity_metrics.json');
+      let groundingLogs: any[] = [];
+      if (fs.existsSync(groundingLogPath)) {
+        try {
+          groundingLogs = JSON.parse(fs.readFileSync(groundingLogPath, 'utf8'));
+        } catch (err) {
+          groundingLogs = [];
+        }
+      }
+      groundingLogs.push({
+        timestamp: new Date().toISOString(),
+        query: query || '',
+        groundingFidelity: metrics.groundingFidelity,
+        overallConfidence: metrics.overallConfidence,
+        retrievalAccuracy: metrics.retrievalAccuracy,
+        sourcesCount: sources.length
+      });
+      fs.writeFileSync(groundingLogPath, JSON.stringify(groundingLogs, null, 2), 'utf8');
+      console.log(`[METRICS] Logged grounding fidelity (${metrics.groundingFidelity}) to ${groundingLogPath}`);
+    } catch (logError) {
+      console.error('Failed to log grounding fidelity metrics:', logError);
+    }
+
+    // Measure hallucination reduction and store it in a separate metrics file
+    try {
+      const hallucinationLogPath = path.resolve(process.cwd(), 'hallucination_reduction_metrics.json');
+      let hallucinationLogs: any[] = [];
+      if (fs.existsSync(hallucinationLogPath)) {
+        try {
+          hallucinationLogs = JSON.parse(fs.readFileSync(hallucinationLogPath, 'utf8'));
+        } catch (err) {
+          hallucinationLogs = [];
+        }
+      }
+      const hallucinationReduction = 1.0 - metrics.hallucinationRisk;
+      hallucinationLogs.push({
+        timestamp: new Date().toISOString(),
+        query: query || '',
+        hallucinationRisk: metrics.hallucinationRisk,
+        hallucinationReduction: hallucinationReduction,
+        overallConfidence: metrics.overallConfidence,
+        sourcesCount: sources.length
+      });
+      fs.writeFileSync(hallucinationLogPath, JSON.stringify(hallucinationLogs, null, 2), 'utf8');
+      console.log(`[METRICS] Logged hallucination reduction (${hallucinationReduction}) to ${hallucinationLogPath}`);
+    } catch (logError) {
+      console.error('Failed to log hallucination reduction metrics:', logError);
+    }
+
+    // Measure domain relevance using space research/government keywords and store it in a separate metrics file
+    try {
+      const domainRelevance = calculateDomainRelevance(nodes, query || '');
+      const domainLogPath = path.resolve(process.cwd(), 'domain_relevance_metrics.json');
+      let domainLogs: any[] = [];
+      if (fs.existsSync(domainLogPath)) {
+        try {
+          domainLogs = JSON.parse(fs.readFileSync(domainLogPath, 'utf8'));
+        } catch (err) {
+          domainLogs = [];
+        }
+      }
+      domainLogs.push({
+        timestamp: new Date().toISOString(),
+        query: query || '',
+        domainRelevance: domainRelevance,
+        detectedDomain: nodes[0]?.metadata?.domain || (query && query.toLowerCase().includes('gfr') ? 'GOVERNMENT' : 'AEROSPACE'),
+        overallConfidence: metrics.overallConfidence,
+        sourcesCount: sources.length
+      });
+      fs.writeFileSync(domainLogPath, JSON.stringify(domainLogs, null, 2), 'utf8');
+      console.log(`[METRICS] Logged domain relevance (${domainRelevance}) to ${domainLogPath}`);
+    } catch (logError) {
+      console.error('Failed to log domain relevance metrics:', logError);
+    }
 
     res.json({
       metrics,
@@ -1142,28 +1338,64 @@ Output strictly valid JSON and nothing else.`;
       let generatedData = { question: '', answer: '' };
       try {
         let generationText = '';
-        if (useLocal) {
+        if (process.env.GROQ_API_KEY) {
+          try {
+            const groqApiKey = process.env.GROQ_API_KEY;
+            const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${groqApiKey}`,
+              },
+              body: JSON.stringify({
+                model: groqModel,
+                messages: [{ role: 'user', content: synthesisPrompt }],
+                temperature: 0.1,
+                max_tokens: 1024,
+              }),
+            });
+            if (response.ok) {
+              const data = await response.json();
+              generationText = data.choices?.[0]?.message?.content || '';
+            }
+          } catch (groqErr) {
+            console.warn('Groq API generation failed for QAC synthesis:', groqErr);
+          }
+        }
+
+        if (!generationText && useLocal) {
           const localUrl = process.env.LOCAL_LLM_URL || 'http://localhost:11434';
           const localModel = process.env.LOCAL_LLM_MODEL || 'gemma2:2b';
-          const response = await fetch(`${localUrl}/api/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: localModel,
-              prompt: synthesisPrompt,
-              stream: false,
-            }),
-          });
-          if (response.ok) {
-            const data = await response.json();
-            generationText = data.response;
+          try {
+            const response = await fetch(`${localUrl}/api/generate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: localModel,
+                prompt: synthesisPrompt,
+                stream: false,
+              }),
+            });
+            if (response.ok) {
+              const data = await response.json();
+              generationText = data.response;
+            }
+          } catch (localErr) {
+            console.warn('Local LLM generation failed for QAC synthesis:', localErr);
           }
-        } else if (aiClient) {
-          const response = await aiClient.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: synthesisPrompt,
-          });
-          generationText = response.text || '';
+        }
+
+        if (!generationText && aiClient) {
+          try {
+            const response = await aiClient.models.generateContent({
+              model: "gemini-3.5-flash",
+              contents: synthesisPrompt,
+            });
+            generationText = response.text || '';
+          } catch (geminiErr) {
+            console.warn('Gemini generation failed for QAC synthesis:', geminiErr);
+          }
         }
 
         if (generationText) {

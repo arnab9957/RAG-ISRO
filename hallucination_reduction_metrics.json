@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": "2026-07-19T12:39:38.523Z",
+    "query": "propulsion system thrust",
+    "hallucinationRisk": 0,
+    "hallucinationReduction": 1,
+    "overallConfidence": 0.9843340340141736,
+    "sourcesCount": 1
+  },
+  {
+    "timestamp": "2026-07-19T12:43:05.492Z",
+    "query": "propulsion system thrust",
+    "hallucinationRisk": 0,
+    "hallucinationReduction": 1,
+    "overallConfidence": 0.9819827689432673,
+    "sourcesCount": 1
+  }
+]

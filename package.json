@@ -10,7 +10,8 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "server": "tsx server/index.ts",
-    "ingest": "tsx scripts/ingest.ts"
+    "ingest": "tsx scripts/ingest.ts",
+    "groq-chat": "tsx scripts/groq_chat.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
