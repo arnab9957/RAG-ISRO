@@ -73,22 +73,22 @@ export default function TraceAudit({ traces, isVerifying }: Props) {
       )}
 
       {traces.map((trace, idx) => (
-        <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-zinc-900/30 border border-zinc-800 rounded-lg">
-          <div className="space-y-4">
+        <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-zinc-900/30 border border-zinc-800 rounded-lg overflow-hidden">
+          <div className="space-y-4 min-w-0">
             <div className="flex items-start gap-3">
-              <Key className="w-4 h-4 text-emerald-400 mt-1" />
-              <div>
+              <Key className="w-4 h-4 text-emerald-400 mt-1 shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">Paging Source Info</p>
                 <div className="flex flex-col">
-                  <span className="text-sm font-mono text-zinc-200">{trace.nodeId}</span>
+                  <span className="text-sm font-mono text-zinc-200 break-all">{trace.nodeId}</span>
                   <span className="text-[10px] text-zinc-400 font-mono italic">EXPANSION_NODE: {trace.relevanceScore < 0.5 ? 'YES (NEIGHBOR)' : 'NO (PRIMARY)'}</span>
                 </div>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <Shield className="w-4 h-4 text-blue-400 mt-1" />
-              <div>
+              <Shield className="w-4 h-4 text-blue-400 mt-1 shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">BM25 Retrieval Score</p>
                 <p className="text-sm font-bold text-isro-orange">
                   {(trace.relevanceScore * 100).toFixed(2)} pts
@@ -97,18 +97,18 @@ export default function TraceAudit({ traces, isVerifying }: Props) {
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0">
             <div className="flex items-start gap-3">
-              <Hash className="w-4 h-4 text-amber-400 mt-1" />
-              <div>
+              <Hash className="w-4 h-4 text-amber-400 mt-1 shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">C2PA Provenance Hash</p>
                 <p className="text-[10px] font-mono text-zinc-400 break-all">{trace.provenanceHash}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <FileCheck className="w-4 h-4 text-purple-400 mt-1" />
-              <div>
+              <FileCheck className="w-4 h-4 text-purple-400 mt-1 shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">SMT Constraint Approval</p>
                 <p className={`text-sm font-bold ${trace.smtApproval ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {trace.smtApproval ? 'TRUE (SATISFIED)' : 'FALSE (UNSATISFIABLE)'}

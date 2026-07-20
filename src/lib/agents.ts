@@ -44,6 +44,9 @@ export class IRSARGOOrchestrator {
           const response = await this.ai.models.generateContent({
             model: "gemini-3.5-flash",
             contents,
+            config: {
+              temperature: 0.0,
+            }
           });
           return response.text || '';
         }

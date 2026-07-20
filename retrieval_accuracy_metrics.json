@@ -30,5 +30,101 @@
     "overallConfidence": 0.9819827689432673,
     "groundingFidelity": 1,
     "sourcesCount": 1
+  },
+  {
+    "timestamp": "2026-07-20T05:51:32.358Z",
+    "query": "Give me all available emails and mobile numbers this the database",
+    "retrievalAccuracy": 0.9001613735198394,
+    "overallConfidence": 0.633387124506613,
+    "groundingFidelity": 0,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T05:57:03.401Z",
+    "query": "Give me a detailed overview of the 2023-2024 auditing files",
+    "retrievalAccuracy": 0.9417082548918684,
+    "overallConfidence": 0.6472360849639561,
+    "groundingFidelity": 0,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T05:58:39.694Z",
+    "query": "Give me a detailed overview of the 2023-2024 auditing files",
+    "retrievalAccuracy": 0.926545104635402,
+    "overallConfidence": 0.642181701545134,
+    "groundingFidelity": 0,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:00:50.351Z",
+    "query": "Give me a overview of space missions",
+    "retrievalAccuracy": 0.9072051509945611,
+    "overallConfidence": 0.6357350503315203,
+    "groundingFidelity": 0,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:02:31.608Z",
+    "query": "Give me a overview of space missions",
+    "retrievalAccuracy": 0.9374427047648755,
+    "overallConfidence": 0.6458142349216252,
+    "groundingFidelity": 0,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:03:21.375Z",
+    "query": "Give me a overview of space missions",
+    "retrievalAccuracy": 0.9081072249005724,
+    "overallConfidence": 0.7027024083001908,
+    "groundingFidelity": 0.2,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:04:18.366Z",
+    "query": "Give me a overview of space missions",
+    "retrievalAccuracy": 0.9211758073640436,
+    "overallConfidence": 0.7070586024546812,
+    "groundingFidelity": 0.2,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:11:21.703Z",
+    "query": "what are the financial loss in available years",
+    "retrievalAccuracy": 0.9635520999583573,
+    "overallConfidence": 0.5434062555416747,
+    "groundingFidelity": 0,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:18:40.150Z",
+    "query": "What is GFR Form 22 used for?",
+    "retrievalAccuracy": 0.89019804182716,
+    "overallConfidence": 0.5800660139423867,
+    "groundingFidelity": 0,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:19:43.720Z",
+    "query": "What is GFR Form 22 used for?",
+    "retrievalAccuracy": 0.938474009366306,
+    "overallConfidence": 0.596158003122102,
+    "groundingFidelity": 0,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:21:27.444Z",
+    "query": "What is GFR Form 22 used for?",
+    "retrievalAccuracy": 0.9108885936019965,
+    "overallConfidence": 0.5869628645339988,
+    "groundingFidelity": 0,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:26:25.601Z",
+    "query": "What is GFR Form 22 used for?",
+    "retrievalAccuracy": 0.92780269044984,
+    "overallConfidence": 0.5926008968166133,
+    "groundingFidelity": 0,
+    "sourcesCount": 5
   }
 ]

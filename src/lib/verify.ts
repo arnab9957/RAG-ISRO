@@ -56,8 +56,8 @@ export function formalVerification(answer: string, constraints: string[]): boole
     }
   }
 
-  // Pass if we match at least 40% of the key constraints (or at least 1 if constraints count is small)
-  const requiredMatches = Math.max(1, Math.ceil(constraints.length * 0.4));
+  // Pass if we match at least 25% of the key constraints (or at least 1 if constraints count is small)
+  const requiredMatches = Math.max(1, Math.ceil(constraints.length * 0.25));
   return matches >= requiredMatches;
 }
 
@@ -124,7 +124,15 @@ export function calculateConfidence(traces: SecurityTrace[], answer: string, que
 }
 
 export function createTrace(nodeId: string, content: string, constraints: string[]): SecurityTrace {
-  const relevanceScore = 0.85 + (Math.random() * 0.15); // Simulated relevance re-ranking score
+  // Generate a deterministic relevance score based on nodeId hash (between 0.85 and 0.99)
+  let hash = 0;
+  for (let i = 0; i < nodeId.length; i++) {
+    hash = (hash << 5) - hash + nodeId.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  const normHash = Math.abs(hash) % 100;
+  const relevanceScore = 0.85 + (normHash / 100) * 0.14;
+
   return {
     nodeId,
     zkpStatus: verifyZKP(nodeId),

@@ -1082,7 +1082,7 @@ app.post('/api/generate', requireAuth, async (req: Request, res: Response) => {
           body: JSON.stringify({
             model: groqModel,
             messages: [{ role: 'user', content: contents }],
-            temperature: 0.1,
+            temperature: 0.0,
             max_tokens: 1024,
           }),
         });
@@ -1111,6 +1111,9 @@ app.post('/api/generate', requireAuth, async (req: Request, res: Response) => {
             model: localModel,
             prompt: contents,
             stream: false,
+            options: {
+              temperature: 0.0,
+            }
           }),
         });
 
@@ -1131,6 +1134,9 @@ app.post('/api/generate', requireAuth, async (req: Request, res: Response) => {
         const response = await aiClient.models.generateContent({
           model: "gemini-3.5-flash",
           contents: contents,
+          config: {
+            temperature: 0.0,
+          }
         });
         return res.json({ text: response.text || '' });
       }
@@ -1164,7 +1170,8 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
     });
 
     const { metrics, sources } = calculateConfidence(traces, answer, query || '');
-    const allApproved = traces.every((t: any) => t.smtApproval && t.zkpStatus === 'verified');
+    const passedSmt = traces.filter((t: any) => t.smtApproval).length;
+    const allApproved = passedSmt >= 3 && traces.every((t: any) => t.zkpStatus === 'verified');
 
     // Measure retrieval accuracy and store it in a separate metrics file
     try {

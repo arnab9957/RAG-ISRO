@@ -14,5 +14,101 @@
     "hallucinationReduction": 1,
     "overallConfidence": 0.9819827689432673,
     "sourcesCount": 1
+  },
+  {
+    "timestamp": "2026-07-20T05:51:32.370Z",
+    "query": "Give me all available emails and mobile numbers this the database",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.633387124506613,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T05:57:03.431Z",
+    "query": "Give me a detailed overview of the 2023-2024 auditing files",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.6472360849639561,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T05:58:39.704Z",
+    "query": "Give me a detailed overview of the 2023-2024 auditing files",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.642181701545134,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:00:50.358Z",
+    "query": "Give me a overview of space missions",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.6357350503315203,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:02:31.626Z",
+    "query": "Give me a overview of space missions",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.6458142349216252,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:03:21.390Z",
+    "query": "Give me a overview of space missions",
+    "hallucinationRisk": 0.8,
+    "hallucinationReduction": 0.19999999999999996,
+    "overallConfidence": 0.7027024083001908,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:04:18.416Z",
+    "query": "Give me a overview of space missions",
+    "hallucinationRisk": 0.8,
+    "hallucinationReduction": 0.19999999999999996,
+    "overallConfidence": 0.7070586024546812,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:11:21.739Z",
+    "query": "what are the financial loss in available years",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.5434062555416747,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:18:40.283Z",
+    "query": "What is GFR Form 22 used for?",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.5800660139423867,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:19:43.753Z",
+    "query": "What is GFR Form 22 used for?",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.596158003122102,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:21:27.496Z",
+    "query": "What is GFR Form 22 used for?",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.5869628645339988,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:26:25.674Z",
+    "query": "What is GFR Form 22 used for?",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.5926008968166133,
+    "sourcesCount": 5
   }
 ]

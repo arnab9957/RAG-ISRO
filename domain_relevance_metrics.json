@@ -6,5 +6,101 @@
     "detectedDomain": "AEROSPACE",
     "overallConfidence": 0.9819827689432673,
     "sourcesCount": 1
+  },
+  {
+    "timestamp": "2026-07-20T05:51:32.375Z",
+    "query": "Give me all available emails and mobile numbers this the database",
+    "domainRelevance": 0,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.633387124506613,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T05:57:03.469Z",
+    "query": "Give me a detailed overview of the 2023-2024 auditing files",
+    "domainRelevance": 0,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.6472360849639561,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T05:58:39.709Z",
+    "query": "Give me a detailed overview of the 2023-2024 auditing files",
+    "domainRelevance": 0,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.642181701545134,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:00:50.362Z",
+    "query": "Give me a overview of space missions",
+    "domainRelevance": 0.9,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.6357350503315203,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:02:31.650Z",
+    "query": "Give me a overview of space missions",
+    "domainRelevance": 0.7,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.6458142349216252,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:03:21.404Z",
+    "query": "Give me a overview of space missions",
+    "domainRelevance": 0.9,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.7027024083001908,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:04:18.429Z",
+    "query": "Give me a overview of space missions",
+    "domainRelevance": 0.7,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.7070586024546812,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:11:21.766Z",
+    "query": "what are the financial loss in available years",
+    "domainRelevance": 0.1,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.5434062555416747,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:18:40.352Z",
+    "query": "What is GFR Form 22 used for?",
+    "domainRelevance": 0,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.5800660139423867,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:19:43.800Z",
+    "query": "What is GFR Form 22 used for?",
+    "domainRelevance": 0,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.596158003122102,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:21:27.516Z",
+    "query": "What is GFR Form 22 used for?",
+    "domainRelevance": 0,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.5869628645339988,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:26:25.688Z",
+    "query": "What is GFR Form 22 used for?",
+    "domainRelevance": 0.4,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.5926008968166133,
+    "sourcesCount": 5
   }
 ]
