@@ -110,5 +110,21 @@
     "hallucinationReduction": 0,
     "overallConfidence": 0.5926008968166133,
     "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:33:52.241Z",
+    "query": "What is GFR Form 22 used for?",
+    "hallucinationRisk": 1,
+    "hallucinationReduction": 0,
+    "overallConfidence": 0.5795237963858622,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:52:25.601Z",
+    "query": "What is GFR Form 22 used for?",
+    "hallucinationRisk": 0,
+    "hallucinationReduction": 1,
+    "overallConfidence": 0.8968,
+    "sourcesCount": 5
   }
 ]

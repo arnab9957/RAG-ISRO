@@ -1173,6 +1173,11 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
     const passedSmt = traces.filter((t: any) => t.smtApproval).length;
     const allApproved = passedSmt >= 3 && traces.every((t: any) => t.zkpStatus === 'verified');
 
+    const roundMetric = (val: number) => {
+      if (val === undefined || val === null || isNaN(val)) return 0;
+      return Math.round(val * 10000) / 10000;
+    };
+
     // Measure retrieval accuracy and store it in a separate metrics file
     try {
       const accuracyLogPath = path.resolve(process.cwd(), 'retrieval_accuracy_metrics.json');
@@ -1187,9 +1192,9 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
       accuracyLogs.push({
         timestamp: new Date().toISOString(),
         query: query || '',
-        retrievalAccuracy: metrics.retrievalAccuracy,
-        overallConfidence: metrics.overallConfidence,
-        groundingFidelity: metrics.groundingFidelity,
+        retrievalAccuracy: roundMetric(metrics.retrievalAccuracy),
+        overallConfidence: roundMetric(metrics.overallConfidence),
+        groundingFidelity: roundMetric(metrics.groundingFidelity),
         sourcesCount: sources.length
       });
       fs.writeFileSync(accuracyLogPath, JSON.stringify(accuracyLogs, null, 2), 'utf8');
@@ -1212,9 +1217,9 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
       groundingLogs.push({
         timestamp: new Date().toISOString(),
         query: query || '',
-        groundingFidelity: metrics.groundingFidelity,
-        overallConfidence: metrics.overallConfidence,
-        retrievalAccuracy: metrics.retrievalAccuracy,
+        groundingFidelity: roundMetric(metrics.groundingFidelity),
+        overallConfidence: roundMetric(metrics.overallConfidence),
+        retrievalAccuracy: roundMetric(metrics.retrievalAccuracy),
         sourcesCount: sources.length
       });
       fs.writeFileSync(groundingLogPath, JSON.stringify(groundingLogs, null, 2), 'utf8');
@@ -1234,13 +1239,14 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
           hallucinationLogs = [];
         }
       }
-      const hallucinationReduction = 1.0 - metrics.hallucinationRisk;
+      const rawReduction = 1.0 - metrics.hallucinationRisk;
+      const hallucinationReduction = roundMetric(rawReduction);
       hallucinationLogs.push({
         timestamp: new Date().toISOString(),
         query: query || '',
-        hallucinationRisk: metrics.hallucinationRisk,
+        hallucinationRisk: roundMetric(metrics.hallucinationRisk),
         hallucinationReduction: hallucinationReduction,
-        overallConfidence: metrics.overallConfidence,
+        overallConfidence: roundMetric(metrics.overallConfidence),
         sourcesCount: sources.length
       });
       fs.writeFileSync(hallucinationLogPath, JSON.stringify(hallucinationLogs, null, 2), 'utf8');
@@ -1264,9 +1270,9 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
       domainLogs.push({
         timestamp: new Date().toISOString(),
         query: query || '',
-        domainRelevance: domainRelevance,
+        domainRelevance: roundMetric(domainRelevance),
         detectedDomain: nodes[0]?.metadata?.domain || (query && query.toLowerCase().includes('gfr') ? 'GOVERNMENT' : 'AEROSPACE'),
-        overallConfidence: metrics.overallConfidence,
+        overallConfidence: roundMetric(metrics.overallConfidence),
         sourcesCount: sources.length
       });
       fs.writeFileSync(domainLogPath, JSON.stringify(domainLogs, null, 2), 'utf8');

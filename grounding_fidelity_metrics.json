@@ -118,5 +118,21 @@
     "overallConfidence": 0.5926008968166133,
     "retrievalAccuracy": 0.92780269044984,
     "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:33:52.230Z",
+    "query": "What is GFR Form 22 used for?",
+    "groundingFidelity": 0,
+    "overallConfidence": 0.5795237963858622,
+    "retrievalAccuracy": 0.8885713891575866,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T06:52:25.592Z",
+    "query": "What is GFR Form 22 used for?",
+    "groundingFidelity": 1,
+    "overallConfidence": 0.8968,
+    "retrievalAccuracy": 0.8903,
+    "sourcesCount": 5
   }
 ]

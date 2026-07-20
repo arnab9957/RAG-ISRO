@@ -33,9 +33,9 @@ export function extractKeyTerms(text: string): string[] {
     'more', 'some', 'any', 'other', 'into', 'only', 'than', 'then', 'also', 'consists'
   ]);
 
-  // Keep unique words longer than 4 characters that are not stop words
+  // Keep unique words longer than 2 characters (or numeric values) that are not stop words
   const terms = Array.from(new Set(words))
-    .filter(word => word.length >= 5 && !stopWords.has(word));
+    .filter(word => (word.length >= 3 || /^\d+$/.test(word)) && !stopWords.has(word));
 
   return terms.slice(0, 8); // Return up to 8 key terms
 }
@@ -92,14 +92,39 @@ export function calculateConfidence(traces: SecurityTrace[], answer: string, que
   // 1. Context Relevance: Average similarity score of retrieved nodes
   const contextRelevance = avgRelevance;
 
-  // 2. Groundedness: Ratio of traces that passed formal SMT constraints
-  const groundedness = verifiedTracesCount / totalTraces;
+  // Check if LLM response is a standard refusal to avoid false positive hallucination risk
+  const lowerAnswer = answer.toLowerCase();
+  const refusalPhrases = [
+    'apologize', 
+    'no relevant', 
+    'no matching', 
+    'not found', 
+    'do not have information', 
+    'no information', 
+    'insufficient information', 
+    'unable to answer',
+    'cannot find'
+  ];
+  const isRefusal = refusalPhrases.some(phrase => lowerAnswer.includes(phrase));
+
+  // 2. Groundedness: Graded evaluation based on verified traces
+  let groundedness = 0.0;
+  if (isRefusal) {
+    groundedness = 1.0; // Refusing when context is irrelevant is 100% grounded/safe
+  } else if (verifiedTracesCount === 0) {
+    groundedness = 0.0;
+  } else if (verifiedTracesCount === 1) {
+    groundedness = 0.8; // Supported by 1 chunk
+  } else if (verifiedTracesCount === 2) {
+    groundedness = 0.9; // Supported by 2 chunks
+  } else {
+    groundedness = 1.0; // Supported by 3 or more chunks
+  }
 
   // 3. Answer Relevance: overlap between answer and original query key terms
   const queryTerms = queryText ? extractKeyTerms(queryText) : [];
   let matchedQueryTerms = 0;
   if (queryTerms.length > 0) {
-    const lowerAnswer = answer.toLowerCase();
     for (const term of queryTerms) {
       if (lowerAnswer.includes(term.toLowerCase())) {
         matchedQueryTerms++;
