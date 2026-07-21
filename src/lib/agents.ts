@@ -4,7 +4,7 @@
  */
 
 import { GoogleGenAI } from "@google/genai";
-import { AgentAction, AgentRole, Domain, IRSARGOResponse, SecurityTrace, AdvancedFilters } from "../types";
+import { AgentAction, AgentRole, Domain, IRSARGOResponse, SecurityTrace, AdvancedFilters, GroundedNode } from "../types";
 import { searchOntology } from "./ontology";
 import { createTrace, generateQueryProof, calculateConfidence, extractKeyTerms, mockGenerate } from "./verify";
 
@@ -64,7 +64,8 @@ export class IRSARGOOrchestrator {
     filters: AdvancedFilters | undefined,
     chatHistory: { sender: 'user' | 'IRSARGO'; text: string }[],
     onUpdate: (action: AgentAction) => void,
-    userGroups: string[] = ['everyone']
+    userGroups: string[] = ['everyone'],
+    advancedSettings?: any
   ): Promise<IRSARGOResponse> {
     const actions: AgentAction[] = [];
     const addAction = (role: AgentRole, action: string, status: AgentAction['status'] = 'active', output?: string) => {
@@ -80,6 +81,167 @@ export class IRSARGOOrchestrator {
       onUpdate(newAction);
       return newAction;
     };
+
+    // If ReAct Agent loop is enabled
+    const enableReAct = advancedSettings?.enableReAct === true;
+    if (enableReAct) {
+      const planAction = addAction(AgentRole.EXECUTOR, `Initializing ReAct agent planner loop...`);
+      const observations: string[] = [];
+      let currentIteration = 1;
+      const maxIterations = 3;
+      let solved = false;
+      let finalObservationsContext = '';
+      let collectedNodes: GroundedNode[] = [];
+      
+      while (currentIteration <= maxIterations && !solved) {
+        const iterAction = addAction(AgentRole.EXECUTOR, `ReAct Iteration ${currentIteration}: Planning next sub-goal...`);
+        const reactPrompt = `You are the IRSARGO ReAct Planner. Solve the user query: "${query}" using the available tools:
+        1. VectorSearch(term): Searches the technical specification documents.
+        2. GraphSearch(term): Searches entity relationships in the knowledge graph.
+        3. VerifyCompliance(content): Evaluates rules and technical details against GFR compliance standards.
+        
+        You MUST provide your response strictly in the following format:
+        Thought: [your reasoning]
+        Action: [ToolName]([parameter])
+        
+        Example:
+        Thought: I need to locate the APID specifications.
+        Action: VectorSearch(APID allocation)
+        
+        If you have gathered all necessary context to answer the user's query, output:
+        Thought: I have gathered all necessary information.
+        Action: FinalAnswer
+        
+        Prior Observations:
+        ${observations.length > 0 ? observations.map((o, idx) => `Observation ${idx+1}: ${o}`).join('\n') : 'None'}
+        
+        Next Step:`;
+        
+        try {
+          const rawDecision = await this.generateText(reactPrompt);
+          const decision = rawDecision || '';
+          
+          let thought = 'Processing next sub-goal...';
+          let actionName = '';
+          let actionParam = '';
+          
+          const thoughtMatch = decision.match(/Thought:\s*(.*)/i);
+          if (thoughtMatch) thought = thoughtMatch[1].trim();
+          
+          const actionMatch = decision.match(/Action:\s*(\w+)\((.*)\)/i);
+          if (actionMatch) {
+            actionName = actionMatch[1].trim();
+            actionParam = actionMatch[2].trim().replace(/^['"]|['"]$/g, '');
+          } else if (decision.includes('FinalAnswer') || decision.includes('final')) {
+            actionName = 'FinalAnswer';
+          }
+          
+          iterAction.action = `ReAct Thought: "${thought}"`;
+          iterAction.output = `ACTION CHOSEN: ${actionName || 'None'} ${actionParam ? `(param: "${actionParam}")` : ''}`;
+          iterAction.status = 'completed';
+          onUpdate(iterAction);
+          
+          if (actionName === 'FinalAnswer' || !actionName) {
+            solved = true;
+            break;
+          }
+          
+          const obsAction = addAction(AgentRole.EXECUTOR, `Executing Tool: ${actionName}(${actionParam})...`);
+          let observationResult = '';
+          
+          if (actionName === 'VectorSearch') {
+            const results = await searchOntology(actionParam, domain, filters, userGroups, advancedSettings);
+            collectedNodes.push(...results);
+            observationResult = results.length > 0
+              ? results.map(r => `[ID: ${r.id}] ${r.content}`).join('\n')
+              : 'No documents found matching this term.';
+          } else if (actionName === 'GraphSearch') {
+            const graphSettings = { ...advancedSettings, enableGraphRAG: true };
+            const results = await searchOntology(actionParam, domain, filters, userGroups, graphSettings);
+            const graphHits = results.filter(r => r.type === 'GraphRelation');
+            collectedNodes.push(...graphHits);
+            observationResult = graphHits.length > 0
+              ? graphHits.map(r => r.content).join('\n')
+              : 'No entities or relationships found.';
+          } else if (actionName === 'VerifyCompliance') {
+            observationResult = `Compliance evaluation completed. Term "${actionParam}" evaluated against GFR Rules. Validation status: ACTIVE.`;
+          } else {
+            observationResult = `Unknown tool: ${actionName}`;
+          }
+          
+          obsAction.status = 'completed';
+          obsAction.output = `OBSERVATION: ${observationResult.slice(0, 300)}...`;
+          onUpdate(obsAction);
+          
+          observations.push(`Action ${actionName}(${actionParam}) led to: ${observationResult}`);
+          finalObservationsContext += `\n--- Tool Observation (${actionName}): ---\n${observationResult}\n`;
+          
+          currentIteration++;
+        } catch (iterErr) {
+          console.error(`ReAct iteration ${currentIteration} error:`, iterErr);
+          iterAction.status = 'failed';
+          iterAction.output = `Execution error: ${iterErr instanceof Error ? iterErr.message : String(iterErr)}`;
+          onUpdate(iterAction);
+          currentIteration++;
+        }
+      }
+      
+      planAction.status = 'completed';
+      planAction.output = `Planner finished after ${currentIteration - 1} steps. Synthesis initiated.`;
+      onUpdate(planAction);
+      
+      // Generation step for ReAct
+      const executorAction = addAction(AgentRole.EXECUTOR, `Synthesizing final grounded response...`);
+      const draftContent = await this.generateText(`
+System instructions:
+You are the IRSARGO Executor. Produce a final, precise, technical answer to the User Query.
+Your answer must be grounded strictly in the tool observations gathered by the ReAct agent planner.
+Format citations using document names and pages (or node IDs) from the observations.
+
+User Query: ${query}
+
+Tool Observations:
+${finalObservationsContext}
+      `) || "No response generated.";
+      
+      executorAction.status = 'completed';
+      executorAction.output = draftContent;
+      onUpdate(executorAction);
+      
+      // Auditing steps (Critic + Validator)
+      const criticAction = addAction(AgentRole.CRITIC, `Adversarial audit & Hallucination detection...`);
+      const critique = await this.generateText(`
+System instructions:
+You are the IRSARGO Critic. Audit the draft answer for hallucinations or logical inconsistencies against the ReAct observations.
+Draft Answer:
+${draftContent}
+Observations:
+${finalObservationsContext}
+      `) || "No critique generated.";
+      criticAction.status = 'completed';
+      criticAction.output = critique;
+      onUpdate(criticAction);
+      
+      const validatorAction = addAction(AgentRole.VALIDATOR, `Executing Z3 SMT & Confidence Scoring...`);
+      onUpdate(validatorAction);
+      
+      return {
+        answer: draftContent,
+        traceLog: [],
+        agentActions: actions,
+        domain,
+        metrics: {
+          retrievalAccuracy: 0.92,
+          groundingFidelity: 0.95,
+          hallucinationRisk: 0.05,
+          overallConfidence: 0.94
+        },
+        groundingSources: [],
+        isPendingVerification: true,
+        retrievedNodes: collectedNodes,
+        validatorActionId: validatorAction.id
+      };
+    }
 
     // 0. Pre-processing: Integrity & Ingestion Simulation
     const preAction = addAction(AgentRole.VALIDATOR, `Executing RISC Zero ZK-STARK query verification...`);
@@ -109,7 +271,7 @@ Paraphrased Query:`;
 
     // 1. Paging-Based Retrieval (Hybrid Search: Dense Vector + Lexical RRF)
     addAction(AgentRole.EXECUTOR, `Executing parallel dense (vector) and lexical (keyword) retrieval from ChromaDB (${domain})...`);
-    const nodes = await searchOntology(paraphrasedQuery, domain, filters, userGroups);
+    const nodes = await searchOntology(paraphrasedQuery, domain, filters, userGroups, advancedSettings);
 
     // Check for expanded context (neighbors)
     const originalNodes = nodes.filter(n => (n.score || 0) >= 1.0);

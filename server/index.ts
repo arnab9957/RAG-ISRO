@@ -355,6 +355,97 @@ async function embedText(text: string) {
   return Array.from(output.data) as number[];
 }
 
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  return normB && normA ? dot / (Math.sqrt(normA) * Math.sqrt(normB)) : 0;
+}
+
+async function clusterEmbeddings(embeddings: number[][], threshold: number = 0.70): Promise<number[][]> {
+  const clusters: number[][] = [];
+  
+  for (let i = 0; i < embeddings.length; i++) {
+    const emb = embeddings[i];
+    let bestClusterIdx = -1;
+    let bestSim = -1;
+    
+    for (let c = 0; c < clusters.length; c++) {
+      const clusterIndices = clusters[c];
+      const centroid = new Array(emb.length).fill(0);
+      for (const idx of clusterIndices) {
+        for (let d = 0; d < emb.length; d++) {
+          centroid[d] += embeddings[idx][d];
+        }
+      }
+      for (let d = 0; d < emb.length; d++) {
+        centroid[d] /= clusterIndices.length;
+      }
+      
+      const sim = cosineSimilarity(emb, centroid);
+      if (sim > bestSim) {
+        bestSim = sim;
+        bestClusterIdx = c;
+      }
+    }
+    
+    if (bestSim >= threshold && bestClusterIdx !== -1) {
+      clusters[bestClusterIdx].push(i);
+    } else {
+      clusters.push([i]);
+    }
+  }
+  return clusters;
+}
+
+async function getTokenEmbeddings(text: string): Promise<number[][]> {
+  const ext = await initExtractor();
+  const output = await ext(text, { pooling: 'none' });
+  const data = Array.from(output.data) as number[];
+  const numTokens = output.dims[1];
+  const hiddenDim = output.dims[2];
+  
+  const tokenVectors: number[][] = [];
+  for (let i = 0; i < numTokens; i++) {
+    const start = i * hiddenDim;
+    const end = start + hiddenDim;
+    const vector = data.slice(start, end);
+    let mag = 0;
+    for (let d = 0; d < hiddenDim; d++) mag += vector[d] * vector[d];
+    mag = Math.sqrt(mag);
+    if (mag > 0) {
+      for (let d = 0; d < hiddenDim; d++) vector[d] /= mag;
+    }
+    tokenVectors.push(vector);
+  }
+  return tokenVectors;
+}
+
+function computeMaxSim(queryTokens: number[][], docTokens: number[][]): number {
+  if (queryTokens.length === 0 || docTokens.length === 0) return 0;
+  let totalScore = 0;
+  for (const qVec of queryTokens) {
+    let maxSim = -Infinity;
+    for (const dVec of docTokens) {
+      let dot = 0;
+      for (let i = 0; i < qVec.length; i++) {
+        dot += qVec[i] * dVec[i];
+      }
+      if (dot > maxSim) {
+        maxSim = dot;
+      }
+    }
+    totalScore += maxSim;
+  }
+  return totalScore;
+}
+
 function chunkText(text: string, chunkSize: number = 300): string[] {
   const words = text.split(/\s+/);
   const chunks: string[] = [];
@@ -372,6 +463,31 @@ async function extractTextFromUpload(filename: string, mimeType: string, dataBas
   const normalizedMimeType = mimeType.toLowerCase();
 
   if (normalizedMimeType.includes('pdf') || extension === '.pdf') {
+    try {
+      const ai = getAiClient();
+      if (ai) {
+        console.log(`[INGESTION] Sending ${filename} to Gemini 2.5 Flash for Multimodal OCR...`);
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [{
+            role: 'user',
+            parts: [
+              { text: 'Extract all text from this document accurately. If there are images, charts, diagrams, or scanned pages, perform OCR and describe the visual contents in detail. Return only the extracted text and descriptions without any markdown formatting wrappers.' },
+              { inlineData: { mimeType: 'application/pdf', data: dataBase64 } }
+            ]
+          }]
+        });
+        if (response.text) {
+          console.log(`[INGESTION] Gemini extraction successful for ${filename}`);
+          return response.text;
+        }
+      }
+    } catch (e: any) {
+      console.warn(`[INGESTION WARNING] Gemini PDF extraction failed for ${filename}, falling back to pdf-parse:`, e.message);
+    }
+    
+    // Fallback to basic pdf-parse
+    console.log(`[INGESTION] Falling back to text-only pdf-parse for ${filename}...`);
     const data = await pdfParse(buffer);
     return data.text as string;
   }
@@ -848,14 +964,45 @@ app.post('/api/search', requireAuth, async (req: Request, res: Response) => {
     } else {
       console.log(`[TOKEN EXCHANGE] Successfully exchanged user token for delegated DB scope for user: ${user.displayName}`);
     }
-
     const collection = await chroma.getOrCreateCollection({
       name: 'IRSARGO_knowledge_base',
       embeddingFunction: null,
     });
     
-    // Embed the search query
-    const queryEmbedding = await embedText(query);
+    const advancedSettings = req.body.advancedSettings || {};
+    const enableQueryExpansion = advancedSettings.enableQueryExpansion === true;
+    const enableHyDE = advancedSettings.enableHyDE === true;
+    const enableColBERT = advancedSettings.enableColBERT === true;
+    const enableGraphRAG = advancedSettings.enableGraphRAG === true;
+
+    // Collect query variants for embedding search
+    const queryVariants = [query];
+    if (enableQueryExpansion) {
+      try {
+        const expansionPrompt = `Generate 2 alternative search queries for the following query. Format the output as a simple list of lines, one query per line, without numbers or markdown:
+Query: ${query}`;
+        const expandedText = await generateInternal(expansionPrompt);
+        const lines = expandedText.split('\n').map(l => l.trim().replace(/^-\s*/, '').replace(/^\d+\.\s*/, '')).filter(l => l.length > 5);
+        queryVariants.push(...lines.slice(0, 2));
+      } catch (err) {
+        console.warn('Failed to expand query:', err);
+      }
+    }
+    
+    if (enableHyDE) {
+      try {
+        const hydePrompt = `Given the query "${query}", write a short, hypothetical paragraph (approx 50 words) that answers it technically. Focus on technical details and specifications.`;
+        const hydeText = await generateInternal(hydePrompt);
+        if (hydeText && hydeText.trim().length > 10) {
+          queryVariants.push(hydeText.trim());
+        }
+      } catch (err) {
+        console.warn('Failed to generate HyDE text:', err);
+      }
+    }
+
+    // Embed all query variants
+    const embeddingsToQuery = await Promise.all(queryVariants.map(v => embedText(v)));
     
     // Build where clause using pre-filtering and escaping
     const andConditions: any[] = [];
@@ -912,48 +1059,148 @@ app.post('/api/search', requireAuth, async (req: Request, res: Response) => {
       whereClause = { $and: andConditions };
     }
 
-    // Parallel Execution of Dense vector search and Lexical text search candidate retrieval
-    const [denseResponse, allDocsResponse] = await Promise.all([
-      collection.query({
-        queryEmbeddings: [queryEmbedding],
-        nResults: 20, // retrieve larger candidate pool for fusion
-        where: whereClause,
-      }),
-      collection.get({
-        where: whereClause,
-      })
-    ]);
+    // Parallel Execution of Dense vector search across all query variants
+    const allDenseNodes: any[] = [];
+    const denseIdSet = new Set<string>();
 
-    // Map dense results
-    const denseNodes = [];
-    if (denseResponse.ids && denseResponse.ids.length > 0) {
-      for (let i = 0; i < denseResponse.ids[0].length; i++) {
-        denseNodes.push({
-          id: denseResponse.ids[0][i],
-          label: denseResponse.metadatas?.[0][i]?.label || 'Extracted Chunk',
-          type: denseResponse.metadatas?.[0][i]?.type || 'Document',
-          content: denseResponse.documents?.[0][i] || '',
-          metadata: denseResponse.metadatas?.[0][i] || {},
-          score: denseResponse.distances ? 1 - (denseResponse.distances[0][i] || 0) : 1
+    await Promise.all(embeddingsToQuery.map(async (emb) => {
+      try {
+        const denseResponse = await collection.query({
+          queryEmbeddings: [emb],
+          nResults: 20,
+          where: whereClause,
         });
+
+        if (denseResponse.ids && denseResponse.ids.length > 0) {
+          for (let i = 0; i < denseResponse.ids[0].length; i++) {
+            const id = denseResponse.ids[0][i];
+            const node = {
+              id,
+              label: denseResponse.metadatas?.[0][i]?.label || 'Extracted Chunk',
+              type: denseResponse.metadatas?.[0][i]?.type || 'Document',
+              content: denseResponse.documents?.[0][i] || '',
+              metadata: denseResponse.metadatas?.[0][i] || {},
+              score: denseResponse.distances ? 1 - (denseResponse.distances[0][i] || 0) : 1
+            };
+            if (!denseIdSet.has(id)) {
+              denseIdSet.add(id);
+              allDenseNodes.push(node);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Dense search variant failed:', err);
+      }
+    }));
+
+    // Fetch all documents for lexical matching against all query variants
+    const allDocsResponse = await collection.get({ where: whereClause });
+    const allLexicalNodes: any[] = [];
+    const lexicalIdSet = new Set<string>();
+    
+    queryVariants.forEach(qVariant => {
+      try {
+        const lexNodes = lexicalSearch(allDocsResponse, qVariant);
+        lexNodes.forEach(node => {
+          if (!lexicalIdSet.has(node.id)) {
+            lexicalIdSet.add(node.id);
+            allLexicalNodes.push(node);
+          }
+        });
+      } catch (err) {
+        console.warn('Lexical search variant failed:', err);
+      }
+    });
+
+    // Apply Reciprocal Rank Fusion (RRF) to merge ranks
+    let fusedNodes = computeRRF(allDenseNodes, allLexicalNodes, 60);
+
+    // Swap child content for parent content if parent_text metadata is present
+    fusedNodes = fusedNodes.map(node => {
+      if (node.metadata && node.metadata.parent_text) {
+        return {
+          ...node,
+          content: node.metadata.parent_text,
+          label: `${node.metadata.filename} Page ${node.metadata.page || 1} (Parent-Doc Context)`
+        };
+      }
+      return node;
+    });
+
+    // ColBERT-style Late-Interaction Reranking (MaxSim operator)
+    if (enableColBERT && query.length > 3 && fusedNodes.length > 0) {
+      try {
+        const queryTokenVectors = await getTokenEmbeddings(query);
+        const topCandidates = fusedNodes.slice(0, 10);
+        
+        await Promise.all(topCandidates.map(async (node) => {
+          try {
+            const docTokenVectors = await getTokenEmbeddings(node.content);
+            const maxSimScore = computeMaxSim(queryTokenVectors, docTokenVectors);
+            node.colbertScore = maxSimScore;
+          } catch (err) {
+            node.colbertScore = 0;
+          }
+        }));
+        
+        // Sort top candidates by ColBERT score and merge back with remaining nodes
+        topCandidates.sort((a, b) => (b.colbertScore || 0) - (a.colbertScore || 0));
+        fusedNodes = [...topCandidates, ...fusedNodes.slice(10)];
+      } catch (colbertErr) {
+        console.warn('Failed ColBERT late-interaction reranking, using default RRF ranking:', colbertErr);
       }
     }
 
-    // Map lexical results
-    const lexicalNodes = lexicalSearch(allDocsResponse, query);
+    // Rerank top 15 fused candidates using TF-IDF Relevance Reranker (fallback when ColBERT is not active)
+    let candidatePool = fusedNodes.slice(0, 15);
+    if (!enableColBERT) {
+      candidatePool = tfidfRerank(candidatePool, query);
+    }
 
-    // Apply Reciprocal Rank Fusion (RRF) to merge ranks
-    const fusedNodes = computeRRF(denseNodes, lexicalNodes, 60);
+    // GraphRAG Entity-Relationship context retrieval
+    const graphNodes: any[] = [];
+    if (enableGraphRAG) {
+      try {
+        const graphFilePath = path.resolve(process.cwd(), 'knowledge_graph.json');
+        if (fs.existsSync(graphFilePath)) {
+          const relations = JSON.parse(fs.readFileSync(graphFilePath, 'utf8'));
+          const queryTerms = query.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(t => t.length >= 3);
+          const matchingRelations = relations.filter((r: any) => {
+            const subjLower = String(r.subject).toLowerCase();
+            const objLower = String(r.object).toLowerCase();
+            return queryTerms.some(term => subjLower.includes(term) || objLower.includes(term));
+          });
 
-    // Rerank top 15 fused candidates using TF-IDF Relevance Reranker
-    const candidatePool = fusedNodes.slice(0, 15);
-    const rerankedNodes = tfidfRerank(candidatePool, query);
+          matchingRelations.slice(0, 5).forEach((r: any, idx: number) => {
+            const graphNodeId = `GRAPH-${r.source}-relation-${idx}-${randomUUID().slice(0, 4)}`;
+            graphNodes.push({
+              id: graphNodeId,
+              label: `Graph Relation: ${r.subject} -> ${r.relation} -> ${r.object}`,
+              type: 'GraphRelation',
+              content: `Entity "${r.subject}" has relationship "${r.relation}" with Entity "${r.object}" (Source Document: ${r.source}).`,
+              metadata: {
+                filename: r.source,
+                type: 'GraphRelation',
+                subject: r.subject,
+                relation: r.relation,
+                object: r.object
+              },
+              score: 1.0
+            });
+          });
+          console.log(`GraphRAG: Retrieved ${graphNodes.length} matching entity relationships`);
+        }
+      } catch (graphErr) {
+        console.warn('Failed to retrieve GraphRAG relations:', graphErr);
+      }
+    }
 
-    // Select top 5 final grounded nodes
-    const nodes = rerankedNodes.slice(0, 5);
+    // Combine final grounded candidates list (prioritizing GraphRAG connections)
+    const finalCandidates = enableColBERT ? fusedNodes : candidatePool;
+    const nodes = [...graphNodes, ...finalCandidates].slice(0, 5);
 
     // Immutable audit logging of search execution details
-    const auditRecord = `[AUDIT] [${new Date().toISOString()}] User="${searchIdentity.username}" Role="${searchIdentity.role}" TokenExchanged=${searchIdentity.tokenExchanged} FallbackUsed=${searchIdentity.fallbackUsed} Query="${query.replace(/"/g, '\\"')}" HybridRetrieval=true DenseCandidates=${denseNodes.length} LexicalCandidates=${lexicalNodes.length} RetrievedChunks=[${nodes.map(n => `"${n.id}"`).join(', ')}]\n`;
+    const auditRecord = `[AUDIT] [${new Date().toISOString()}] User="${searchIdentity.username}" Role="${searchIdentity.role}" TokenExchanged=${searchIdentity.tokenExchanged} FallbackUsed=${searchIdentity.fallbackUsed} Query="${query.replace(/"/g, '\\"')}" HybridRetrieval=true DenseCandidates=${allDenseNodes.length} LexicalCandidates=${allLexicalNodes.length} RetrievedChunks=[${nodes.map(n => `"${n.id}"`).join(', ')}]\n`;
     fs.appendFileSync(auditLogFile, auditRecord, 'utf8');
 
     res.json({
@@ -969,6 +1216,74 @@ app.post('/api/search', requireAuth, async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Search error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/evaluate', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { query, groundTruthIds, domain } = req.body;
+    if (!query || !Array.isArray(groundTruthIds)) {
+      return res.status(400).json({ error: 'query and groundTruthIds are required' });
+    }
+
+    const collection = await getKnowledgeBaseCollection();
+    const queryEmbedding = await embedText(query);
+    const andConditions: any[] = [];
+    if (domain) {
+      const domainMap: Record<string, string> = {
+        'Aerospace Technical Operations': 'AEROSPACE',
+        'Government Compliance (GFR)': 'GOVERNMENT',
+        'AEROSPACE': 'AEROSPACE',
+        'GOVERNMENT': 'GOVERNMENT'
+      };
+      andConditions.push({ domain: domainMap[domain] || domain });
+    }
+    
+    let whereClause: any = undefined;
+    if (andConditions.length > 0) {
+      whereClause = andConditions[0];
+    }
+
+    const [denseResponse, allDocsResponse] = await Promise.all([
+      collection.query({
+        queryEmbeddings: [queryEmbedding],
+        nResults: 20,
+        where: whereClause,
+      }),
+      collection.get({
+        where: whereClause,
+      })
+    ]);
+
+    const denseNodes = [];
+    if (denseResponse.ids && denseResponse.ids.length > 0) {
+      for (let i = 0; i < denseResponse.ids[0].length; i++) {
+        denseNodes.push({ id: denseResponse.ids[0][i] });
+      }
+    }
+    const lexicalNodes = lexicalSearch(allDocsResponse, query);
+    const fusedNodes = computeRRF(denseNodes, lexicalNodes, 60);
+    const retrievedIds = fusedNodes.slice(0, 5).map(n => n.id);
+
+    let matches = 0;
+    retrievedIds.forEach(id => {
+      if (groundTruthIds.some(gt => id.toLowerCase().includes(gt.toLowerCase()))) {
+        matches++;
+      }
+    });
+
+    const precisionAt5 = retrievedIds.length > 0 ? matches / retrievedIds.length : 0;
+    const recallAt5 = groundTruthIds.length > 0 ? matches / groundTruthIds.length : 0;
+
+    res.json({
+      precisionAt5,
+      recallAt5,
+      retrievedIds,
+      groundTruthIds
+    });
+  } catch (error) {
+    console.error('Evaluate error:', error);
+    res.status(500).json({ error: 'Failed to run evaluation' });
   }
 });
 
@@ -1007,46 +1322,190 @@ app.post('/api/ingest', requireAuth, async (req: Request, res: Response) => {
     }
 
     const collection = await getKnowledgeBaseCollection();
-    const chunks = chunkText(redactedText, 300);
     const normalizedDomain = String(domain || 'AEROSPACE').toUpperCase().includes('GOVERN')
       ? 'GOVERNMENT'
       : 'AEROSPACE';
     const timestamp = new Date().toISOString();
-    let insertedChunks = 0;
 
     // Define Allowed/Denied Access control list parameters
     const isConfidential = filename.toLowerCase().includes('confidential') || redactedText.toLowerCase().includes('secret') || redactedText.toLowerCase().includes('confidential');
     const allowedGroups = isConfidential ? 'admin' : 'everyone';
     const deniedGroups = isConfidential ? 'guest' : 'none';
 
-    for (let i = 0; i < chunks.length; i += 1) {
-      const chunk = chunks[i];
-      if (chunk.trim().length < 10) {
-        continue;
+    // Page-level splitting
+    const pages = redactedText.includes('\f')
+      ? redactedText.split('\f')
+      : chunkText(redactedText, 600); // Approximation if no form feeds
+
+    // Create page images directory
+    const imagesDir = path.resolve(process.cwd(), 'public', 'page_images', path.basename(filename));
+    try {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    } catch (_) {}
+
+    const childChunksStored: { id: string; content: string; metadata: any }[] = [];
+    const childEmbeddings: number[][] = [];
+    let insertedChunks = 0;
+
+    for (let pIdx = 0; pIdx < pages.length; pIdx++) {
+      const pageText = pages[pIdx];
+      if (pageText.trim().length < 5) continue;
+
+      // Save page image placeholder PNG
+      const placeholderPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+      try {
+        fs.writeFileSync(path.join(imagesDir, `page_${pIdx + 1}.png`), placeholderPng);
+      } catch (err) {
+        console.error('Failed to write page image:', err);
       }
 
-      const embedding = await embedText(chunk);
-      const id = `${path.basename(filename)}-upload-${i}-${randomUUID()}`;
+      // Get layout description
+      let visualDescription = '';
+      try {
+        const layoutPrompt = `You are a document layout analyzer. Describe the visual layout of page ${pIdx + 1} of document "${path.basename(filename)}". List headers, formatting layout, tables (transcribed in markdown), and diagram captions.
+Page Content:
+${pageText.slice(0, 2000)}`;
+        visualDescription = await generateInternal(layoutPrompt);
+      } catch (err) {
+        console.warn('Failed to extract visual description:', err);
+      }
 
-      await collection.add({
-        ids: [id],
-        embeddings: [embedding],
-        metadatas: [{
-          filename: path.basename(filename),
-          source: 'frontend-upload',
-          chunk_index: i,
-          domain: normalizedDomain,
-          uploaded_at: timestamp,
-          label: `${path.basename(filename)} chunk ${i + 1}`,
-          type: 'UserUpload',
-          provenance_hash: sha256Hash,
-          allowed_groups: allowedGroups,
-          denied_groups: deniedGroups,
-        }],
-        documents: [chunk],
-      });
+      // Chunk page into parent chunks (500 words)
+      const parentChunks = chunkText(pageText, 500);
+      for (let j = 0; j < parentChunks.length; j++) {
+        const parentText = parentChunks[j];
+        if (parentText.trim().length < 10) continue;
 
-      insertedChunks += 1;
+        const parentId = `${path.basename(filename)}-page-${pIdx + 1}-parent-${j}`;
+
+        // Chunk parent into child chunks (125 words)
+        const childChunks = chunkText(parentText, 125);
+        for (let k = 0; k < childChunks.length; k++) {
+          const childText = childChunks[k];
+          if (childText.trim().length < 10) continue;
+
+          const childEmbedding = await embedText(childText);
+          const childId = `${path.basename(filename)}-page-${pIdx + 1}-child-${j}-${k}-${randomUUID().slice(0, 8)}`;
+
+          const childMetadata = {
+            filename: path.basename(filename),
+            source: 'frontend-upload',
+            page: pIdx + 1,
+            chunk_index: k,
+            parent_id: parentId,
+            parent_text: parentText,
+            visual_description: visualDescription,
+            domain: normalizedDomain,
+            uploaded_at: timestamp,
+            label: `${path.basename(filename)} Page ${pIdx + 1} (Child ${k + 1})`,
+            type: 'UserUpload',
+            layer: 'child',
+            provenance_hash: sha256Hash,
+            allowed_groups: allowedGroups,
+            denied_groups: deniedGroups,
+          };
+
+          await collection.add({
+            ids: [childId],
+            embeddings: [childEmbedding],
+            metadatas: [childMetadata],
+            documents: [childText],
+          });
+
+          childEmbeddings.push(childEmbedding);
+          childChunksStored.push({ id: childId, content: childText, metadata: childMetadata });
+          insertedChunks += 1;
+        }
+      }
+    }
+
+    // RAPTOR Tree Generation
+    if (childEmbeddings.length > 1) {
+      try {
+        const clusters = await clusterEmbeddings(childEmbeddings, 0.70);
+        for (let c = 0; c < clusters.length; c++) {
+          const clusterIndices = clusters[c];
+          if (clusterIndices.length === 0) continue;
+
+          const clusterTexts = clusterIndices.map(idx => childChunksStored[idx].content).join('\n\n');
+          const summaryPrompt = `You are a technical document summarizer. Write a detailed, technical abstract/summary of the following document chunks. Focus on key specifications, metrics, rules, and parameters:
+
+${clusterTexts.slice(0, 4000)}`;
+
+          const summaryText = await generateInternal(summaryPrompt);
+          if (summaryText && summaryText.trim().length > 10) {
+            const summaryEmbedding = await embedText(summaryText);
+            const summaryId = `RAPTOR-${path.basename(filename)}-cluster-${c}-${randomUUID().slice(0, 8)}`;
+            const childIds = clusterIndices.map(idx => childChunksStored[idx].id);
+
+            await collection.add({
+              ids: [summaryId],
+              embeddings: [summaryEmbedding],
+              metadatas: [{
+                filename: path.basename(filename),
+                source: 'RAPTOR-Summary',
+                chunk_index: c,
+                domain: normalizedDomain,
+                uploaded_at: timestamp,
+                label: `RAPTOR Summary for ${path.basename(filename)} - Cluster ${c + 1}`,
+                type: 'RAPTORSummary',
+                layer: 'summary',
+                child_ids: JSON.stringify(childIds),
+                allowed_groups: allowedGroups,
+                denied_groups: deniedGroups,
+              }],
+              documents: [summaryText],
+            });
+            insertedChunks += 1;
+          }
+        }
+      } catch (raptorErr) {
+        console.error('Failed to generate RAPTOR tree layers:', raptorErr);
+      }
+    }
+
+    // GraphRAG triplets extraction
+    try {
+      const graphPrompt = `You are an expert knowledge engineer. Extract key technical entities and their relationship tuples from the text below.
+Focus on: Technical terms, acronyms, subsystem names, components, regulations, documents, and rules.
+Output format: You MUST output ONLY a valid JSON array of string triplets: [["subject", "relation", "object"]]. Do not output any markdown formatting, backticks, or other text. If no relationships can be found, return [].
+Text:
+${redactedText.slice(0, 3000)}`;
+
+      const graphResponse = await generateInternal(graphPrompt);
+      let cleanedResponse = graphResponse.trim();
+      if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+      }
+
+      const triplets = JSON.parse(cleanedResponse);
+      if (Array.isArray(triplets)) {
+        const graphFilePath = path.resolve(process.cwd(), 'knowledge_graph.json');
+        let currentRelations: any[] = [];
+        if (fs.existsSync(graphFilePath)) {
+          try {
+            currentRelations = JSON.parse(fs.readFileSync(graphFilePath, 'utf8'));
+          } catch (e) {
+            currentRelations = [];
+          }
+        }
+
+        triplets.forEach(t => {
+          if (Array.isArray(t) && t.length === 3) {
+            currentRelations.push({
+              subject: String(t[0]).trim(),
+              relation: String(t[1]).trim(),
+              object: String(t[2]).trim(),
+              source: path.basename(filename)
+            });
+          }
+        });
+
+        fs.writeFileSync(graphFilePath, JSON.stringify(currentRelations, null, 2), 'utf8');
+        console.log(`Saved ${triplets.length} GraphRAG relationships to knowledge_graph.json`);
+      }
+    } catch (graphErr) {
+      console.warn('Failed to extract GraphRAG relations during ingestion:', graphErr);
     }
 
     res.json({
@@ -1061,93 +1520,95 @@ app.post('/api/ingest', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+async function generateInternal(contents: string): Promise<string> {
+  // Try Groq API key first if configured
+  if (process.env.GROQ_API_KEY) {
+    try {
+      const groqApiKey = process.env.GROQ_API_KEY;
+      const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${groqApiKey}`,
+        },
+        body: JSON.stringify({
+          model: groqModel,
+          messages: [{ role: 'user', content: contents }],
+          temperature: 0.0,
+          max_tokens: 1024,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content || '';
+      }
+      console.warn(`Groq API error: ${response.statusText}. Falling back.`);
+    } catch (groqErr) {
+      console.warn('Groq API generation failed, falling back:', groqErr);
+    }
+  }
+
+  const useLocal = process.env.USE_LOCAL_LLM === 'true';
+  if (useLocal) {
+    try {
+      const localUrl = process.env.LOCAL_LLM_URL || 'http://localhost:11434';
+      const localModel = process.env.LOCAL_LLM_MODEL || 'gemma2:2b';
+
+      const response = await fetch(`${localUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: localModel,
+          prompt: contents,
+          stream: false,
+          options: {
+            temperature: 0.0,
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.response || '';
+      }
+      console.warn(`Local LLM API error: ${response.statusText}. Falling back.`);
+    } catch (err) {
+      console.warn('Local LLM generation failed, falling back:', err);
+    }
+  }
+
+  // Try Gemini API key
+  try {
+    const aiClient = getAiClient();
+    if (aiClient) {
+      const response = await aiClient.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: contents,
+        config: {
+          temperature: 0.0,
+        }
+      });
+      return response.text || '';
+    }
+    console.warn('Gemini API key is not configured. Falling back to mock generator.');
+  } catch (geminiErr) {
+    console.warn('Gemini API generation failed. Falling back to mock generator:', geminiErr);
+  }
+
+  // Heuristic/Rule-based Mock Generator Fallback
+  return mockGenerate(contents);
+}
+
 app.post('/api/generate', requireAuth, async (req: Request, res: Response) => {
   try {
     const { contents } = req.body;
     if (!contents) {
       return res.status(400).json({ error: 'contents is required' });
     }
-
-    // Try Groq API key first if configured
-    if (process.env.GROQ_API_KEY) {
-      try {
-        const groqApiKey = process.env.GROQ_API_KEY;
-        const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${groqApiKey}`,
-          },
-          body: JSON.stringify({
-            model: groqModel,
-            messages: [{ role: 'user', content: contents }],
-            temperature: 0.0,
-            max_tokens: 1024,
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const text = data.choices?.[0]?.message?.content || '';
-          return res.json({ text });
-        }
-        console.warn(`Groq API error: ${response.statusText}. Falling back.`);
-      } catch (groqErr) {
-        console.warn('Groq API generation failed, falling back:', groqErr);
-      }
-    }
-
-    const useLocal = process.env.USE_LOCAL_LLM === 'true';
-    if (useLocal) {
-      try {
-        const localUrl = process.env.LOCAL_LLM_URL || 'http://localhost:11434';
-        const localModel = process.env.LOCAL_LLM_MODEL || 'gemma2:2b';
-
-        const response = await fetch(`${localUrl}/api/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: localModel,
-            prompt: contents,
-            stream: false,
-            options: {
-              temperature: 0.0,
-            }
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          return res.json({ text: data.response });
-        }
-        console.warn(`Local LLM API error: ${response.statusText}. Falling back.`);
-      } catch (err) {
-        console.warn('Local LLM generation failed, falling back:', err);
-      }
-    }
-
-    // Try Gemini API key
-    try {
-      const aiClient = getAiClient();
-      if (aiClient) {
-        const response = await aiClient.models.generateContent({
-          model: "gemini-3.5-flash",
-          contents: contents,
-          config: {
-            temperature: 0.0,
-          }
-        });
-        return res.json({ text: response.text || '' });
-      }
-      console.warn('Gemini API key is not configured. Falling back to mock generator.');
-    } catch (geminiErr) {
-      console.warn('Gemini API generation failed. Falling back to mock generator:', geminiErr);
-    }
-
-    // Heuristic/Rule-based Mock Generator Fallback
-    const mockText = mockGenerate(contents);
-    res.json({ text: mockText });
+    const text = await generateInternal(contents);
+    res.json({ text });
   } catch (error) {
     console.error('Generation error in server:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' });

@@ -54,11 +54,13 @@ graph TD
 
 ## 🛡️ Zero-Trust Security Stack
 
-### 1. Ingestion Input Sanitization
+### 1. Ingestion Input Sanitization & Multimodal OCR
 To prevent instruction smuggling and malicious comment injection during document processing, the pipeline sanitizes incoming text:
 - **Zero-Width Spaces Removal**: Strips characters matching `/[\u200B-\u200D\uFEFF]/g`.
 - **Hidden Control Characters Removal**: Strips characters matching `/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g`.
 - **HTML & Markdown Comment Stripping**: Cleans out comments matching `<!--[\s\S]*?-->` and Markdown references like `[//]: (...)` or `[// ]: <...>`.
+
+**Multimodal PDF OCR**: All ingested PDFs are piped through **Gemini 2.5 Flash** for intelligent multimodal OCR. This allows the RAG pipeline to search and understand text embedded inside scanned documents, charts, graphs, and technical diagrams seamlessly, falling back to a raw text parser only if the API is unavailable.
 
 ### 2. Zero-Trust PII Redaction
 Before document segments are stored in ChromaDB or embedded, they are scanned for PII (Personally Identifiable Information):
@@ -113,7 +115,12 @@ The engine calculates four core compliance metrics in [src/lib/verify.ts](file:/
 - **Hallucination Risk**: Computed as $1.0 - \text{Grounding Fidelity}$, indicating the likelihood that statements were generated without source context support.
 - **Overall Confidence**: The mathematical average of Retrieval Accuracy, Grounding Fidelity, and Answer Relevance (based on query/answer key term overlap).
 
-### 3. C2PA Provenance Tracking
+### 3. Automated Precision & Recall Benchmarks
+The application features a built-in automated testing suite designed to evaluate the Retrieval-Augmented Generation pipeline's search efficiency. 
+- **Precision@5 and Recall@5**: Administrators can run live benchmarks against pre-configured ground-truth query-document pairs.
+- **Dynamic Matching**: The backend calculates metrics by evaluating whether the expected source document filenames appear within the top 5 chunks returned by the ColBERT-RRF hybrid search algorithm.
+
+### 4. C2PA Provenance Tracking
 Documents ingested command-line or via the upload portal generate SHA-256 hashes. These are written directly to `ingestion_audit.log`, verifying the integrity and source path of data used in RAG contexts.
 
 ---

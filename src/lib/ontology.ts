@@ -93,7 +93,7 @@ function scoreNode(node: GroundedNode, queryTerms: string[]): number {
   return score;
 }
 
-export async function searchOntology(query: string, domain: Domain, filters?: AdvancedFilters, userGroups?: string[]): Promise<GroundedNode[]> {
+export async function searchOntology(query: string, domain: Domain, filters?: AdvancedFilters, userGroups?: string[], advancedSettings?: any): Promise<GroundedNode[]> {
   try {
     const token = localStorage.getItem('irsargo_token');
     const simulateOutage = localStorage.getItem('irsargo_simulate_outage') === 'true';
@@ -103,7 +103,7 @@ export async function searchOntology(query: string, domain: Domain, filters?: Ad
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ query, domain, filters, userGroups, simulateOutage }),
+      body: JSON.stringify({ query, domain, filters, userGroups, simulateOutage, advancedSettings }),
     });
 
     if (response.status === 401) {

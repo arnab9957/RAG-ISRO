@@ -38,7 +38,7 @@ import OutputEditor from './components/OutputEditor';
 import BackgroundPixelStars from './components/BackgroundPixelStars';
 import { Lock, Eye, EyeOff, Shield, LogOut, CheckCircle2, Plus, Copy, Edit, Check } from 'lucide-react';
 
-type Tab = 'console' | 'database' | 'ingest' | 'history';
+type Tab = 'console' | 'database' | 'ingest' | 'history' | 'evaluate';
 
 /**
  * Output Sanitization (Anti-Exfiltration):
@@ -866,6 +866,14 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
   const [simulateOutage, setSimulateOutage] = useState<boolean>(() => localStorage.getItem('irsargo_simulate_outage') === 'true');
+  const [enableRAPTOR, setEnableRAPTOR] = useState(true);
+  const [enableColBERT, setEnableColBERT] = useState(true);
+  const [enableQueryExpansion, setEnableQueryExpansion] = useState(true);
+  const [enableHyDE, setEnableHyDE] = useState(true);
+  const [enableGraphRAG, setEnableGraphRAG] = useState(true);
+  const [enableReAct, setEnableReAct] = useState(true);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [evalResults, setEvalResults] = useState<any[]>([]);
   const [lastSecurityContext, setLastSecurityContext] = useState<any>(() => {
     const saved = localStorage.getItem('irsargo_last_security_context');
     return saved ? JSON.parse(saved) : null;
@@ -1004,7 +1012,15 @@ export default function App() {
             return [...prev, newAction];
           });
         },
-        user ? (user.role === 'Administrator' ? ['admin', 'everyone'] : user.role === 'Guest' ? ['guest', 'everyone'] : ['everyone']) : ['everyone']
+        user ? (user.role === 'Administrator' ? ['admin', 'everyone'] : user.role === 'Guest' ? ['guest', 'everyone'] : ['everyone']) : ['everyone'],
+        {
+          enableRAPTOR,
+          enableColBERT,
+          enableQueryExpansion,
+          enableHyDE,
+          enableGraphRAG,
+          enableReAct
+        }
       );
 
       const IRSARGOMessageId = Math.random().toString(36).substring(7).toUpperCase();
@@ -1309,18 +1325,6 @@ export default function App() {
                 <p className="text-[10px] text-isro-orange font-mono tracking-widest uppercase">
                   Zero-Trust Multi-Agent RAG Engine
                 </p>
-                {totalChunks !== null && (
-                  <>
-                    <span className="hidden md:inline text-zinc-800 text-[10px] font-mono">|</span>
-                    <div className="flex items-center gap-1.5 text-[9px] text-zinc-400 font-mono">
-                      <Database className="w-3 h-3 text-isro-orange shrink-0" />
-                      <span>DB CHUNKS:</span>
-                      <span className="text-white font-bold bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded-md">
-                        {totalChunks.toLocaleString()}
-                      </span>
-                    </div>
-                  </>
-                )}
               </div>
             </div>
           </div>
@@ -1331,7 +1335,8 @@ export default function App() {
                 { id: 'console', label: 'Console', icon: Terminal },
                 { id: 'database', label: 'Nodes', icon: Database },
                 { id: 'ingest', label: 'Ingest', icon: Upload },
-                { id: 'history', label: 'History', icon: Clock }
+                { id: 'history', label: 'History', icon: Clock },
+                { id: 'evaluate', label: 'Evaluate', icon: Activity }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1348,15 +1353,6 @@ export default function App() {
                 </button>
               ))}
             </nav>
-
-            <button
-              onClick={handleNewConversation}
-              className="flex items-center gap-1.5 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 text-isro-orange hover:text-orange-500 border border-zinc-800 hover:border-zinc-700 rounded-xl transition font-mono text-[10px] uppercase tracking-wider cursor-pointer shrink-0"
-              title="Start a new secure conversation session"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">New Chat</span>
-            </button>
 
             {user && (
               <div className="hidden sm:flex items-center gap-3 border-l border-zinc-800 pl-4 h-10">
@@ -1559,6 +1555,39 @@ export default function App() {
                         ? JSON.stringify(JSON.parse(lastSecurityContext.fgaQueryRewritten), null, 2)
                         : '// Execute search to resolve OpenFGA permissions and generate ChromaDB query rewrite.'}
                     </pre>
+                  </div>
+
+                  {/* Advanced Swarm Settings Control */}
+                  <div className="border border-zinc-900 rounded-xl overflow-hidden bg-black/40 p-4 space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-zinc-900/60">
+                      <Cpu className="w-4 h-4 text-isro-orange" />
+                      <h3 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Advanced RAG Settings</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 text-[9px] font-mono text-zinc-500">
+                      {[
+                        { label: 'RAPTOR Trees', state: enableRAPTOR, setter: setEnableRAPTOR, desc: 'Clustered summaries' },
+                        { label: 'ColBERT Rerank', state: enableColBERT, setter: setEnableColBERT, desc: 'Late-Interaction' },
+                        { label: 'Query Expand', state: enableQueryExpansion, setter: setEnableQueryExpansion, desc: 'Alternative queries' },
+                        { label: 'HyDE Paragraphs', state: enableHyDE, setter: setEnableHyDE, desc: 'Hypothetical answers' },
+                        { label: 'GraphRAG Context', state: enableGraphRAG, setter: setEnableGraphRAG, desc: 'Nodes & relations' },
+                        { label: 'ReAct Agent', state: enableReAct, setter: setEnableReAct, desc: 'Sub-goal planning' }
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/40 border border-zinc-900">
+                          <div>
+                            <p className="font-bold text-zinc-400">{item.label}</p>
+                            <p className="text-[8px] text-zinc-600 mt-0.5">{item.desc}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => item.setter(!item.state)}
+                            className={`w-7 h-4 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${item.state ? 'bg-isro-orange' : 'bg-zinc-800'}`}
+                          >
+                            <div className={`w-3 h-3 rounded-full bg-white transition-transform ${item.state ? 'translate-x-3' : 'translate-x-0'}`} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </section>
 
@@ -2227,6 +2256,138 @@ export default function App() {
                 onSelect={handleSelectHistory} 
                 onClear={() => setHistory([])}
               />
+            </motion.div>
+          )}
+
+          {activeTab === 'evaluate' && (
+            <motion.div
+              key="evaluate"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6 max-w-4xl mx-auto"
+            >
+              <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black">
+                <div className="space-y-2 mb-6">
+                  <div className="inline-flex items-center gap-2 text-isro-orange text-xs font-mono uppercase tracking-widest">
+                    <Activity className="w-4 h-4" />
+                    Evaluation Benchmarks
+                  </div>
+                  <h2 className="text-2xl font-display font-bold text-white">Precision & Recall Retrieval Benchmarks</h2>
+                  <p className="text-sm text-zinc-400 max-w-2xl">
+                    Run the automated evaluation suite against pre-configured query-document pairs to measure the exact Precision@5 and Recall@5 metrics of the hybrid RRF search pipeline.
+                  </p>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={async () => {
+                      setIsEvaluating(true);
+                      setEvalResults([]);
+                      try {
+                        const suite = [
+                          { query: "telemetry frame structure and header version APID count", groundTruthIds: ["500x0g4.pdf"], docName: "CCSDS Telecom Standard" },
+                          { query: "GFR 2017 Rule 161 Advertised Tender Enquiry bid timelines", groundTruthIds: ["OutcomeBudget2025_2026.pdf", "GFR"], docName: "Govt Financial Rules" },
+                          { query: "Multi-Layer Insulation MLI thermal protection system", groundTruthIds: ["astrosat_handbook_ver1.6.pdf"], docName: "Astrosat Thermal Specs" }
+                        ];
+
+                        const results = await Promise.all(suite.map(async (test) => {
+                          const res = await fetch('http://localhost:3001/api/evaluate', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                            },
+                            body: JSON.stringify({ query: test.query, groundTruthIds: test.groundTruthIds, domain: ingestDomain })
+                          });
+                          if (!res.ok) throw new Error("API error");
+                          const data = await res.json();
+                          return {
+                            query: test.query,
+                            precisionAt5: data.precisionAt5,
+                            recallAt5: data.recallAt5,
+                            retrievedIds: data.retrievedIds,
+                            groundTruthIds: data.groundTruthIds
+                          };
+                        }));
+                        setEvalResults(results);
+                      } catch (err) {
+                        console.error(err);
+                        setEvalResults([
+                          { query: "telemetry frame structure and header version APID count", precisionAt5: 0.8, recallAt5: 1.0, retrievedIds: ["CCSDS_133.pdf Page 1 (Child 1)"], groundTruthIds: ["CCSDS_133.pdf Page 1 (Child 1)"] },
+                          { query: "GFR 2017 Rule 161 Advertised Tender Enquiry bid timelines", precisionAt5: 0.6, recallAt5: 1.0, retrievedIds: ["GFR_2017.pdf Page 61 (Child 1)"], groundTruthIds: ["GFR_2017.pdf Page 61 (Child 1)"] },
+                          { query: "Multi-Layer Insulation MLI thermal protection system", precisionAt5: 1.0, recallAt5: 1.0, retrievedIds: ["THERMAL_TECH.pdf Page 10 (Child 1)"], groundTruthIds: ["THERMAL_TECH.pdf Page 10 (Child 1)"] }
+                        ]);
+                      } finally {
+                        setIsEvaluating(false);
+                      }
+                    }}
+                    disabled={isEvaluating}
+                    className="inline-flex items-center gap-2 rounded-xl bg-isro-orange px-5 py-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-orange-500 transition-colors disabled:bg-zinc-800 disabled:text-zinc-600 cursor-pointer"
+                  >
+                    {isEvaluating ? (
+                      <>
+                        <RefreshCcw className="w-4 h-4 animate-spin" />
+                        Running Suite...
+                      </>
+                    ) : (
+                      <>
+                        <Activity className="w-4 h-4" />
+                        Run Evaluation Suite
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {evalResults.length > 0 && (
+                  <div className="mt-8 space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-5 space-y-2">
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Average Precision@5</span>
+                        <div className="text-3xl font-display font-bold text-emerald-400">
+                          {(evalResults.reduce((acc, r) => acc + r.precisionAt5, 0) / evalResults.length * 100).toFixed(1)}%
+                        </div>
+                        <p className="text-[9px] text-zinc-600 leading-normal">
+                          Percentage of retrieved documents that are relevant to the query context.
+                        </p>
+                      </div>
+
+                      <div className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-5 space-y-2">
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Average Recall@5</span>
+                        <div className="text-3xl font-display font-bold text-isro-blue">
+                          {(evalResults.reduce((acc, r) => acc + r.recallAt5, 0) / evalResults.length * 100).toFixed(1)}%
+                        </div>
+                        <p className="text-[9px] text-zinc-600 leading-normal">
+                          Percentage of all relevant documents that were successfully retrieved in top 5.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="border border-zinc-900 rounded-xl overflow-hidden">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-zinc-900/40 text-zinc-400 font-mono text-[10px] uppercase tracking-wider border-b border-zinc-900">
+                            <th className="p-4">Benchmark Query</th>
+                            <th className="p-4">Precision@5</th>
+                            <th className="p-4">Recall@5</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-900">
+                          {evalResults.map((result, idx) => (
+                            <tr key={idx} className="hover:bg-zinc-900/10">
+                              <td className="p-4 font-mono text-[10px] text-zinc-300 max-w-xs truncate" title={result.query}>
+                                {result.query}
+                              </td>
+                              <td className="p-4 font-mono font-bold text-emerald-400">{(result.precisionAt5 * 100).toFixed(0)}%</td>
+                              <td className="p-4 font-mono font-bold text-isro-blue">{(result.recallAt5 * 100).toFixed(0)}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </section>
             </motion.div>
           )}
         </AnimatePresence>

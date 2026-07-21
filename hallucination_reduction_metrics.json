@@ -126,5 +126,29 @@
     "hallucinationReduction": 1,
     "overallConfidence": 0.8968,
     "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-20T08:09:51.918Z",
+    "query": "What is GFR Form 22 used for?",
+    "hallucinationRisk": 0,
+    "hallucinationReduction": 1,
+    "overallConfidence": 0.8968,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-07-21T07:15:26.336Z",
+    "query": "what are the main fallbacks described in the db",
+    "hallucinationRisk": 0,
+    "hallucinationReduction": 1,
+    "overallConfidence": 0.896,
+    "sourcesCount": 10
+  },
+  {
+    "timestamp": "2026-07-21T07:48:44.995Z",
+    "query": "matters relating to sale of Central Government equity through offer for sale or private placement or any other mode in the erstwhile Central Public Sector Undertakings. Note: All other post disinvestment matters, including those relating to and arising out of the exercise of Call option by the Strategic Partner in the erstwhile Central Public Sector Undertakings, shall continue to be handled by the administrative Ministry or Department concerned, where necessary, in consultation with the Department of Investment and Public Asset Management (DIPAM). 2. Decisions on the recommendations of Administrative Ministries, NITI Aayog, etc. for disinvestment including strategic disinvestment. 3. All matters related to Independent External Monitor (s) for disinvestment and public asset management. 4. (a) Decisions in matters relating to Central Public Sector Undertakings for purposes of Government investment in equity like capital restructuring, bonus, dividends, disinvestment of government equity and other related issues. (b) Advise the Government in matters of financial restructuring of the Central Public Sector Enterprises and for attracting investment in the said Enterprises through capital market. 5. The Unit Trust of India Act, 1963 (52 of 1963) along with subjects relating to Specified Undertaking of the Unit Trust of India (SUUTI). II. VISION (i) Promote people’s ownership of Central Public Sector Enterprises (CPSEs) to share in their prosperity through disinvestment. (ii) Efficient management of public investment i n CPSEs for acc el era tin g eco no mic development and augmenting Government’s resources for higher expenditure. III. MISSION (i) L i s t C P S E s o n s to c k e xc h a n g e s t o promote people’s ownership through public participation and improving efficiencies of CPSEs through accountability to its shareholders. (ii) To bring in operational efficiencies in CPSEs through strategic disinvestment, ensuring their greater contribution to",
+    "hallucinationRisk": 0,
+    "hallucinationReduction": 1,
+    "overallConfidence": 0.7221,
+    "sourcesCount": 10
   }
 ]
