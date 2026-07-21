@@ -1088,25 +1088,38 @@ export default function App() {
             return msg;
           }));
 
+          // Construct final verified response for caching
+          const finalVerifiedResponse: IRSARGOResponse = {
+            ...result,
+            traceLog: verifyResult.traceLog,
+            metrics: verifyResult.metrics,
+            groundingSources: verifyResult.groundingSources,
+            isPendingVerification: false,
+            agentActions: result.agentActions.map(action => {
+              if (action.id === result.validatorActionId) {
+                return verifyResult.validatorAction;
+              }
+              return action;
+            })
+          };
+
+          // --- Save to Semantic Cache ---
+          // Only cache if grounding fidelity is high and no hallucinations
+          if (finalVerifiedResponse.metrics.groundingFidelity > 0.8 && finalVerifiedResponse.metrics.hallucinationRisk < 0.2) {
+            fetch('http://localhost:3001/api/cache/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: currentQuery, response: finalVerifiedResponse })
+            }).catch(e => console.warn('Failed to save to semantic cache:', e));
+          }
+          // ------------------------------
+
           // Update history state
           setHistory(prev => prev.map(h => {
             if (h.id === historyItemId) {
-              const updatedResponse: IRSARGOResponse = {
-                ...h.response,
-                traceLog: verifyResult.traceLog,
-                metrics: verifyResult.metrics,
-                groundingSources: verifyResult.groundingSources,
-                isPendingVerification: false,
-                agentActions: h.response.agentActions.map(action => {
-                  if (action.id === result.validatorActionId) {
-                    return verifyResult.validatorAction;
-                  }
-                  return action;
-                })
-              };
               return {
                 ...h,
-                response: updatedResponse
+                response: finalVerifiedResponse
               };
             }
             return h;

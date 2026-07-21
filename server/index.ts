@@ -1598,7 +1598,13 @@ async function generateInternal(contents: string): Promise<string> {
   }
 
   // Heuristic/Rule-based Mock Generator Fallback
-  return mockGenerate(contents);
+  let textContent = '';
+  if (typeof contents === 'string') {
+    textContent = contents;
+  } else if (Array.isArray(contents)) {
+    textContent = JSON.stringify(contents);
+  }
+  return mockGenerate(textContent);
 }
 
 app.post('/api/generate', requireAuth, async (req: Request, res: Response) => {
@@ -1925,6 +1931,51 @@ Output strictly valid JSON and nothing else.`;
   }
 });
 
+// --- Semantic Caching Implementation ---
+const semanticCache = new Map<string, { vector: number[]; response: any }>();
+
+app.post('/api/cache/check', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ error: 'Query required' });
+    
+    const queryVector = await embedText(query);
+    
+    let bestMatch: any = null;
+    let highestSim = -1;
+    
+    for (const [cachedQuery, cacheData] of semanticCache.entries()) {
+      const sim = cosineSimilarity(queryVector, cacheData.vector);
+      if (sim > 0.95 && sim > highestSim) {
+        highestSim = sim;
+        bestMatch = cacheData.response;
+      }
+    }
+    
+    if (bestMatch) {
+      return res.json({ hit: true, response: bestMatch, similarity: highestSim });
+    }
+    return res.json({ hit: false });
+  } catch (error) {
+    console.error('Cache check error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/cache/save', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { query, response } = req.body;
+    if (!query || !response) return res.status(400).json({ error: 'Query and response required' });
+    
+    const queryVector = await embedText(query);
+    semanticCache.set(query, { vector: queryVector, response });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Cache save error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`IRSARGO Backend running on port ${PORT}`);

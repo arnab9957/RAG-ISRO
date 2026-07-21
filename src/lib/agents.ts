@@ -82,6 +82,31 @@ export class IRSARGOOrchestrator {
       return newAction;
     };
 
+    // --- Semantic Cache Check ---
+    try {
+      const cacheRes = await fetch('http://localhost:3001/api/cache/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+      if (cacheRes.ok) {
+        const cacheData = await cacheRes.json();
+        if (cacheData.hit && cacheData.response) {
+          const hitAction = addAction(AgentRole.VALIDATOR, `Semantic Cache Hit! Bypassing generation layers... (Similarity: ${Math.round(cacheData.similarity * 100)}%)`, 'completed');
+          hitAction.output = 'Instantly retrieved from Semantic Cache.';
+          
+          return {
+            ...cacheData.response,
+            isPendingVerification: false,
+            agentActions: [hitAction]
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Cache check failed, falling back to full generation:', e);
+    }
+    // ----------------------------
+
     // If ReAct Agent loop is enabled
     const enableReAct = advancedSettings?.enableReAct === true;
     if (enableReAct) {

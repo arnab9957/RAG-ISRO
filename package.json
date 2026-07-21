@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "server": "tsx server/index.ts",
     "ingest": "tsx scripts/ingest.ts",
-    "groq-chat": "tsx scripts/groq_chat.ts"
+    "groq-chat": "tsx scripts/groq_chat.ts",
+    "benchmark": "tsx scripts/benchmark_rag.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

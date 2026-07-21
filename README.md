@@ -4,6 +4,22 @@
 
 Designed to operate in secure, air-gapped / off-grid environments, the system features a zero-trust multi-agent security pipeline, local embedding computation, dynamic access control lists (DACL), anti-exfiltration output filtering, and simulated hybrid formal verification (ZK-STARK + Z3 SMT) to guarantee response groundedness, constraint satisfaction, and strict data safety.
 
+
+---
+
+## 🚀 Key Integrated Features
+
+The system implements advanced Retrieval-Augmented Generation (RAG) methodologies engineered for maximum accuracy, recall, and zero-trust safety:
+
+1. **RAPTOR (Hierarchical Tree-Organized Retrieval)**: Recursively clusters chunk embeddings and generates parent summaries using local VLMs/LLMs, allowing the system to query broad, high-level themes alongside fine-grained passages.
+2. **ColBERT-style Late-Interaction Reranking**: Utilizes unpooled token-level embeddings from `@xenova/transformers` to calculate contextual similarity via the **MaxSim** operator, ensuring high-fidelity term alignment.
+3. **GraphRAG Node/Edge Ingestion**: Extracts entity relationship triplets `(subject, relation, object)` and queries them to inject structured relationship paths into the retrieval stream.
+4. **Parent-Document Retrieval**: Indexes small, semantic child chunks for search accuracy but retrieves and displays parent text (large continuous context blocks) to ensure continuity in generation.
+5. **ReAct Agentic Multi-Step Planner**: Formulates sub-goals, routes queries to `VectorSearch`, `GraphSearch`, or `VerifyCompliance` tools, and collects observations recursively.
+6. **Query Expansion & HyDE**: Generates query variants and hypothetical answers (HyDE) to bridge phrasing gaps and enhance retrieval recall.
+7. **Offline Multimodal VLM Page Ingestion**: Converts PDF pages into images and runs local **Moondream2** via **Ollama** to analyze and transcribe tables, diagrams, and formatting layouts offline.
+8. **Precision & Recall Dashboard**: Features a built-in automated suite to evaluate retrieval pipeline efficiency (Precision@5 and Recall@5) against pre-configured QA pairs.
+
 ---
 
 ## 📐 System Architecture Flow
@@ -16,20 +32,27 @@ graph TD
     
     subgraph Pre-Processing Stage
         PreProcess --> ZK["ZK-STARK Query Verification<br/>(RISC Zero Simulation)"]
-        ZK --> Paraphrase["Semantic Query Paraphrasing<br/>(Executor Agent)"]
+        ZK --> Expand["Query Expansion & HyDE<br/>(Executor Agent)"]
     end
     
-    Paraphrase --> VectorQuery[Vector DB Retrieval]
+    Expand --> VectorQuery[Vector DB Retrieval]
     
-    subgraph Knowledge Retrieval
+    subgraph Knowledge Retrieval & Processing
         VectorQuery --> Chroma[(ChromaDB Vector Store)]
-        Chroma --> ContextExpand["Context Continuity Expansion<br/>(Neighbor Node Expansion)"]
+        Chroma --> RRAPTOR["RAPTOR Index Layer Summaries"]
+        Chroma --> ParentDoc["Parent-Doc Context Swap"]
     end
     
-    ContextExpand --> Rerank[TF-IDF Relevance Reranking]
-    Rerank --> ExecutorGen["Grounded Generation Layer<br/>(Executor Agent - Peirce LNN)"]
+    RRAPTOR --> Fusion["Reciprocal Rank Fusion<br/>(RRF Dense + Sparse)"]
+    ParentDoc --> Fusion
+    
+    Fusion --> ColBERT["ColBERT-style MaxSim Reranker"]
+    
+    ColBERT --> ReActLoop["ReAct Agentic Multi-Step Planner<br/>(Executor/Validator Tools Loop)"]
     
     subgraph Generation & Validation Swarm
+        ReActLoop --> GraphRAG["GraphRAG Path Injection<br/>(knowledge_graph.json)"]
+        GraphRAG --> ExecutorGen["Grounded Generation Layer"]
         ExecutorGen --> CriticAudit["Adversarial Hallucination Audit<br/>(Critic Agent)"]
         CriticAudit --> SMTVerify["Z3 SMT Formal Prover Simulation<br/>(Validator Agent)"]
         SMTVerify --> ConfScore[Confidence & Risk Metric Scoring]
@@ -41,14 +64,16 @@ graph TD
 
 1. **Query Pre-Processing**: User query input is validated and cryptographically verified.
 2. **ZK-STARK Proving**: Generates a simulated zero-knowledge proof (`zkstark_[timestamp]_[hash]_risc0_v2`) representing query integrity.
-3. **Semantic Query Paraphrasing**: The *Executor Agent* strips out instructions and extracts the core query intent, preventing prompt-injection payloads from modifying agent system prompts.
-4. **Vector Retrieval**: Queries ChromaDB with security clearances injected.
-5. **Context Expansion**: Fetches adjacent pages/chunks of matching documents to preserve structural flow.
-6. **TF-IDF Reranking**: Re-orders retrieved chunks dynamically based on query term frequency.
-7. **Grounded Generation (Peirce LNN)**: The *Executor Agent* synthesizes a response constrained strictly to retrieved context enclosed in `<grounding_context>` XML blocks.
-8. **Adversarial Hallucination Audit**: The *Critic Agent* evaluates the draft answer against the retrieved context to flag logical flaws, ungrounded declarations, or context leaks.
-9. **Z3 SMT Verification**: Checks if the answer satisfies key domain terms extracted as logical constraints.
-10. **Output Sanitization**: The output is stripped of unauthorized image/link tags to block exfiltration attacks.
+3. **Query Expansion & HyDE**: Generates 2 alternative search queries and a hypothetical document paragraph to bridge semantic phrasing gaps and boost retrieval recall.
+4. **Parent-Document Retrieval**: Indexes small child chunks for semantic precision but swaps in larger parent document context blocks during generation to maintain context continuity.
+5. **RAPTOR (Recursive Summarization Tree)**: Recursively clusters document chunks using local cosine similarity and generates summary layers, allowing multi-level search across leaf passages and high-level themes.
+6. **ColBERT-style Late-Interaction Reranking**: Uses unpooled token-level MaxSim operators computed natively in JS using `@xenova/transformers` to rerank top RRF candidates.
+7. **GraphRAG Node/Edge Ingestion & Search**: Indexes extracted entity relationship triplets `(subject, relation, object)` into `knowledge_graph.json` and injects matching paths as context nodes.
+8. **ReAct Agentic Multi-Step Planner**: Routes sub-queries dynamically to `VectorSearch`, `GraphSearch`, and `VerifyCompliance` tools to build answers for complex, multi-hop questions.
+9. **Grounded Generation (Peirce LNN)**: The *Executor Agent* synthesizes a response constrained strictly to retrieved context enclosed in `<grounding_context>` XML blocks.
+10. **Adversarial Hallucination Audit**: The *Critic Agent* evaluates the draft answer against the retrieved context to flag logical flaws, ungrounded declarations, or context leaks.
+11. **Z3 SMT Verification**: Checks if the answer satisfies key domain terms extracted as logical constraints.
+12. **Output Sanitization**: The output is stripped of unauthorized image/link tags to block exfiltration attacks.
 
 ---
 
@@ -60,7 +85,7 @@ To prevent instruction smuggling and malicious comment injection during document
 - **Hidden Control Characters Removal**: Strips characters matching `/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g`.
 - **HTML & Markdown Comment Stripping**: Cleans out comments matching `<!--[\s\S]*?-->` and Markdown references like `[//]: (...)` or `[// ]: <...>`.
 
-**Multimodal PDF OCR**: All ingested PDFs are piped through **Gemini 2.5 Flash** for intelligent multimodal OCR. This allows the RAG pipeline to search and understand text embedded inside scanned documents, charts, graphs, and technical diagrams seamlessly, falling back to a raw text parser only if the API is unavailable.
+**Offline Multimodal VLM Page Ingestion**: All ingested PDFs are rendered page-by-page to local image stores (`public/page_images/`). The server runs a local vision-language model (**Moondream2** via **Ollama**) to describe page layouts, diagrams, and transcribe table grids, indexing these descriptions alongside parsed text to ensure layout and structural continuity.
 
 ### 2. Zero-Trust PII Redaction
 Before document segments are stored in ChromaDB or embedded, they are scanned for PII (Personally Identifiable Information):
@@ -130,8 +155,10 @@ Documents ingested command-line or via the upload portal generate SHA-256 hashes
 ```text
 ├── chroma_data/             # Local persistent directory for ChromaDB database files
 ├── datasets/                # Source directory for document ingestion (PDF, TXT, MD, CSV)
+├── knowledge_graph.json     # Local flat JSON entity-relationship edge-list (GraphRAG database)
+├── pii_mappings.json        # Reversible PII mapping placeholders storage
 ├── server/
-│   └── index.ts             # Express.js backend API server handling RAG, Auth & Ingest
+│   └── index.ts             # Express.js backend API server handling RAG, Auth, Ingest, & ColBERT
 ├── scripts/
 │   ├── ingest.ts            # Local ingestion parser, text chunker, and ChromaDB importer
 │   └── verify_ingest.ts     # Command-line utility to output database counts and check connection
