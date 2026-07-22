@@ -1520,9 +1520,32 @@ ${redactedText.slice(0, 3000)}`;
   }
 });
 
-async function generateInternal(contents: string): Promise<string> {
-  // Try Groq API key first if configured
-  if (process.env.GROQ_API_KEY) {
+let globalAirGappedMode = false;
+
+app.get('/api/config', (req: Request, res: Response) => {
+  res.json({
+    airGappedMode: globalAirGappedMode,
+  });
+});
+
+app.post('/api/config', (req: Request, res: Response) => {
+  if (typeof req.body.airGappedMode === 'boolean') {
+    globalAirGappedMode = req.body.airGappedMode;
+    console.log(`[AIR-GAPPED SYSTEM POLICY] Air-Gapped Mode set to: ${globalAirGappedMode ? 'ENABLED (OFFLINE ONLY - GROQ/GEMINI SEVERED)' : 'DISABLED (ONLINE CLOUD ALLOWED)'}`);
+  }
+  res.json({
+    airGappedMode: globalAirGappedMode,
+    message: globalAirGappedMode 
+      ? 'Air-Gapped Data Privacy ENABLED. Outbound Groq and Gemini cloud API connections are fully severed.' 
+      : 'Online mode ACTIVE.'
+  });
+});
+
+async function generateInternal(contents: string | any, isAirGappedOverride?: boolean): Promise<string> {
+  const isAirGapped = isAirGappedOverride ?? globalAirGappedMode;
+
+  // Try Groq API key first if configured (Only if NOT Air-Gapped)
+  if (!isAirGapped && process.env.GROQ_API_KEY) {
     try {
       const groqApiKey = process.env.GROQ_API_KEY;
       const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
@@ -1534,7 +1557,7 @@ async function generateInternal(contents: string): Promise<string> {
         },
         body: JSON.stringify({
           model: groqModel,
-          messages: [{ role: 'user', content: contents }],
+          messages: [{ role: 'user', content: typeof contents === 'string' ? contents : JSON.stringify(contents) }],
           temperature: 0.0,
           max_tokens: 1024,
         }),
@@ -1548,6 +1571,8 @@ async function generateInternal(contents: string): Promise<string> {
     } catch (groqErr) {
       console.warn('Groq API generation failed, falling back:', groqErr);
     }
+  } else if (isAirGapped) {
+    console.log('[AIR-GAPPED SECURITY] Groq Cloud API call bypassed. 100% local privacy maintained.');
   }
 
   const useLocal = process.env.USE_LOCAL_LLM === 'true';
@@ -1561,7 +1586,7 @@ async function generateInternal(contents: string): Promise<string> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: localModel,
-          prompt: contents,
+          prompt: typeof contents === 'string' ? contents : JSON.stringify(contents),
           stream: false,
           options: {
             temperature: 0.0,
@@ -1579,25 +1604,29 @@ async function generateInternal(contents: string): Promise<string> {
     }
   }
 
-  // Try Gemini API key
-  try {
-    const aiClient = getAiClient();
-    if (aiClient) {
-      const response = await aiClient.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: contents,
-        config: {
-          temperature: 0.0,
-        }
-      });
-      return response.text || '';
+  // Try Gemini API key (Only if NOT Air-Gapped)
+  if (!isAirGapped) {
+    try {
+      const aiClient = getAiClient();
+      if (aiClient) {
+        const response = await aiClient.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: contents,
+          config: {
+            temperature: 0.0,
+          }
+        });
+        return response.text || '';
+      }
+      console.warn('Gemini API key is not configured. Falling back to mock generator.');
+    } catch (geminiErr) {
+      console.warn('Gemini API generation failed. Falling back to mock generator:', geminiErr);
     }
-    console.warn('Gemini API key is not configured. Falling back to mock generator.');
-  } catch (geminiErr) {
-    console.warn('Gemini API generation failed. Falling back to mock generator:', geminiErr);
+  } else {
+    console.log('[AIR-GAPPED SECURITY] Gemini Cloud API call bypassed. 100% local privacy maintained.');
   }
 
-  // Heuristic/Rule-based Mock Generator Fallback
+  // Heuristic/Rule-based Mock Generator Fallback (Runs 100% offline locally)
   let textContent = '';
   if (typeof contents === 'string') {
     textContent = contents;
@@ -1609,12 +1638,17 @@ async function generateInternal(contents: string): Promise<string> {
 
 app.post('/api/generate', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { contents } = req.body;
+    const { contents, airGappedMode: reqAirGapped } = req.body;
     if (!contents) {
       return res.status(400).json({ error: 'contents is required' });
     }
-    const text = await generateInternal(contents);
-    res.json({ text });
+    const isAirGapped = req.headers['x-air-gapped-mode'] === 'true' || reqAirGapped === true || globalAirGappedMode;
+    const text = await generateInternal(contents, isAirGapped);
+    res.json({
+      text,
+      airGappedMode: isAirGapped,
+      cloudApisBlocked: isAirGapped
+    });
   } catch (error) {
     console.error('Generation error in server:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' });

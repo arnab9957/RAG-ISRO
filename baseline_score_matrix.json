@@ -1,0 +1,49 @@
+{
+  "model": "Baseline Naive RAG",
+  "scenarioMatrix": [
+    {
+      "scenario": "Accuracy",
+      "retrievalAccuracy": 78,
+      "groundingFidelity": 60,
+      "confidenceScore": 52.4,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 732
+    },
+    {
+      "scenario": "Hallucination",
+      "retrievalAccuracy": 79.5,
+      "groundingFidelity": 0,
+      "confidenceScore": 55.9,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 718
+    },
+    {
+      "scenario": "Security",
+      "retrievalAccuracy": 79.4,
+      "groundingFidelity": 0,
+      "confidenceScore": 57.1,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 693
+    },
+    {
+      "scenario": "Privacy",
+      "retrievalAccuracy": 70.5,
+      "groundingFidelity": 0,
+      "confidenceScore": 65.5,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 731
+    }
+  ],
+  "systemRankMatrix": {
+    "Accuracy": 78,
+    "Security": 8.4,
+    "Privacy": 6.2,
+    "Grounding": 60,
+    "Speed": 92.4,
+    "DaclEnforcement": 0,
+    "AuthResilience": 12.5,
+    "ProvenanceCheck": 0
+  },
+  "overallScore": 32.2,
+  "timestamp": "2026-07-22T06:51:53.480Z"
+}

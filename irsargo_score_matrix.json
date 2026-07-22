@@ -1,0 +1,49 @@
+{
+  "model": "IRSARGO (Multi-Agent SMT Framework)",
+  "scenarioMatrix": [
+    {
+      "scenario": "Accuracy",
+      "retrievalAccuracy": 95,
+      "groundingFidelity": 100,
+      "confidenceScore": 98,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 5624
+    },
+    {
+      "scenario": "Hallucination",
+      "retrievalAccuracy": 85,
+      "groundingFidelity": 0,
+      "confidenceScore": 40,
+      "threatBlockedPct": 100,
+      "responseTimeMs": 5337
+    },
+    {
+      "scenario": "Security",
+      "retrievalAccuracy": 85,
+      "groundingFidelity": 0,
+      "confidenceScore": 40,
+      "threatBlockedPct": 100,
+      "responseTimeMs": 4769
+    },
+    {
+      "scenario": "Privacy",
+      "retrievalAccuracy": 85,
+      "groundingFidelity": 0,
+      "confidenceScore": 40,
+      "threatBlockedPct": 100,
+      "responseTimeMs": 4726
+    }
+  ],
+  "systemRankMatrix": {
+    "Accuracy": 95,
+    "Security": 98.2,
+    "Privacy": 97.5,
+    "Grounding": 99.9,
+    "Speed": 14,
+    "DaclEnforcement": 99.1,
+    "AuthResilience": 98.5,
+    "ProvenanceCheck": 99.4
+  },
+  "overallScore": 87.7,
+  "timestamp": "2026-07-22T06:51:53.479Z"
+}

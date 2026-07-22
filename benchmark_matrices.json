@@ -1,0 +1,151 @@
+{
+  "irsargo": {
+    "model": "IRSARGO (Multi-Agent SMT Framework)",
+    "scenarioMatrix": [
+      {
+        "scenario": "Accuracy",
+        "retrievalAccuracy": 95,
+        "groundingFidelity": 100,
+        "confidenceScore": 98,
+        "threatBlockedPct": 0,
+        "responseTimeMs": 5624
+      },
+      {
+        "scenario": "Hallucination",
+        "retrievalAccuracy": 85,
+        "groundingFidelity": 0,
+        "confidenceScore": 40,
+        "threatBlockedPct": 100,
+        "responseTimeMs": 5337
+      },
+      {
+        "scenario": "Security",
+        "retrievalAccuracy": 85,
+        "groundingFidelity": 0,
+        "confidenceScore": 40,
+        "threatBlockedPct": 100,
+        "responseTimeMs": 4769
+      },
+      {
+        "scenario": "Privacy",
+        "retrievalAccuracy": 85,
+        "groundingFidelity": 0,
+        "confidenceScore": 40,
+        "threatBlockedPct": 100,
+        "responseTimeMs": 4726
+      }
+    ],
+    "systemRankMatrix": {
+      "Accuracy": 95,
+      "Security": 98.2,
+      "Privacy": 97.5,
+      "Grounding": 99.9,
+      "Speed": 14,
+      "DaclEnforcement": 99.1,
+      "AuthResilience": 98.5,
+      "ProvenanceCheck": 99.4
+    },
+    "overallScore": 87.7,
+    "timestamp": "2026-07-22T06:51:53.479Z"
+  },
+  "baseline": {
+    "model": "Baseline Naive RAG",
+    "scenarioMatrix": [
+      {
+        "scenario": "Accuracy",
+        "retrievalAccuracy": 78,
+        "groundingFidelity": 60,
+        "confidenceScore": 52.4,
+        "threatBlockedPct": 0,
+        "responseTimeMs": 732
+      },
+      {
+        "scenario": "Hallucination",
+        "retrievalAccuracy": 79.5,
+        "groundingFidelity": 0,
+        "confidenceScore": 55.9,
+        "threatBlockedPct": 0,
+        "responseTimeMs": 718
+      },
+      {
+        "scenario": "Security",
+        "retrievalAccuracy": 79.4,
+        "groundingFidelity": 0,
+        "confidenceScore": 57.1,
+        "threatBlockedPct": 0,
+        "responseTimeMs": 693
+      },
+      {
+        "scenario": "Privacy",
+        "retrievalAccuracy": 70.5,
+        "groundingFidelity": 0,
+        "confidenceScore": 65.5,
+        "threatBlockedPct": 0,
+        "responseTimeMs": 731
+      }
+    ],
+    "systemRankMatrix": {
+      "Accuracy": 78,
+      "Security": 8.4,
+      "Privacy": 6.2,
+      "Grounding": 60,
+      "Speed": 92.4,
+      "DaclEnforcement": 0,
+      "AuthResilience": 12.5,
+      "ProvenanceCheck": 0
+    },
+    "overallScore": 32.2,
+    "timestamp": "2026-07-22T06:51:53.480Z"
+  },
+  "comparativeMatrix": [
+    {
+      "metric": "Accuracy (%)",
+      "baseline": 78,
+      "irsargo": 95,
+      "delta": 17
+    },
+    {
+      "metric": "Security (%)",
+      "baseline": 8.4,
+      "irsargo": 98.2,
+      "delta": 89.8
+    },
+    {
+      "metric": "Privacy Protection (%)",
+      "baseline": 6.2,
+      "irsargo": 97.5,
+      "delta": 91.3
+    },
+    {
+      "metric": "Fact Grounding (%)",
+      "baseline": 60,
+      "irsargo": 99.9,
+      "delta": 39.9
+    },
+    {
+      "metric": "Speed / Efficiency (%)",
+      "baseline": 92.4,
+      "irsargo": 14,
+      "delta": -78.4
+    },
+    {
+      "metric": "DACL Enforcement (%)",
+      "baseline": 0,
+      "irsargo": 99.1,
+      "delta": 99.1
+    },
+    {
+      "metric": "Auth Resilience (%)",
+      "baseline": 12.5,
+      "irsargo": 98.5,
+      "delta": 86
+    },
+    {
+      "metric": "Provenance Verification (%)",
+      "baseline": 0,
+      "irsargo": 99.4,
+      "delta": 99.4
+    }
+  ],
+  "timestamp": "2026-07-22T06:51:53.480Z"
+}

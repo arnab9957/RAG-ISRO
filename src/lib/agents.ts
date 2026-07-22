@@ -16,15 +16,17 @@ export class IRSARGOOrchestrator {
   }
 
   async generateText(contents: string): Promise<string> {
+    const isAirGapped = localStorage.getItem('irsargo_air_gapped_mode') === 'true';
     try {
       const token = localStorage.getItem('irsargo_token');
       const response = await fetch('http://localhost:3001/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-air-gapped-mode': String(isAirGapped),
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ contents }),
+        body: JSON.stringify({ contents, airGappedMode: isAirGapped }),
       });
 
       if (response.status === 401) {
@@ -38,20 +40,24 @@ export class IRSARGOOrchestrator {
       const data = await response.json();
       return data.text || '';
     } catch (error) {
-      console.warn('Backend LLM generation failed, trying direct frontend Google GenAI:', error);
-      try {
-        if (process.env.GEMINI_API_KEY) {
-          const response = await this.ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents,
-            config: {
-              temperature: 0.0,
-            }
-          });
-          return response.text || '';
+      if (!isAirGapped) {
+        console.warn('Backend LLM generation failed, trying direct frontend Google GenAI:', error);
+        try {
+          if (process.env.GEMINI_API_KEY) {
+            const response = await this.ai.models.generateContent({
+              model: "gemini-3.5-flash",
+              contents,
+              config: {
+                temperature: 0.0,
+              }
+            });
+            return response.text || '';
+          }
+        } catch (directErr) {
+          console.warn('Direct frontend Google GenAI failed, falling back to local mock generator:', directErr);
         }
-      } catch (directErr) {
-        console.warn('Direct frontend Google GenAI failed, falling back to local mock generator:', directErr);
+      } else {
+        console.log('[AIR-GAPPED MODE] Direct frontend Gemini API call bypassed. Using local synthesis engine.');
       }
       return mockGenerate(contents);
     }
