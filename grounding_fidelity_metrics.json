@@ -1,7 +1,0 @@
-{
-  "metric": "Grounding Fidelity & SMT Proof Verification",
-  "irsargoGroundingFidelity": 99.9,
-  "baselineGroundingFidelity": 60,
-  "smtSolverStatus": "Z3_FORMAL_PROOF_PASSED",
-  "timestamp": "2026-07-22T08:44:25.773Z"
-}

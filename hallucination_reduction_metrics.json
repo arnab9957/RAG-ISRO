@@ -1,7 +1,0 @@
-{
-  "metric": "Hallucination & Security Attack Reduction",
-  "irsargoThreatBlockedPct": 98.2,
-  "baselineThreatBlockedPct": 8.4,
-  "piiProtectionPct": 97.5,
-  "timestamp": "2026-07-22T08:44:25.773Z"
-}

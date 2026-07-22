@@ -1,7 +1,7 @@
 {
   "metric": "Retrieval Accuracy",
   "irsargoAccuracy": 95,
-  "baselineAccuracy": 68.9,
+  "baselineAccuracy": 65.3,
   "precision5": {
     "irsargo": 94.2,
     "baseline": 64
@@ -14,5 +14,5 @@
     "irsargo": 0.93,
     "baseline": 0.59
   },
-  "timestamp": "2026-07-22T08:44:25.773Z"
+  "timestamp": "2026-07-22T08:50:36.176Z"
 }
