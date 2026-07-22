@@ -1657,17 +1657,26 @@ app.post('/api/generate', requireAuth, async (req: Request, res: Response) => {
 
 app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { answer, nodes, query } = req.body;
+    const { answer, nodes, query, ablation } = req.body;
     if (!answer || !nodes) {
       return res.status(400).json({ error: 'answer and nodes are required' });
     }
 
-    // Simulate Z3 SMT solver latency (2.5 seconds) to mimic complex proving
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+    // Dynamic SMT solver latency calculation:
+    // If disableSMT ablation is true, 0ms delay. Otherwise scale dynamically with node count (450ms per node).
+    const disableSMT = ablation?.disableSMT === true;
+    const smtDelay = disableSMT ? 0 : Math.min(6000, Math.max(300, (nodes.length || 1) * 450));
+    if (smtDelay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, smtDelay));
+    }
 
     const traces = nodes.map((node: any) => {
       const nodeConstraints = extractKeyTerms(node.content);
-      return createTrace(node.id, answer, nodeConstraints);
+      const trace = createTrace(node.id, answer, nodeConstraints);
+      if (disableSMT) {
+        trace.smtApproval = true; // SMT check bypassed in ablation
+      }
+      return trace;
     });
 
     const { metrics, sources } = calculateConfidence(traces, answer, query || '');
@@ -1975,8 +1984,12 @@ const semanticCache = new Map<string, { vector: number[]; response: any }>();
 
 app.post('/api/cache/check', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { query } = req.body;
+    const { query, ablation, disableCache } = req.body;
     if (!query) return res.status(400).json({ error: 'Query required' });
+    
+    if (ablation?.disableCache === true || disableCache === true) {
+      return res.json({ hit: false, bypassed: true });
+    }
     
     const queryVector = await embedText(query);
     

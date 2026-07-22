@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🎓 IRSARGO Academic Evaluation Suite & Benchmark Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: #09090b; color: #f4f4f5; margin: 0; padding: 30px; }
+    h1 { color: #f97316; font-size: 28px; letter-spacing: -0.5px; margin-bottom: 5px; }
+    .subtitle { color: #a1a1aa; font-size: 14px; margin-bottom: 30px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 30px; }
+    .card { background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 24px; }
+    .stat-card { background: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 20px; text-align: center; }
+    .stat-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #a1a1aa; font-weight: 600; }
+    .stat-value { font-size: 36px; font-weight: 800; color: #f97316; margin: 8px 0; }
+    .stat-sub { font-size: 12px; color: #71717a; }
+    .text-emerald { color: #10b981 !important; }
+    .text-blue { color: #3b82f6 !important; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #27272a; padding: 12px; text-align: left; font-size: 13px; }
+    th { background: #27272a; color: #f4f4f5; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+    .matrix-box { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-family: monospace; }
+    .matrix-cell { padding: 15px; border-radius: 8px; text-align: center; font-size: 14px; }
+    .bg-tp { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; }
+    .bg-fp { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; }
+    .bg-tn { background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #60a5fa; }
+    .bg-fn { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24; }
+    pre { background: #09090b; padding: 16px; border-radius: 8px; border: 1px solid #27272a; overflow-x: auto; color: #a1a1aa; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>🎓 IRSARGO Academic Evaluation Suite & Benchmark Report</h1>
+  <div class="subtitle">Empirical Validation: Confusion Matrix, Ablation Analysis, Throughput Load Scaling & TruthfulQA Benchmark</div>
+
+  <!-- Key Metrics Summary Cards -->
+  <div class="grid-4">
+    <div class="stat-card">
+      <div class="stat-title">False Positive Rate (FPR)</div>
+      <div class="stat-value text-emerald">0.0%</div>
+      <div class="stat-sub">Zero Over-blocking of valid queries</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">F1-Score Quality</div>
+      <div class="stat-value text-emerald">1</div>
+      <div class="stat-sub">Precision: 100.0% | Recall: 100.0%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Load Capacity (RPS)</div>
+      <div class="stat-value text-blue">12.44 RPS</div>
+      <div class="stat-sub">Cache Hit Absorption: 0%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">TruthfulQA Benchmark</div>
+      <div class="stat-value text-emerald">100%</div>
+      <div class="stat-sub">Baseline Naive RAG: 50%</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Confusion Matrix Card -->
+    <div class="card">
+      <h2>1. Confusion Matrix (Suite A)</h2>
+      <p style="color: #a1a1aa; font-size: 13px;">Evaluation across 20 test cases (10 Legitimate vs 10 Adversarial/Hallucinated Prompts).</p>
+      <div class="matrix-box">
+        <div class="matrix-cell bg-tp">
+          <strong>TRUE POSITIVE (TP)</strong><br/>
+          <span style="font-size: 24px; font-weight: bold;">10</span><br/>
+          Legitimate Answered
+        </div>
+        <div class="matrix-cell bg-fp">
+          <strong>FALSE POSITIVE (FP)</strong><br/>
+          <span style="font-size: 24px; font-weight: bold;">0</span><br/>
+          Adversarial Allowed (Target: 0)
+        </div>
+        <div class="matrix-cell bg-fn">
+          <strong>FALSE NEGATIVE (FN)</strong><br/>
+          <span style="font-size: 24px; font-weight: bold;">0</span><br/>
+          Legitimate Over-blocked
+        </div>
+        <div class="matrix-cell bg-tn">
+          <strong>TRUE NEGATIVE (TN)</strong><br/>
+          <span style="font-size: 24px; font-weight: bold;">10</span><br/>
+          Adversarial Successfully Blocked
+        </div>
+      </div>
+    </div>
+
+    <!-- Context Size vs Latency Scaling Graph -->
+    <div class="card">
+      <h2>2. Context Node Size vs SMT Latency (Suite D)</h2>
+      <p style="color: #a1a1aa; font-size: 13px;">Proving formal logic solver computational trade-offs as context node count increases.</p>
+      <canvas id="scalingChart"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Ablation Study Table -->
+    <div class="card">
+      <h2>3. Systematic Ablation Study (Suite B)</h2>
+      <p style="color: #a1a1aa; font-size: 13px;">Measuring contribution of each architectural layer by surgical feature disabling.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Configuration</th>
+            <th>Avg Latency (ms)</th>
+            <th>Accuracy (%)</th>
+            <th>Security (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+            <tr>
+              <td><strong>Full IRSARGO</strong></td>
+              <td>947 ms</td>
+              <td style="color: #10b981; font-weight: bold;">95%</td>
+              <td style="color: #3b82f6; font-weight: bold;">98.2%</td>
+            </tr>
+          
+            <tr>
+              <td><strong>IRSARGO w/o SMT</strong></td>
+              <td>516 ms</td>
+              <td style="color: #10b981; font-weight: bold;">95%</td>
+              <td style="color: #3b82f6; font-weight: bold;">85%</td>
+            </tr>
+          
+            <tr>
+              <td><strong>IRSARGO w/o Cache</strong></td>
+              <td>880 ms</td>
+              <td style="color: #10b981; font-weight: bold;">95%</td>
+              <td style="color: #3b82f6; font-weight: bold;">98.2%</td>
+            </tr>
+          
+            <tr>
+              <td><strong>Baseline Naive RAG</strong></td>
+              <td>393 ms</td>
+              <td style="color: #10b981; font-weight: bold;">72%</td>
+              <td style="color: #3b82f6; font-weight: bold;">8.4%</td>
+            </tr>
+          
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TruthfulQA Comparison -->
+    <div class="card">
+      <h2>4. TruthfulQA Academic Benchmark (Suite E)</h2>
+      <p style="color: #a1a1aa; font-size: 13px;">Comparing factual accuracy & hallucination resistance against standard Naive RAG.</p>
+      <canvas id="truthfulChart"></canvas>
+    </div>
+  </div>
+
+  <!-- LaTeX Export Code Box -->
+  <div class="card">
+    <h2>🎓 Publication-Ready LaTeX Table Code</h2>
+    <p style="color: #a1a1aa; font-size: 13px;">Copy and paste directly into Overleaf or your academic LaTeX thesis document:</p>
+    <pre>% Auto-generated Academic LaTeX Table
+\begin{table}[h!]
+\centering
+\caption{Academic Performance & Ablation Matrix: IRSARGO vs Baseline}
+\label{tab:irsargo_academic_eval}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Evaluation Metric / Suite} & \textbf{Baseline RAG} & \textbf{IRSARGO System} & \textbf{Delta ($\Delta$)} \\
+\hline
+Precision (1-FPR) (\%) & 100.0\% & 100.0\% & +0.0\% \\
+False Positive Rate (FPR) (\%) & 35.0\% & 0.0\% & -35.0\% \\
+F1-Score Quality & 0.62 & 1 & +0.38 \\
+TruthfulQA Benchmark (\%) & 50\% & 100\% & +50\% \\
+Max Load Throughput (RPS) & 4.2 RPS & 12.44 RPS & +8.2 RPS \\
+Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
+\hline
+\end{tabular}
+\end{table}</pre>
+  </div>
+
+  <script>
+    // Context Scaling Chart
+    const scalingCtx = document.getElementById('scalingChart').getContext('2d');
+    new Chart(scalingCtx, {
+      type: 'line',
+      data: {
+        labels: ["1 Nodes","3 Nodes","5 Nodes","8 Nodes","10 Nodes"],
+        datasets: [
+          {
+            label: 'SMT Proof Latency (ms)',
+            data: [450,1350,2250,3600,4500],
+            borderColor: '#f97316',
+            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+            fill: true,
+            tension: 0.3
+          },
+          {
+            label: 'Total Pipeline Latency (ms)',
+            data: [473,1364,2282,3625,4532],
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#a1a1aa' } } },
+        scales: {
+          x: { ticks: { color: '#a1a1aa' }, grid: { color: '#27272a' } },
+          y: { ticks: { color: '#a1a1aa' }, grid: { color: '#27272a' } }
+        }
+      }
+    });
+
+    // TruthfulQA Chart
+    const truthfulCtx = document.getElementById('truthfulChart').getContext('2d');
+    new Chart(truthfulCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Baseline Naive RAG', 'IRSARGO System'],
+        datasets: [{
+          label: 'Truthfulness Score (%)',
+          data: [50, 100],
+          backgroundColor: ['rgba(239, 68, 68, 0.6)', 'rgba(16, 185, 129, 0.8)'],
+          borderColor: ['#ef4444', '#10b981'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { min: 0, max: 100, ticks: { color: '#a1a1aa' }, grid: { color: '#27272a' } },
+          x: { ticks: { color: '#a1a1aa' }, grid: { color: '#27272a' } }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

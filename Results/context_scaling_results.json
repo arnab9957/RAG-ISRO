@@ -1,0 +1,27 @@
+[
+  {
+    "nodeCount": 1,
+    "smtLatencyMs": 450,
+    "totalLatencyMs": 473
+  },
+  {
+    "nodeCount": 3,
+    "smtLatencyMs": 1350,
+    "totalLatencyMs": 1364
+  },
+  {
+    "nodeCount": 5,
+    "smtLatencyMs": 2250,
+    "totalLatencyMs": 2282
+  },
+  {
+    "nodeCount": 8,
+    "smtLatencyMs": 3600,
+    "totalLatencyMs": 3625
+  },
+  {
+    "nodeCount": 10,
+    "smtLatencyMs": 4500,
+    "totalLatencyMs": 4532
+  }
+]

@@ -3,8 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https://upload.wikimedia.org https://indiadesignsystem.bombaydc.com; connect-src 'self' http://localhost:3001 http://localhost:3000 ws://localhost:3000 ws://localhost:* http://localhost:* ws://127.0.0.1:* http://127.0.0.1:* https://generativelanguage.googleapis.com;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https://upload.wikimedia.org https://indiadesignsystem.bombaydc.com; connect-src 'self' http://localhost:3001 http://localhost:3000 ws://localhost:3000 ws://localhost:* http://localhost:* ws://127.0.0.1:* http://127.0.0.1:* https://generativelanguage.googleapis.com https://cdn.jsdelivr.net;" />
     <title>IRSARGO</title>
+    <!-- GSAP Core, ScrollTrigger & ScrollSmoother -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollSmoother.min.js"></script>
   </head>
   <body>
     <div id="root"></div>

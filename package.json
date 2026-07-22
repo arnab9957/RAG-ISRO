@@ -12,7 +12,8 @@
     "server": "tsx server/index.ts",
     "ingest": "tsx scripts/ingest.ts",
     "groq-chat": "tsx scripts/groq_chat.ts",
-    "benchmark": "tsx scripts/benchmark_rag.ts"
+    "benchmark": "tsx scripts/benchmark_rag.ts",
+    "academic-benchmark": "tsx scripts/academic_benchmark.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

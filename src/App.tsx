@@ -405,9 +405,9 @@ function LoginPortal({ onLoginSuccess }: LoginPortalProps) {
         <div className="relative isro-glass border border-zinc-800 rounded-3xl p-8 bg-zinc-950/90 shadow-2xl flex flex-col items-center">
           
           {/* Logo & Title */}
-          <div className="flex flex-col items-center gap-3 mb-6">
-            <div className="p-4 bg-isro-orange rounded-2xl shadow-[0_0_30px_rgba(242,116,32,0.4)] animate-pulse">
-              <Rocket className="w-8 h-8 text-white" />
+          <div className="flex flex-col items-center gap-4 mb-6">
+            <div className="p-4 bg-zinc-900/90 border border-zinc-700/60 rounded-3xl shadow-[0_0_40px_rgba(242,116,32,0.4)] flex items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="IRSARGO Logo" className="w-24 h-24 md:w-28 md:h-28 object-contain filter drop-shadow-[0_0_15px_rgba(242,116,32,0.5)]" />
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-[0.25em] text-white uppercase font-display bg-linear-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
@@ -907,6 +907,40 @@ export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const orchestrator = useRef(new IRSARGOOrchestrator());
 
+  // GSAP ScrollTrigger & ScrollSmoother Integration
+  useEffect(() => {
+    let smootherInstance: any = null;
+    const initScrollSmoother = () => {
+      const gsap = (window as any).gsap;
+      const ScrollTrigger = (window as any).ScrollTrigger;
+      const ScrollSmoother = (window as any).ScrollSmoother;
+
+      if (gsap && ScrollTrigger && ScrollSmoother) {
+        try {
+          gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
+          smootherInstance = ScrollSmoother.create({
+            wrapper: '#smooth-wrapper',
+            content: '#smooth-content',
+            smooth: 1.2,
+            effects: true,
+            smoothTouch: 0.1
+          });
+        } catch (err) {
+          console.warn('[GSAP] ScrollSmoother initialization warning:', err);
+        }
+      }
+    };
+
+    const timer = setTimeout(initScrollSmoother, 150);
+
+    return () => {
+      clearTimeout(timer);
+      if (smootherInstance && smootherInstance.kill) {
+        smootherInstance.kill();
+      }
+    };
+  }, [activeTab]);
+
   const fetchChunkCount = async () => {
     if (!token) return;
     try {
@@ -1350,19 +1384,11 @@ export default function App() {
       <header className="relative z-10 border-b border-zinc-800 bg-black/60 backdrop-blur-xl sticky top-0">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-isro-orange rounded-lg shadow-[0_0_20px_rgba(242,116,32,0.3)]">
-              <Rocket className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-display font-bold tracking-[0.2em] uppercase bg-linear-to-r from-white to-zinc-500 bg-clip-text text-transparent">
-                IRSARGO
-              </h1>
-              <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3">
-                <p className="text-[10px] text-isro-orange font-mono tracking-widest uppercase">
-                  Zero-Trust Multi-Agent RAG Engine
-                </p>
-              </div>
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="IRSARGO Logo" 
+              className="h-12 md:h-14 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(242,116,32,0.4)] transition-all hover:scale-105" 
+            />
           </div>
           
           <div className="flex items-center gap-4">
@@ -1431,7 +1457,10 @@ export default function App() {
         </div>
       </header>
 
-      <main className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-6 py-10">
+      {/* GSAP ScrollSmoother Container */}
+      <div id="smooth-wrapper" className="relative z-10 flex-1 w-full">
+        <div id="smooth-content" className="flex flex-col min-h-full">
+          <main className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-6 py-10">
         <AnimatePresence mode="wait">
           {activeTab === 'console' && (
             <motion.div
@@ -2533,6 +2562,8 @@ export default function App() {
           </div>
         </div>
       </footer>
+        </div>
+      </div>
     </div>
   );
 }

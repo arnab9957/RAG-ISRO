@@ -234,42 +234,61 @@
       <p style="color: #a8a29e;">Detailed multi-stage architecture illustrating Data Ingestion, Security Gateway, and Multi-Agent Query Processing Swarm with Z3 SMT formal proof verification.</p>
       <div class="mermaid">
 graph TD
-    %% Ingestion Stage
-    subgraph Data Ingestion
-        Doc[Source Docs: PDF/TXT/MD] --> Sanitize[Input Sanitization: Strip Comments/Control Chars]
-        Sanitize --> PII[PII Redaction: Reversible Placeholders]
-        PII --> Tagging[DACL Tagging: Access Clearances]
-        Tagging --> LocalEmbed[Local Embedding Computation: Xenova all-MiniLM]
-        LocalEmbed --> Chroma[(ChromaDB Vector Store)]
-        Doc --> Provenance[C2PA SHA-256 Hash Logged]
+    %% Subsystem 1: Offline Data Ingestion & Zero-Trust Annotation Pipeline
+    subgraph Data Ingestion & Security Annotation Pipeline
+        Doc[Source Documents: PDF / TXT / MD] --> C2PA[C2PA Provenance Tracker: SHA-256 Binary Hash Logging]
+        Doc --> InputSanitizer[Input Sanitizer: Strip Control Chars & Hidden Comments]
+        InputSanitizer --> PIIRedact[Zero-Trust PII Redactor: Reversible Placeholder Mapping]
+        PIIRedact --> DACLTagging[DACL Tagging Engine: Access Clearance & Metadata Injection]
+        DACLTagging --> Chunking[Sliding-Window Text Chunker: 300-Word Segments]
+        Chunking --> Embedder[Local ONNX Embedder: Xenova/all-MiniLM-L6-v2]
+        Embedder --> VectorDB[(ChromaDB Vector Store: Encrypted Chunks & Metadata)]
     end
 
-    %% Auth Stage
-    subgraph Security Gateway & Authentication
-        User[User Login] --> MFA{MFA Verification}
-        MFA -->|Success| JWT[JWT Token Issued: Role Clearance]
-        MFA -->|IDP Outage Simulated| Fallback[Graceful Degradation: Guest Auditor Session]
+    %% Subsystem 2: Zero-Trust Security Gateway & Auth Delegation
+    subgraph Security Gateway & Identity Delegation
+        User[Operator Login] --> MFA{MFA Verification}
+        MFA -->|Success| JWT[Signed JWT Token: Role Clearance Level 1-5 & Active Directory SID]
+        MFA -->|IDP Outage Detected| Fallback[Graceful Degradation: Guest Auditor Fallback Session]
+        AirGapToggle[Air-Gapped Mode Switch] -.->|Toggle Cloud API Bypass| SecGateway[Security Gateway Proxy]
     end
 
-    %% Query Stage
-    subgraph Multi-Agent Query Processing Swarm
-        QueryInput[User Query] --> ZKProof[ZK-STARK Query Verification]
-        ZKProof --> Paraphrase[Semantic Query Paraphrasing: Executor Agent]
-        Paraphrase --> SecureRetrieve[Secure DB Retrieval: ChromaDB DACL Filters]
-        SecureRetrieve --> ContextExpand[Context Neighbor Expansion]
-        ContextExpand --> LexicalFuse[Hybrid Dense + Lexical Fusion: RRF]
-        LexicalFuse --> TFIDFRerank[TF-IDF Relevance Reranking]
-        TFIDFRerank --> CrossVal[Cross-Validation: Validator Agent]
-        CrossVal --> PeirceLNN[Grounded Generation: Executor Agent]
-        PeirceLNN --> Critic[Adversarial Hallucination Audit: Critic Agent]
-        Critic --> Z3SMT[Z3 SMT Solver Simulation: Validator Agent]
-        Z3SMT --> AntiExfil[Output Sanitizer: Redact External URLs/Images]
-        AntiExfil --> SecureResponse([Final Secured Response])
+    %% Subsystem 3: Multi-Agent Query Processing Swarm & Hybrid Retrieval
+    subgraph Multi-Agent Query Processing & Hybrid Retrieval Swarm
+        QueryInput[User Query] --> ZKProof[ZK-STARK Query Verification: Cryptographic Proof Generation]
+        ZKProof --> Paraphraser[Executor Agent: Semantic Paraphraser & Instruction Isolator]
+        Paraphraser --> DACLFilter[ChromaDB Compound Filter: DACL User Clearance Match]
+
+        %% Parallel Hybrid Retrieval
+        DACLFilter --> DenseSearch[Dense Vector Search: Cosine Similarity Metric]
+        DACLFilter --> LexicalSearch[Lexical Search: TF-IDF Keyword Match]
+        DenseSearch --> RRF[Reciprocal Rank Fusion: RRF]
+        LexicalSearch --> RRF
+
+        RRF --> ContextExpand[Context Neighbor Expansion: Multi-Page Chunk Stitching]
+        ContextExpand --> TFIDFRerank[TF-IDF Relevance Reranker]
+
+        %% Swarm Evaluation & Formal Verification
+        TFIDFRerank --> CrossVal[Validator Agent: Multi-Document Cross-Validation]
+        CrossVal --> PeirceLNN[Executor Agent: Grounded Generation in XML Delimiters]
+        PeirceLNN --> Critic[Critic Agent: Adversarial Hallucination & Security Audit]
+        Critic --> Z3SMT[Validator Agent: Z3 SMT Solver Symbolic Formal Proof Verification]
+        Z3SMT --> AntiExfil[Output Sanitizer: Redact External URLs & Image Beacons]
+        AntiExfil --> SecureResponse([Final Verified & Secured Response])
     end
 
-    Chroma -.-> SecureRetrieve
-    JWT -.-> SecureRetrieve
-    Fallback -.-> SecureRetrieve
+    %% Subsystem 4: RAG Triad Metrics & Synthetic Fine-Tuning
+    subgraph Metrics & Synthetic Fine-Tuning Engine
+        FinalResponse --> MetricLogger[RAG Triad Metric Logger: Accuracy, Grounding & Hallucination Metrics]
+        VectorDB --> RAGen[RAGen Tool: Synthetic QAC Triples Generator]
+        RAGen --> SyntheticDataset[(synthetic_qac_training.json: Local Model Alignment)]
+    end
+
+    %% Cross-Subsystem Interconnections
+    VectorDB -.-> DACLFilter
+    JWT -.-> DACLFilter
+    Fallback -.-> DACLFilter
+    SecGateway -.-> ZKProof
       </div>
     </div>
 
