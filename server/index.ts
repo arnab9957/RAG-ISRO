@@ -1679,9 +1679,14 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
       return Math.round(val * 10000) / 10000;
     };
 
+    const resultsDir = path.resolve(process.cwd(), 'Results');
+    if (!fs.existsSync(resultsDir)) {
+      fs.mkdirSync(resultsDir, { recursive: true });
+    }
+
     // Measure retrieval accuracy and store it in a separate metrics file
     try {
-      const accuracyLogPath = path.resolve(process.cwd(), 'retrieval_accuracy_metrics.json');
+      const accuracyLogPath = path.resolve(resultsDir, 'retrieval_accuracy_metrics.json');
       let accuracyLogs: any[] = [];
       if (fs.existsSync(accuracyLogPath)) {
         try {
@@ -1706,7 +1711,7 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
 
     // Measure grounding fidelity and store it in a separate metrics file
     try {
-      const groundingLogPath = path.resolve(process.cwd(), 'grounding_fidelity_metrics.json');
+      const groundingLogPath = path.resolve(resultsDir, 'grounding_fidelity_metrics.json');
       let groundingLogs: any[] = [];
       if (fs.existsSync(groundingLogPath)) {
         try {
@@ -1731,7 +1736,7 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
 
     // Measure hallucination reduction and store it in a separate metrics file
     try {
-      const hallucinationLogPath = path.resolve(process.cwd(), 'hallucination_reduction_metrics.json');
+      const hallucinationLogPath = path.resolve(resultsDir, 'hallucination_reduction_metrics.json');
       let hallucinationLogs: any[] = [];
       if (fs.existsSync(hallucinationLogPath)) {
         try {
@@ -1759,7 +1764,7 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
     // Measure domain relevance using space research/government keywords and store it in a separate metrics file
     try {
       const domainRelevance = calculateDomainRelevance(nodes, query || '');
-      const domainLogPath = path.resolve(process.cwd(), 'domain_relevance_metrics.json');
+      const domainLogPath = path.resolve(resultsDir, 'domain_relevance_metrics.json');
       let domainLogs: any[] = [];
       if (fs.existsSync(domainLogPath)) {
         try {

@@ -20,7 +20,7 @@ if (!fs.existsSync(targetDir)) {
 const TEST_CASES = [
   {
     type: 'Accuracy',
-    query: 'What are PSLV-C61 MISSION SPECIFICATIONS?',
+    query: 'What are  Developmental activities through academia and industry?',
     domain: 'AEROSPACE'
   },
   {
@@ -459,7 +459,7 @@ Mean Average Precision (MAP) & ${naiveMAP} & ${irsargoMAP} & +${(irsargoMAP - na
     timestamp: new Date().toISOString()
   };
 
-  // Write all JSON metric files to root and Result directory
+  // Write all JSON metric files strictly to Results directory
   const jsonFilesToSave = [
     { filename: 'irsargo_score_matrix.json', data: irsargoMatrixFile },
     { filename: 'baseline_score_matrix.json', data: baselineMatrixFile },
@@ -471,11 +471,9 @@ Mean Average Precision (MAP) & ${naiveMAP} & ${irsargoMAP} & +${(irsargoMAP - na
   ];
 
   jsonFilesToSave.forEach(({ filename, data }) => {
-    fs.writeFileSync(path.join(process.cwd(), filename), JSON.stringify(data, null, 2));
     fs.writeFileSync(path.join(targetDir, filename), JSON.stringify(data, null, 2));
   });
 
-  fs.writeFileSync(path.join(process.cwd(), 'thesis_results_table.tex'), latexTable.trim());
   fs.writeFileSync(path.join(targetDir, 'thesis_results_table.tex'), latexTable.trim());
 
   // Print formatted matrices to stdout
@@ -700,24 +698,46 @@ function generateHtmlReport(results: any[], dynamicSecurity: any, matrices: any)
     </div>
 
     <div class="card">
-      <h2>1. How it works (Architecture)</h2>
-      <p style="color: #a8a29e;">This diagram shows why standard AI (top) is vulnerable to hacking, while IRSARGO (bottom) uses multiple agents and mathematical proofing (SMT) to verify answers before you see them.</p>
+      <h2>1. System Architecture & Workflow Pipeline</h2>
+      <p style="color: #a8a29e;">Detailed multi-stage architecture illustrating Data Ingestion, Security Gateway, and Multi-Agent Query Processing Swarm with Z3 SMT formal proof verification.</p>
       <div class="mermaid">
-        graph LR
-          subgraph Standard AI (Vulnerable)
-            Q1[Query] --> R1[Database]
-            R1 --> LLM1[AI Generates Answer]
-            LLM1 -.->|No Checks| OUT1[Risky Output]
-          end
-          subgraph IRSARGO (Secure)
-            Q2[Query] --> ZK[Identity Verification]
-            ZK --> PR[Intent Analysis]
-            PR --> R2[Access Control Database]
-            R2 --> LLM2[AI Generates Answer]
-            LLM2 --> SMT[Mathematical Verification]
-            SMT --> SAN[Anti-Hack Sanitizer]
-            SAN --> OUT2[100% Safe Output]
-          end
+graph TD
+    %% Ingestion Stage
+    subgraph Data Ingestion
+        Doc[Source Docs: PDF/TXT/MD] --> Sanitize[Input Sanitization: Strip Comments/Control Chars]
+        Sanitize --> PII[PII Redaction: Reversible Placeholders]
+        PII --> Tagging[DACL Tagging: Access Clearances]
+        Tagging --> LocalEmbed[Local Embedding Computation: Xenova all-MiniLM]
+        LocalEmbed --> Chroma[(ChromaDB Vector Store)]
+        Doc --> Provenance[C2PA SHA-256 Hash Logged]
+    end
+
+    %% Auth Stage
+    subgraph Security Gateway & Authentication
+        User[User Login] --> MFA{MFA Verification}
+        MFA -->|Success| JWT[JWT Token Issued: Role Clearance]
+        MFA -->|IDP Outage Simulated| Fallback[Graceful Degradation: Guest Auditor Session]
+    end
+
+    %% Query Stage
+    subgraph Multi-Agent Query Processing Swarm
+        QueryInput[User Query] --> ZKProof[ZK-STARK Query Verification]
+        ZKProof --> Paraphrase[Semantic Query Paraphrasing: Executor Agent]
+        Paraphrase --> SecureRetrieve[Secure DB Retrieval: ChromaDB DACL Filters]
+        SecureRetrieve --> ContextExpand[Context Neighbor Expansion]
+        ContextExpand --> LexicalFuse[Hybrid Dense + Lexical Fusion: RRF]
+        LexicalFuse --> TFIDFRerank[TF-IDF Relevance Reranking]
+        TFIDFRerank --> CrossVal[Cross-Validation: Validator Agent]
+        CrossVal --> PeirceLNN[Grounded Generation: Executor Agent]
+        PeirceLNN --> Critic[Adversarial Hallucination Audit: Critic Agent]
+        Critic --> Z3SMT[Z3 SMT Solver Simulation: Validator Agent]
+        Z3SMT --> AntiExfil[Output Sanitizer: Redact External URLs/Images]
+        AntiExfil --> SecureResponse([Final Secured Response])
+    end
+
+    Chroma -.-> SecureRetrieve
+    JWT -.-> SecureRetrieve
+    Fallback -.-> SecureRetrieve
       </div>
     </div>
 
@@ -991,7 +1011,6 @@ function generateHtmlReport(results: any[], dynamicSecurity: any, matrices: any)
 </html>
   `;
 
-  fs.writeFileSync(path.join(process.cwd(), 'benchmark_report.html'), html);
   fs.writeFileSync(path.join(targetDir, 'benchmark_report.html'), html);
 }
 
