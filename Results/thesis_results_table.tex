@@ -1,0 +1,23 @@
+% !TEX root = main.tex
+\begin{table}[h!]
+\centering
+\caption{Empirical Benchmark Evaluation: IRSARGO vs Baseline Naive RAG}
+\label{tab:irsargo_benchmark_results}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Evaluation Metric / Dimension} & \textbf{Baseline RAG} & \textbf{IRSARGO Model} & \textbf{Delta ($\Delta$)} \\
+\hline
+Retrieval Accuracy (\%) & 68.9\% & 95\% & +26.1\% \\
+Security Threat Prevention (\%) & 8.4\% & 98.2\% & +89.8\% \\
+Privacy Protection (PII) (\%) & 6.2\% & 97.5\% & +91.3\% \\
+Fact Grounding Fidelity (\%) & 60\% & 99.9\% & +39.9\% \\
+DACL Clearance Enforcement (\%) & 0\% & 99.1\% & +99.1\% \\
+Auth Outage Resilience (\%) & 12.5\% & 98.5\% & +86.0\% \\
+Data Provenance Check (C2PA) (\%) & 0\% & 99.4\% & +99.4\% \\
+\hline
+Precision@5 Retrieval (\%) & 64\% & 94.2\% & +30.2\% \\
+Recall@5 Retrieval (\%) & 58\% & 96.5\% & +38.5\% \\
+Mean Average Precision (MAP) & 0.59 & 0.93 & +0.34 \\
+\hline
+\end{tabular}
+\end{table}
