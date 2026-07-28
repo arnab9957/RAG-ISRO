@@ -241,17 +241,19 @@ To count and verify current records in the local Chroma database, execute:
 npx tsx scripts/verify_ingest.ts
 ```
 
-### Step 5: Start the Backend Server
-Start the Express API server (runs on `http://localhost:3001`):
+### Step 5: Start All System Services (Docker + Auth + Ollama + Backend + Frontend)
+Execute a single command to automatically spin up all required containers and services:
 ```bash
 npm run server
+# or
+npm start
 ```
 
-### Step 6: Start the Frontend App
-Start the Vite developer client server (runs on `http://localhost:3000`):
-```bash
-npm run dev
-```
+This single command automatically:
+1. Starts **Docker Compose** containers for **ChromaDB** (`http://localhost:8000`), **Keycloak OIDC IDP** (`http://localhost:8080`), **PostgreSQL**, **OpenLDAP** (`port 389`), and **phpLDAPadmin** (`http://localhost:8081`).
+2. Spawns the **Ollama local LLM/VLM server** (`http://localhost:11434`).
+3. Starts the **Express API Backend** (`http://localhost:3001`).
+4. Starts the **Vite React Frontend** (`http://localhost:3000`).
 
 ---
 

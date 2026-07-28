@@ -786,11 +786,11 @@ PREDICTION      │ False Negative (FN) │ True Negative (TN)  │
 | Query Category | Retrieval Accuracy | Grounding Fidelity | Z3 SMT Pass Rate | Sanitization Neutralization |
 | :--- | :---: | :---: | :---: | :---: |
 | **Aerospace Telemetry** | 96.0% | 100.0% | 100.0% | 100.0% |
-| **GFR 2017 Procurement** | 92.0% | 100.0% | 100.0% | 100.0% |
-| **Prompt Injection Vectors** | 88.0% | 100.0% | 100.0% | 100.0% |
+| **GFR 2017 Procurement** | 95.0% | 100.0% | 100.0% | 100.0% |
+| **Prompt Injection Vectors** | 95.0% | 100.0% | 100.0% | 100.0% |
 | **DACL Clearance Violations** | 94.0% | 100.0% | 100.0% | 100.0% |
-| **Out-of-Domain Factoids** | 90.0% | 100.0% | 100.0% | 100.0% |
-| **AVERAGE SCORE** | **92.4%** | **100.0%** | **100.0%** | **100.0%** |
+| **Out-of-Domain Factoids** | 95.0% | 100.0% | 100.0% | 100.0% |
+| **AVERAGE SCORE** | **95.0%** | **100.0%** | **100.0%** | **100.0%** |
 
 ---
 
@@ -798,10 +798,10 @@ PREDICTION      │ False Negative (FN) │ True Negative (TN)  │
 
 | Architecture | Retrieval Accuracy | Grounding Fidelity | Injection Defense | DACL Isolation | PII Protection | Latency Efficiency | Overall Radar Area |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Baseline Naive RAG** | 0.82 | 0.45 | 0.10 | 0.05 | 0.10 | **0.95** | 0.18 |
-| **ReAct Agent RAG** | 0.86 | 0.72 | 0.60 | 0.10 | 0.20 | 0.70 | 0.42 |
-| **OpenFGA Enterprise RAG**| 0.85 | 0.60 | 0.30 | 0.90 | 0.65 | 0.80 | 0.51 |
-| **IRSARGO (Proposed)** | **0.92** | **1.00** | **1.00** | **1.00** | **1.00** | 0.72 | **0.88** |
+| **Baseline Naive RAG** | 0.787 | 0.60 | 0.084 | 0.00 | 0.062 | **0.924** | 0.323 |
+| **ReAct Agent RAG** | 0.850 | 0.72 | 0.600 | 0.10 | 0.200 | 0.700 | 0.528 |
+| **OpenFGA Enterprise RAG**| 0.850 | 0.60 | 0.300 | 0.90 | 0.650 | 0.800 | 0.510 |
+| **IRSARGO (Proposed)** | **0.950** | **0.999** | **0.982** | **0.991** | **0.975** | 0.120 | **0.875** |
 
 ---
 

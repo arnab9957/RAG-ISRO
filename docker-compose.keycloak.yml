@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Keycloak PostgreSQL Database
+  keycloak-db:
+    image: postgres:15-alpine
+    container_name: IRSARGO-keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_db_pass}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    networks:
+      - isro-auth-network
+    restart: unless-stopped
+
+  # Keycloak OIDC Identity Provider (Air-Gapped)
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.0
+    container_name: IRSARGO-keycloak
+    command: start-dev --http-port 8080 --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_db_pass}
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-keycloak_admin_pass}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      - keycloak-db
+      - openldap
+    networks:
+      - isro-auth-network
+    restart: unless-stopped
+
+  # OpenLDAP Enterprise Directory Server
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: IRSARGO-openldap
+    environment:
+      LDAP_ORGANISATION: "ISRO Space Research Organisation"
+      LDAP_DOMAIN: "isro.gov.in"
+      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-ldap_admin_pass}
+      LDAP_CONFIG_PASSWORD: ${LDAP_CONFIG_PASSWORD:-ldap_config_pass}
+    ports:
+      - "389:389"
+      - "636:636"
+    volumes:
+      - openldap_data:/var/lib/ldap
+      - openldap_config:/etc/ldap/slapd.d
+    networks:
+      - isro-auth-network
+    restart: unless-stopped
+
+  # OpenLDAP Web Administration Console
+  phpldapadmin:
+    image: osixia/phpldapadmin:0.9.0
+    container_name: IRSARGO-phpldapadmin
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: "openldap"
+      PHPLDAPADMIN_HTTPS: "false"
+    ports:
+      - "8081:80"
+    depends_on:
+      - openldap
+    networks:
+      - isro-auth-network
+    restart: unless-stopped
+
+networks:
+  isro-auth-network:
+    driver: bridge
+
+volumes:
+  keycloak_db_data:
+  openldap_data:
+  openldap_config:
