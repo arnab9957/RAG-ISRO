@@ -1,0 +1,92 @@
+{
+  "realm": "isro",
+  "enabled": true,
+  "displayName": "ISRO Air-Gapped Defense Realm",
+  "displayNameHtml": "<b>ISRO Enterprise Security</b>",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "Administrator",
+        "description": "Level 5 Top Secret Clearance for ISRO Aerospace Engineers"
+      },
+      {
+        "name": "Operator",
+        "description": "Level 3 Confidential Clearance for Ground Station Operations"
+      },
+      {
+        "name": "Guest",
+        "description": "Level 1 Restricted Access"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "irsargo-rag-client",
+      "name": "IRSARGO RAG System",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://127.0.0.1:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+      ],
+      "fullScopeAllowed": true
+    }
+  ],
+  "users": [
+    {
+      "username": "isro_admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Dr. Vikram",
+      "lastName": "Sarabhai",
+      "email": "v.sarabhai@isro.gov.in",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin_password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Administrator"],
+      "attributes": {
+        "clearanceLevel": ["5"],
+        "department": ["AEROSPACE_PROPULSION"],
+        "sid": ["S-1-5-21-ISRO-ADMIN-001"]
+      }
+    },
+    {
+      "username": "isro_operator",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Ground Station",
+      "lastName": "Operator",
+      "email": "operator@isro.gov.in",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "operator_password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Operator"],
+      "attributes": {
+        "clearanceLevel": ["3"],
+        "department": ["TELEMETRY_TRACKING"],
+        "sid": ["S-1-5-21-ISRO-OPERATOR-002"]
+      }
+    }
+  ]
+}

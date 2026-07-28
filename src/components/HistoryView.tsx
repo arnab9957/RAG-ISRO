@@ -11,9 +11,10 @@ interface HistoryViewProps {
   history: HistoryItem[];
   onSelect: (item: HistoryItem) => void;
   onClear: () => void;
+  onDeleteItem?: (id: string) => void;
 }
 
-export default function HistoryView({ history, onSelect, onClear }: HistoryViewProps) {
+export default function HistoryView({ history, onSelect, onClear, onDeleteItem }: HistoryViewProps) {
   if (history.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 opacity-20">
@@ -31,21 +32,21 @@ export default function HistoryView({ history, onSelect, onClear }: HistoryViewP
         </h2>
         <button 
           onClick={onClear}
-          className="flex items-center gap-2 text-[10px] font-mono text-zinc-500 hover:text-red-500 transition-colors"
+          className="flex items-center gap-2 text-[10px] font-mono text-zinc-500 hover:text-red-500 transition-colors cursor-pointer"
         >
           <Trash2 className="w-3 h-3" />
-          PURGE HISTORY
+          PURGE ALL HISTORY
         </button>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
         {history.map((item) => (
-          <motion.button
+          <motion.div
             key={item.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={() => onSelect(item)}
-            className="isro-glass p-4 rounded-xl hover:border-isro-orange/50 transition-all text-left group"
+            className="isro-glass p-4 rounded-xl hover:border-isro-orange/50 transition-all text-left group cursor-pointer"
           >
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -61,7 +62,22 @@ export default function HistoryView({ history, onSelect, onClear }: HistoryViewP
               <p className="text-sm font-medium text-zinc-300 line-clamp-1 group-hover:text-white transition-colors">
                 {item.query}
               </p>
-              <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-isro-orange transition-colors shrink-0 ml-4" />
+              <div className="flex items-center gap-2 shrink-0 ml-4">
+                {onDeleteItem && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteItem(item.id);
+                    }}
+                    className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-950/50 transition cursor-pointer"
+                    title="Delete this item from history"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-isro-orange transition-colors" />
+              </div>
             </div>
 
             <div className="mt-3 flex gap-2">
@@ -75,7 +91,7 @@ export default function HistoryView({ history, onSelect, onClear }: HistoryViewP
                 VERIFIED: YES
               </div>
             </div>
-          </motion.button>
+          </motion.div>
         ))}
       </div>
     </div>

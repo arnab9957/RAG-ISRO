@@ -17,7 +17,7 @@ services:
     build:
       context: .
       dockerfile: ingest.Dockerfile
-    image: IRSARGO-ingest:latest
+    image: irsargo-ingest:latest
     container_name: IRSARGO-ingest
     working_dir: /app
     # Only mount datasets into the running container; code and node_modules are baked in the image

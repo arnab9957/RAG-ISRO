@@ -11,6 +11,7 @@ import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import nodemailer from 'nodemailer';
 import { extractKeyTerms, createTrace, calculateConfidence, mockGenerate } from '../src/lib/verify';
+import { authenticateKeycloakUser, registerKeycloakUser } from './keycloak';
 
 // --- RAG Security Helper Functions ---
 
@@ -515,39 +516,67 @@ interface PendingSession {
 
 const ACTIVE_SESSIONS: Record<string, PendingSession> = {};
 
-app.post('/api/register', (req: Request, res: Response) => {
+app.post('/api/register', async (req: Request, res: Response) => {
   try {
     const { username, password, displayName, role, clearanceLevel, email, phone } = req.body;
-    if (!username || !password || !displayName || !role || !clearanceLevel || !email || !phone) {
-      return res.status(400).json({ error: 'All registration fields are required' });
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required for registration' });
     }
     const normalizedUser = username.toLowerCase();
-    if (USERS_DB[normalizedUser]) {
-      return res.status(400).json({ error: 'Username is already registered' });
-    }
+    const finalDisplayName = displayName || username;
+    const finalRole = role || 'Operator';
+    const finalClearance = Number(clearanceLevel || 3);
+    const finalEmail = email || `${normalizedUser}@isro.gov.in`;
 
     const passwordHash = createHash('sha256').update(password).digest('hex');
-    const sid = `S-1-5-21-362381-custom-${Math.floor(100 + Math.random() * 900)}`;
+    const sid = `S-1-5-21-362381-KEYCLOAK-${normalizedUser.toUpperCase()}`;
 
     USERS_DB[normalizedUser] = {
       username: normalizedUser,
       passwordHash,
-      displayName,
-      role,
-      clearanceLevel: Number(clearanceLevel),
-      departments: role === 'Administrator' ? ['PROPULSION', 'AVIONICS', 'TELEMETRY'] : role === 'Operator' ? ['AVIONICS'] : [],
-      projects: role === 'Administrator' ? ['GSAT-24', 'LVM3-M4', 'ADITYA-L1'] : role === 'Operator' ? ['GSAT-24'] : [],
+      displayName: finalDisplayName,
+      role: finalRole,
+      clearanceLevel: finalClearance,
+      departments: finalRole === 'Administrator' ? ['PROPULSION', 'AVIONICS', 'TELEMETRY'] : ['AVIONICS'],
+      projects: finalRole === 'Administrator' ? ['GSAT-24', 'LVM3-M4', 'ADITYA-L1'] : ['GSAT-24'],
       sid,
-      email,
-      phone
+      email: finalEmail,
+      phone: phone || ''
     };
+
+    // Provision user into Keycloak Server Dashboard
+    const kcResult = await registerKeycloakUser({
+      username: normalizedUser,
+      password,
+      displayName: finalDisplayName,
+      role: finalRole,
+      clearanceLevel: finalClearance,
+      email: finalEmail
+    });
 
     // Log registration audit
     const logFile = path.resolve(process.cwd(), 'ingestion_audit.log');
-    const auditRecord = `[AUDIT] [${new Date().toISOString()}] USER_REGISTERED: User="${normalizedUser}" Clearance=${clearanceLevel} Role=${role}\n`;
+    const auditRecord = `[AUDIT] [${new Date().toISOString()}] USER_REGISTERED_KEYCLOAK: User="${normalizedUser}" Clearance=${finalClearance} Role=${finalRole} Msg="${kcResult.message}"\n`;
     fs.appendFileSync(logFile, auditRecord, 'utf8');
 
-    res.json({ success: true, message: 'User registered successfully. You can now log in.' });
+    const userRecord = USERS_DB[normalizedUser];
+    const token = `keycloak_jwt_${normalizedUser}_${Date.now()}`;
+
+    res.json({ 
+      success: true, 
+      token,
+      user: {
+        username: userRecord.username,
+        displayName: userRecord.displayName,
+        role: userRecord.role,
+        clearanceLevel: userRecord.clearanceLevel,
+        departments: userRecord.departments,
+        projects: userRecord.projects,
+        sid: userRecord.sid,
+        email: userRecord.email
+      },
+      message: `User '${normalizedUser}' registered successfully and provisioned in Keycloak Realm 'isro' dashboard!` 
+    });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -599,6 +628,48 @@ app.post('/api/login', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Keycloak Enterprise OIDC Offline Login Endpoint
+app.post('/api/login/keycloak', async (req: Request, res: Response) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Keycloak username and password are required' });
+    }
+
+    const keycloakSession = await authenticateKeycloakUser(username, password);
+
+    // Issue internal RS256 JWT for IRSARGO microservices
+    const token = signJwt({
+      sub: keycloakSession.username,
+      displayName: keycloakSession.displayName,
+      role: keycloakSession.role,
+      clearanceLevel: keycloakSession.clearanceLevel,
+      departments: keycloakSession.departments,
+      projects: keycloakSession.projects,
+      sid: keycloakSession.sid
+    });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        username: keycloakSession.username,
+        displayName: keycloakSession.displayName,
+        role: keycloakSession.role,
+        clearanceLevel: keycloakSession.clearanceLevel,
+        departments: keycloakSession.departments,
+        projects: keycloakSession.projects,
+        sid: keycloakSession.sid,
+        email: keycloakSession.email,
+        authProvider: 'KEYCLOAK_OIDC'
+      }
+    });
+  } catch (error: any) {
+    console.error('Keycloak authentication error:', error?.message || error);
+    res.status(401).json({ error: error?.message || 'Keycloak authentication failed. Ensure Keycloak container is running on port 8080.' });
   }
 });
 
@@ -979,10 +1050,17 @@ app.post('/api/search', requireAuth, async (req: Request, res: Response) => {
     const queryVariants = [query];
     if (enableQueryExpansion) {
       try {
-        const expansionPrompt = `Generate 2 alternative search queries for the following query. Format the output as a simple list of lines, one query per line, without numbers or markdown:
+        const expansionPrompt = `Generate 2 alternative search queries for the following query.
+
+CHAIN-OF-THOUGHT INSTRUCTIONS:
+Step 1: Identify core domain concepts, acronyms, and technical parameters in the query.
+Step 2: Generate Query 1 focusing on technical specification/acronym expansion.
+Step 3: Generate Query 2 focusing on operational context or compliance rules.
+
+Format output strictly as a simple list of lines, one query per line, without numbers, tags, or markdown formatting:
 Query: ${query}`;
         const expandedText = await generateInternal(expansionPrompt);
-        const lines = expandedText.split('\n').map(l => l.trim().replace(/^-\s*/, '').replace(/^\d+\.\s*/, '')).filter(l => l.length > 5);
+        const lines = expandedText.split('\n').map(l => l.trim().replace(/^-\s*/, '').replace(/^\d+\.\s*/, '')).filter(l => l.length > 5 && !l.includes('CHAIN-OF-THOUGHT'));
         queryVariants.push(...lines.slice(0, 2));
       } catch (err) {
         console.warn('Failed to expand query:', err);
@@ -991,7 +1069,14 @@ Query: ${query}`;
     
     if (enableHyDE) {
       try {
-        const hydePrompt = `Given the query "${query}", write a short, hypothetical paragraph (approx 50 words) that answers it technically. Focus on technical details and specifications.`;
+        const hydePrompt = `Given the query "${query}", write a hypothetical technical passage (approx 50 words) answering it.
+
+CHAIN-OF-THOUGHT INSTRUCTIONS:
+Step 1: Identify standard aerospace/ISRO technical manual structure relevant to this query.
+Step 2: Incorporate realistic parameters, units, or rule identifiers.
+Step 3: Write a precise hypothetical paragraph matching official documentation format.
+
+Query: ${query}`;
         const hydeText = await generateInternal(hydePrompt);
         if (hydeText && hydeText.trim().length > 10) {
           queryVariants.push(hydeText.trim());
@@ -1362,7 +1447,14 @@ app.post('/api/ingest', requireAuth, async (req: Request, res: Response) => {
       // Get layout description
       let visualDescription = '';
       try {
-        const layoutPrompt = `You are a document layout analyzer. Describe the visual layout of page ${pIdx + 1} of document "${path.basename(filename)}". List headers, formatting layout, tables (transcribed in markdown), and diagram captions.
+        const layoutPrompt = `You are a document layout analyzer.
+
+CHAIN-OF-THOUGHT INSTRUCTIONS:
+Step 1: Identify structural headers and section headings on page ${pIdx + 1}.
+Step 2: Detect any embedded tables and transcribe them in Markdown table format.
+Step 3: Extract diagram captions, callouts, and formatting structure.
+
+Describe the visual layout of page ${pIdx + 1} of document "${path.basename(filename)}":
 Page Content:
 ${pageText.slice(0, 2000)}`;
         visualDescription = await generateInternal(layoutPrompt);
@@ -1428,8 +1520,14 @@ ${pageText.slice(0, 2000)}`;
           if (clusterIndices.length === 0) continue;
 
           const clusterTexts = clusterIndices.map(idx => childChunksStored[idx].content).join('\n\n');
-          const summaryPrompt = `You are a technical document summarizer. Write a detailed, technical abstract/summary of the following document chunks. Focus on key specifications, metrics, rules, and parameters:
+          const summaryPrompt = `You are a technical document summarizer.
 
+CHAIN-OF-THOUGHT INSTRUCTIONS:
+Step 1: Scan for numerical limits, operational constraints, tolerances, and procurement rules.
+Step 2: Consolidate core technical findings across document chunks.
+Step 3: Generate a detailed technical abstract/summary focusing on key specifications, metrics, rules, and parameters.
+
+Document Chunks:
 ${clusterTexts.slice(0, 4000)}`;
 
           const summaryText = await generateInternal(summaryPrompt);
@@ -1466,9 +1564,16 @@ ${clusterTexts.slice(0, 4000)}`;
 
     // GraphRAG triplets extraction
     try {
-      const graphPrompt = `You are an expert knowledge engineer. Extract key technical entities and their relationship tuples from the text below.
-Focus on: Technical terms, acronyms, subsystem names, components, regulations, documents, and rules.
-Output format: You MUST output ONLY a valid JSON array of string triplets: [["subject", "relation", "object"]]. Do not output any markdown formatting, backticks, or other text. If no relationships can be found, return [].
+      const graphPrompt = `You are an expert knowledge engineer.
+
+CHAIN-OF-THOUGHT INSTRUCTIONS:
+Step 1: Identify key technical entities (acronyms, subsystem names, components, regulations, documents, rules).
+Step 2: Extract clear relationship predicate verbs connecting subject and object pairs.
+Step 3: Format output strictly as a JSON array of string triplets: [["subject", "relation", "object"]].
+
+Focus on: Technical terms, acronyms, subsystem names, components, regulations, and rules.
+Output format: You MUST output ONLY a valid JSON array of string triplets: [["subject", "relation", "object"]]. Do not output any markdown formatting, backticks, or extra commentary. If no relationships can be found, return [].
+
 Text:
 ${redactedText.slice(0, 3000)}`;
 
@@ -1850,9 +1955,13 @@ app.post('/api/ragen/generate', requireAuth, async (req: Request, res: Response)
       // Prompt the LLM using Bloom's Taxonomy principles to generate a higher-order query
       const synthesisPrompt = `System instructions:
 You are the RAGen synthetic data generator. Based on the target document chunk, generate a high-order Question and Answer pair:
-1. **Bloom's Taxonomy Guidance**: Create a question that requires complex reasoning (analyzing, evaluating, or creating) based on the context, rather than simple surface fact recall.
-2. **Concept-Centered Evidence Assembly**: The question should specifically reference key concept fields or rules from this chunk.
-3. **Format**: Output in clean JSON format matching this schema:
+
+CHAIN-OF-THOUGHT INSTRUCTIONS:
+1. **Analyze Chunk**: Identify core technical concepts, operational limits, or rules in Target Document Chunk.
+2. **Apply Bloom's Taxonomy**: Formulate a question requiring higher-order multi-step reasoning (analyzing, evaluating, or synthesizing) rather than simple keyword lookup.
+3. **Formulate Grounded Answer**: Construct an explicit, precise answer derived strictly from Target Document Chunk.
+
+Format: Output strictly in clean JSON matching this schema:
 {
   "question": "The question string",
   "answer": "The precise grounded answer based ONLY on the target document"

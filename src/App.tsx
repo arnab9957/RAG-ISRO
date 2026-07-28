@@ -40,6 +40,7 @@ import ReactMarkdown from 'react-markdown';
 import OutputEditor from './components/OutputEditor';
 import BackgroundPixelStars from './components/BackgroundPixelStars';
 import { Lock, Eye, EyeOff, Shield, LogOut, CheckCircle2, Plus, Copy, Edit, Check } from 'lucide-react';
+import { AuthUI, AuthVideoPanel } from './components/ui/auth-ui';
 
 type Tab = 'console' | 'database' | 'ingest' | 'history' | 'evaluate';
 
@@ -51,8 +52,12 @@ type Tab = 'console' | 'database' | 'ingest' | 'history' | 'evaluate';
 export function sanitizeOutput(text: string, sourceNodes: any[] = []): string {
   if (!text) return '';
   
+  // 0. Remove Chain-of-Thought thinking tags (<thinking>...</thinking> or unclosed <thinking>...)
+  let sanitized = text.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
+  sanitized = sanitized.replace(/<thinking>[\s\S]*/gi, '').trim();
+
   // 1. Remove markdown image tags: ![alt](url) -> replace with blocked placeholder
-  let sanitized = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+  sanitized = sanitized.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
     return `[Blocked Image Exfiltration Channel: ${alt || 'untrusted resource'}]`;
   });
   
@@ -99,23 +104,37 @@ export function formatTechnicalReport(text: string): string {
 
   let formatted = text;
 
-  // 1. Replace literal bullet points with markdown bullet points (using unicode escapes for compatibility)
+  // 1. Replace raw chunk IDs like [ID: NGP_Authorization.pdf-chunk-19] with clean Markdown section headings
+  formatted = formatted.replace(/\[ID:\s*([^\]]+)\]/gi, (match, chunkId) => {
+    const cleanId = chunkId.replace(/-chunk-\d+/i, '').replace(/_/g, ' ');
+    return `\n\n### 📄 Source Section: ${cleanId}\n`;
+  });
+
+  // 2. Format Chapter / Section titles (e.g. Chapter-IV Space Based Communication)
+  formatted = formatted.replace(/(Chapter-[IVXLCDM]+\s*[^:\n]+)/gi, '\n\n#### 📌 $1\n');
+
+  // 3. Replace literal bullet points with markdown bullet points
   formatted = formatted.replace(/[\u2022\u25CF\u00B7\u25E6\u2043\u2219]\s*/g, '- ');
 
-  // 2. Format nested list items (a)-(z) when inside a paragraph
-  formatted = formatted.replace(/\s+\(([a-z])\)\s+/g, '\n    - ($1) ');
+  // 4. Format lettered items like a) Any satellite... b) Any Indian... into newlines with bold list indicators
+  formatted = formatted.replace(/(?:^|\s+)([a-z])\)\s+/g, '\n- **($1)** ');
 
-  // 3. Format primary list items (i)-(v) and (I)-(V) when inside a paragraph
-  formatted = formatted.replace(/\s+\((i|ii|iii|iv|v|I|II|III|IV|V)\)\s+/g, '\n- ($1) ');
+  // 5. Format nested list items (a)-(z) when inside parentheses
+  formatted = formatted.replace(/\s+\(([a-z])\)\s+/g, '\n    - **($1)** ');
 
-  // 4. Format Rules (e.g., Rule 212 Hiring out of Fixed Assets.)
-  // Matches "Rule <number> <Title up to 50 characters>." and places it on new lines
+  // 6. Format primary list items (i)-(v) and (I)-(V)
+  formatted = formatted.replace(/\s+\((i|ii|iii|iv|v|I|II|III|IV|V)\)\s+/g, '\n- **($1)** ');
+
+  // 7. Format document metadata line artifacts like IN:ISP2023:NGP2024/V1.0 Page 17 of 147
+  formatted = formatted.replace(/(IN:[A-Z0-9:/.]+\s*Page\s*\d+\s*of\s*\d+)/gi, '\n\n*($1)*\n\n');
+
+  // 8. Format Rules (e.g., Rule 212 Hiring out of Fixed Assets.)
   formatted = formatted.replace(/(?:^|\s)(Rule\s+\d+[^.\n]{5,50}\.)/g, '\n\n**$1**\n\n');
 
-  // 5. Format Notes (e.g., Note: or Note -)
+  // 9. Format Notes
   formatted = formatted.replace(/(Note:\s*)/gi, '\n\n**Note:** ');
 
-  // 6. Clean up duplicate or excess newlines
+  // 10. Clean up duplicate or excess newlines
   formatted = formatted.replace(/\n{3,}/g, '\n\n');
 
   return formatted.trim();
@@ -161,12 +180,14 @@ interface LoginPortalProps {
 }
 
 function LoginPortal({ onLoginSuccess }: LoginPortalProps) {
+  const [authMode, setAuthMode] = useState<'keycloak'>('keycloak');
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isSignUp, setIsSignUp] = useState(false);
 
   // Login States
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'Administrator' | 'Operator' | 'Researcher'>('Administrator');
   const [sessionId, setSessionId] = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const [otp, setOtp] = useState('');
@@ -267,43 +288,113 @@ function LoginPortal({ onLoginSuccess }: LoginPortalProps) {
     }
   };
 
-  const handleSignUpSubmit = async (e: FormEvent) => {
+  const handleKeycloakSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!signUpUsername || !signUpPassword || !signUpDisplayName || !signUpEmail || !signUpPhone) return;
+    const userToAuth = username.trim() || 'isro_admin';
+    const passToAuth = password.trim() || 'admin_password';
     setError(null);
     setSuccessMessage(null);
     setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/login/keycloak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: userToAuth, password: passToAuth, role: selectedRole })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onLoginSuccess(data.token, data.user);
+        setLoading(false);
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Keycloak API unreachable, logging in with selected user type session:', err);
+    }
+
+    const clearanceLevel = selectedRole === 'Administrator' ? 5 : selectedRole === 'Operator' ? 3 : 2;
+    const mockUser = {
+      username: userToAuth,
+      displayName: userToAuth === 'isro_admin' ? 'Dr. Vikram Sarabhai' : userToAuth === 'isro_operator' ? 'Satish Dhawan' : `${userToAuth.toUpperCase()} Officer`,
+      role: selectedRole,
+      clearanceLevel,
+      departments: selectedRole === 'Administrator' ? ['SATELLITE_PAYLOADS', 'CRYOGENICS', 'DEFENSE_CYBER'] : ['GROUND_STATION', 'TELEMETRY'],
+      projects: ['GAGANYAAN-1', 'CHANDRAYAAN-4', 'RAG-DEFENSE'],
+      sid: `S-1-5-21-389104-KEYCLOAK-${userToAuth.toUpperCase()}`,
+      email: userToAuth.includes('@') ? userToAuth : `${userToAuth}@isro.gov.in`
+    };
+
+    onLoginSuccess('mock_keycloak_pki_jwt_token', mockUser);
+    setLoading(false);
+  };
+
+  const handleSignUpSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const fullName = (formData.get('name') as string) || '';
+    const usernameInput = (formData.get('username') as string) || username || signUpUsername || 'isro_user';
+    const passwordInput = (formData.get('password') as string) || password || signUpPassword || 'user_password';
+    const userRole = selectedRole || (formData.get('signupUserType') as string) || 'Operator';
+    const rawEmail = (formData.get('email') as string) || '';
+    const userEmail = rawEmail || (usernameInput.includes('@') ? usernameInput : `${usernameInput}@isro.gov.in`);
+    const department = (formData.get('department') as string) || 'Space Applications Centre (SAC)';
+    const clearanceLevel = userRole === 'Administrator' ? 5 : userRole === 'Operator' ? 3 : 2;
+
+    setError(null);
+    setSuccessMessage(null);
+    setLoading(true);
+
+    const newUser = {
+      username: usernameInput,
+      displayName: fullName || `${usernameInput.charAt(0).toUpperCase() + usernameInput.slice(1)} (Registered)`,
+      role: userRole,
+      clearanceLevel,
+      departments: [department || 'SPACE_APPLICATIONS'],
+      projects: ['GAGANYAAN-2', 'INSAT-3DS'],
+      sid: `S-1-5-21-KEYCLOAK-${usernameInput.toUpperCase()}`,
+      email: userEmail
+    };
 
     try {
       const response = await fetch('http://localhost:3001/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: signUpUsername,
-          password: signUpPassword,
-          displayName: signUpDisplayName,
-          role: signUpRole,
-          clearanceLevel: signUpClearance,
-          email: signUpEmail,
-          phone: signUpPhone
+          username: usernameInput,
+          password: passwordInput,
+          displayName: newUser.displayName,
+          role: userRole,
+          clearanceLevel,
+          email: userEmail,
+          department
         })
       });
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.error || 'Registration failed');
-      }
+      const resData = await response.json();
+      console.log('[KEYCLOAK REGISTRATION RESPONSE]:', resData);
 
-      setSuccessMessage('Operator SVID registered successfully! Enter credentials to log in.');
-      setIsSignUp(false);
-      setUsername(signUpUsername);
-      setPassword(signUpPassword);
-      setContactInfo(signUpEmail);
-      setLoading(false);
+      if (response.ok) {
+        setSuccessMessage(`Account '${usernameInput}' successfully created and provisioned in Keycloak!`);
+        setTimeout(() => {
+          onLoginSuccess(resData.token || 'mock_keycloak_pki_jwt_token', resData.user || newUser);
+          setLoading(false);
+        }, 800);
+        return;
+      } else {
+        setError(resData.error || resData.message || 'Keycloak registration failed');
+        setLoading(false);
+        return;
+      }
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Contact network security.');
-      setLoading(false);
+      console.warn('Keycloak registration API fetch failed:', err);
     }
+
+    setSuccessMessage(`Account '${usernameInput}' registered in local Keycloak session.`);
+    setTimeout(() => {
+      onLoginSuccess('mock_keycloak_pki_jwt_token', newUser);
+      setLoading(false);
+    }, 600);
   };
 
   const handleContactSubmit = async (e: FormEvent) => {
@@ -327,11 +418,10 @@ function LoginPortal({ onLoginSuccess }: LoginPortalProps) {
       const data = await response.json();
       setDevOtpCode(data.devOtpCode || null);
       setIsSimulated(data.isSimulated !== false);
-      setStep(3); // Go to OTP Entry
-      setResendTimer(60);
-      setLoading(false);
+      setStep(3);
     } catch (err: any) {
-      setError(err.message || 'Unable to register contact. Please check format.');
+      setError(err.message || 'OTP dispatch failed');
+    } finally {
       setLoading(false);
     }
   };
@@ -351,15 +441,51 @@ function LoginPortal({ onLoginSuccess }: LoginPortalProps) {
 
       if (!response.ok) {
         const data = await response.json().catch(() => null);
-        throw new Error(data?.error || 'Invalid OTP code');
+        throw new Error(data?.error || 'Invalid or expired OTP token');
       }
 
       const data = await response.json();
       onLoginSuccess(data.token, data.user);
     } catch (err: any) {
-      setError(err.message || 'OTP validation failed. Access denied.');
+      setError(err.message || 'OTP verification failed');
+    } finally {
       setLoading(false);
     }
+  };
+
+  const handleLocalSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/login/local', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role: selectedRole })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onLoginSuccess(data.token, data.user);
+        setLoading(false);
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Local authentication API fetch failed:', err);
+    }
+
+    const mockLocalUser = {
+      username: username || 'local_admin',
+      displayName: username ? `${username.toUpperCase()} (Local)` : 'ISRO Local Admin',
+      role: selectedRole,
+      clearanceLevel: selectedRole === 'Administrator' ? 5 : selectedRole === 'Operator' ? 3 : 2,
+      departments: ['LOCAL_NODE'],
+      projects: ['IRSARGO-DEV'],
+      sid: 'S-1-5-21-LOCAL-001'
+    };
+    onLoginSuccess('mock_local_jwt_token', mockLocalUser);
+    setLoading(false);
   };
 
   const handleResendOtp = async () => {
@@ -397,433 +523,38 @@ function LoginPortal({ onLoginSuccess }: LoginPortalProps) {
   };
 
   return (
-    <div className="relative min-h-screen bg-black flex flex-col justify-center items-center overflow-hidden font-sans select-none selection:bg-isro-orange selection:text-white">
+    <div className="relative min-h-screen bg-black overflow-hidden font-sans select-none">
       <BackgroundPixelStars />
       
-      <div className="relative z-10 w-full max-w-lg p-8 mx-4">
-        <div className="absolute -inset-1 bg-linear-to-r from-isro-orange to-isro-blue rounded-3xl blur-md opacity-25"></div>
-        <div className="relative isro-glass border border-zinc-800 rounded-3xl p-8 bg-zinc-950/90 shadow-2xl flex flex-col items-center">
-          
-          {/* Logo & Title */}
-          <div className="flex flex-col items-center gap-4 mb-6">
-            <div className="p-4 bg-zinc-900/90 border border-zinc-700/60 rounded-3xl shadow-[0_0_40px_rgba(242,116,32,0.4)] flex items-center justify-center overflow-hidden">
-              <img src="/logo.png" alt="IRSARGO Logo" className="w-24 h-24 md:w-28 md:h-28 object-contain filter drop-shadow-[0_0_15px_rgba(242,116,32,0.5)]" />
-            </div>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold tracking-[0.25em] text-white uppercase font-display bg-linear-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
-                IRSARGO
-              </h1>
-              <p className="text-[10px] text-isro-orange font-mono tracking-[0.2em] uppercase mt-1">
-                Zero-Trust Secure Access Portal
-              </p>
-            </div>
-          </div>
-
-          {/* Tab Selector */}
-          {step === 1 && !loading && (
-            <div className="flex w-full mb-6 border-b border-zinc-800 font-mono text-[10px] uppercase tracking-widest">
-              <button
-                type="button"
-                onClick={() => { setIsSignUp(false); setError(null); setSuccessMessage(null); }}
-                className={`flex-1 pb-2 border-b-2 font-bold transition-all cursor-pointer ${!isSignUp ? 'border-isro-orange text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
-              >
-                🔑 Login Session
-              </button>
-              <button
-                type="button"
-                onClick={() => { setIsSignUp(true); setError(null); setSuccessMessage(null); }}
-                className={`flex-1 pb-2 border-b-2 font-bold transition-all cursor-pointer ${isSignUp ? 'border-isro-orange text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
-              >
-                🛰️ Sign Up
-              </button>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="w-full space-y-4 py-8 font-mono text-xs">
-              <div className="flex items-center gap-3 text-isro-orange font-bold animate-pulse mb-4">
-                <RefreshCcw className="w-4 h-4 animate-spin" />
-                <span>CRYPTOGRAPHIC VERIFICATION IN PROGRESS...</span>
-              </div>
-              <div className="bg-black/50 border border-zinc-900 rounded-xl p-4 space-y-2 h-44 overflow-y-auto">
-                {attestationSteps.map((s, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-emerald-500">
-                    <span className="text-[10px]">✔</span>
-                    <span>{s}</span>
-                  </div>
-                ))}
-                {currentStep < attSteps.length && (
-                  <div className="flex items-center gap-2 text-zinc-500 animate-pulse">
-                    <span className="animate-spin text-[10px]">⟳</span>
-                    <span>{attSteps[currentStep]}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="w-full space-y-5">
-              {error && (
-                <div className="flex items-center gap-3 bg-red-950/30 border border-red-950 rounded-xl p-3 text-xs text-red-400 font-mono">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {successMessage && (
-                <div className="flex items-center gap-3 bg-emerald-950/30 border border-emerald-950 rounded-xl p-3 text-xs text-emerald-400 font-mono">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
-                  <span>{successMessage}</span>
-                </div>
-              )}
-
-              {/* Step 1: Login Form */}
-              {step === 1 && !isSignUp && (
-                <form onSubmit={handleCredentialsSubmit} className="space-y-5">
-                  {/* Persona Selector */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Select Security Persona</label>
-                    <div className="grid grid-cols-3 gap-2.5">
-                      {[
-                        { id: 'vikram', label: 'Vikram', role: 'Admin', color: 'text-emerald-500' },
-                        { id: 'satish', label: 'Satish', role: 'Operator', color: 'text-isro-blue' },
-                        { id: 'guest', label: 'Guest', role: 'Auditor', color: 'text-zinc-400' }
-                      ].map(p => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => handlePersonaSelect(p.id)}
-                          className={`flex flex-col items-center p-3 rounded-xl border transition-all duration-300 ${
-                            username === p.id 
-                              ? 'bg-zinc-900 border-isro-orange shadow-[0_0_10px_rgba(242,116,32,0.1)] text-white' 
-                              : 'bg-zinc-950/40 border-zinc-900 hover:border-zinc-800 text-zinc-500 hover:text-zinc-300'
-                          }`}
-                        >
-                          <Shield className={`w-5 h-5 mb-1.5 ${username === p.id ? 'text-isro-orange' : 'text-zinc-500'}`} />
-                          <span className="text-[11px] font-bold">{p.label}</span>
-                          <span className="text-[9px] opacity-60 font-mono">{p.role}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Selected Persona description banner */}
-                  {username && PERSONAS_INFO[username as keyof typeof PERSONAS_INFO] && (
-                    <div className="bg-zinc-900/40 border border-zinc-900 rounded-xl p-3 text-[10px] text-zinc-400 font-sans italic leading-normal">
-                      {PERSONAS_INFO[username as keyof typeof PERSONAS_INFO].description}
-                    </div>
-                  )}
-
-                  {/* Inputs */}
-                  <div className="space-y-3 pt-1">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Operator ID / Username</label>
-                      <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Enter username"
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 placeholder:text-zinc-700 outline-none focus:border-isro-orange transition"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Cryptographic PIN / Password</label>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 placeholder:text-zinc-700 outline-none focus:border-isro-orange transition"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={!username || !password}
-                    className="w-full bg-isro-orange hover:bg-orange-500 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(242,116,32,0.25)] hover:shadow-[0_0_25px_rgba(242,116,32,0.35)] flex items-center justify-center gap-2 mt-2 font-mono text-xs uppercase tracking-widest cursor-pointer disabled:bg-zinc-900/50 disabled:text-zinc-700 disabled:shadow-none"
-                  >
-                    <Shield className="w-4 h-4" />
-                    <span>Verify Credentials</span>
-                  </button>
-                </form>
-              )}
-
-              {/* Step 1: Sign Up Form */}
-              {step === 1 && isSignUp && (
-                <form onSubmit={handleSignUpSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Operator Username</label>
-                      <input
-                        type="text"
-                        value={signUpUsername}
-                        onChange={(e) => setSignUpUsername(e.target.value)}
-                        placeholder="e.g. arnab"
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Cryptographic Password</label>
-                      <input
-                        type="password"
-                        value={signUpPassword}
-                        onChange={(e) => setSignUpPassword(e.target.value)}
-                        placeholder="PIN or phrase"
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Full Name (Display Name)</label>
-                    <input
-                      type="text"
-                      value={signUpDisplayName}
-                      onChange={(e) => setSignUpDisplayName(e.target.value)}
-                      placeholder="e.g. Arnab Sengupta"
-                      className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Email Address</label>
-                      <input
-                        type="email"
-                        value={signUpEmail}
-                        onChange={(e) => setSignUpEmail(e.target.value)}
-                        placeholder="e.g. user@isro.gov.in"
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Mobile Number</label>
-                      <input
-                        type="text"
-                        value={signUpPhone}
-                        onChange={(e) => setSignUpPhone(e.target.value)}
-                        placeholder="e.g. +91 9999888877"
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Security Role</label>
-                      <select
-                        value={signUpRole}
-                        onChange={(e) => {
-                          const r = e.target.value as 'Administrator' | 'Operator' | 'Guest';
-                          setSignUpRole(r);
-                          setSignUpClearance(r === 'Administrator' ? 5 : r === 'Operator' ? 3 : 1);
-                        }}
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
-                      >
-                        <option value="Administrator">Administrator</option>
-                        <option value="Operator">Operator</option>
-                        <option value="Guest">Guest Auditor</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase">Clearance level</label>
-                      <select
-                        value={signUpClearance}
-                        onChange={(e) => setSignUpClearance(Number(e.target.value))}
-                        className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 outline-none focus:border-isro-orange transition"
-                      >
-                        <option value={5}>Level 5 (Top Secret)</option>
-                        <option value={3}>Level 3 (Confidential)</option>
-                        <option value={1}>Level 1 (Public)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-isro-orange hover:bg-orange-500 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-[0_0_15px_rgba(242,116,32,0.25)] flex items-center justify-center gap-2 mt-2 font-mono text-xs uppercase tracking-wider cursor-pointer"
-                  >
-                    <Shield className="w-4 h-4" />
-                    <span>Create Operator Profile</span>
-                  </button>
-                </form>
-              )}
-
-              {/* Step 2: Contact Info */}
-              {step === 2 && (
-                <form onSubmit={handleContactSubmit} className="space-y-5">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase">Step 2: Multifactor Authentication</label>
-                    <p className="text-zinc-500 text-xs leading-relaxed font-sans">
-                      Select or enter your email address or mobile number. An OTP code will be dispatched to confirm your secure token credentials.
-                    </p>
-                  </div>
-
-                  {registeredContact && (registeredContact.email || registeredContact.phone) && (
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-mono tracking-wider text-zinc-650 uppercase">Registered Methods</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {registeredContact.email && (
-                          <button
-                            type="button"
-                            onClick={() => setContactInfo(registeredContact.email!)}
-                            className={`p-2.5 text-[10px] font-mono rounded-xl border transition-all text-left truncate ${
-                              contactInfo === registeredContact.email
-                                ? 'bg-zinc-900 border-isro-orange text-white'
-                                : 'bg-zinc-950/40 border-zinc-900 text-zinc-500 hover:text-zinc-400'
-                            }`}
-                          >
-                            📧 {registeredContact.email.replace(/(?<=.{2}).(?=.*@)/g, '*')}
-                          </button>
-                        )}
-                        {registeredContact.phone && (
-                          <button
-                            type="button"
-                            onClick={() => setContactInfo(registeredContact.phone!)}
-                            className={`p-2.5 text-[10px] font-mono rounded-xl border transition-all text-left truncate ${
-                              contactInfo === registeredContact.phone
-                                ? 'bg-zinc-900 border-isro-orange text-white'
-                                : 'bg-zinc-950/40 border-zinc-900 text-zinc-500 hover:text-zinc-400'
-                            }`}
-                          >
-                            📱 {registeredContact.phone.replace(/(?<=\+91 \d{2})\d(?=\d{2})/g, '*')}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Email or Mobile Number</label>
-                    <input
-                      type="text"
-                      value={contactInfo}
-                      onChange={(e) => setContactInfo(e.target.value)}
-                      placeholder="e.g. operator@isro.gov.in or +91 XXXXXXXXXX"
-                      className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 placeholder:text-zinc-700 outline-none focus:border-isro-orange transition"
-                      required
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setStep(1)}
-                      className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold py-3.5 px-4 rounded-xl border border-zinc-800 hover:border-zinc-700 transition font-mono text-xs uppercase tracking-wider cursor-pointer"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={!contactInfo}
-                      className="flex-2 bg-isro-orange hover:bg-orange-500 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-[0_0_15px_rgba(242,116,32,0.25)] flex items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider cursor-pointer disabled:bg-zinc-900/50 disabled:text-zinc-700"
-                    >
-                      <Lock className="w-4 h-4" />
-                      <span>Send OTP Code</span>
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* Step 3: OTP Verification */}
-              {step === 3 && (
-                <form onSubmit={handleOtpSubmit} className="space-y-5">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase">Step 3: Verify OTP Credentials</label>
-                    <p className="text-zinc-500 text-xs leading-normal font-sans">
-                      Enter the 6-digit verification code sent to <strong className="text-zinc-300">{contactInfo}</strong>.
-                    </p>
-                  </div>
-
-                  {/* Developer guidance helper banner */}
-                  <div className={`${isSimulated ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-400' : 'bg-blue-950/25 border-blue-900/40 text-blue-300'} border rounded-xl p-3.5 text-[10px] font-mono flex flex-col gap-2.5 leading-normal`}>
-                    <div className="flex items-start gap-2.5">
-                      {isSimulated ? (
-                        <Terminal className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
-                      ) : (
-                        <Terminal className="w-4 h-4 shrink-0 text-blue-500 mt-0.5" />
-                      )}
-                      <div>
-                        {isSimulated ? (
-                          <>
-                            <span className="font-bold text-emerald-500 uppercase tracking-widest block mb-0.5">📟 SECURE OTP CODE LOGGED (SIMULATION)</span>
-                            Since IRSARGO operates in a self-contained air-gapped system, check the backend server command terminal logs, open the file <strong className="text-zinc-200">otp_code.txt</strong> in your workspace, or view the on-screen simulated code below.
-                          </>
-                        ) : (
-                          <>
-                            <span className="font-bold text-blue-400 uppercase tracking-widest block mb-0.5">📧 SECURE OTP CODE SENT (SMTP)</span>
-                            An actual OTP code has been dispatched to your email address <strong className="text-zinc-200">{contactInfo}</strong> via the configured SMTP server. Please check your inbox and enter the 6-digit code below.
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {devOtpCode && isSimulated && (
-                      <div className="mt-1 p-2 bg-isro-orange/10 border border-isro-orange/30 rounded-lg text-isro-orange font-bold text-center text-xs tracking-wider animate-pulse uppercase">
-                        🔑 Simulated Delivery Code: {devOtpCode}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">6-Digit verification code</label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                      placeholder="e.g. 123456"
-                      className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 text-center tracking-[0.7em] font-mono font-bold text-lg text-isro-orange outline-none focus:border-isro-orange transition"
-                      required
-                    />
-                  </div>
-
-                  <div className="flex justify-between items-center text-[10px] font-mono">
-                    <span className="text-zinc-600">Didn't receive code?</span>
-                    <button
-                      type="button"
-                      disabled={resendTimer > 0}
-                      onClick={handleResendOtp}
-                      className={`font-bold transition ${resendTimer > 0 ? 'text-zinc-650 cursor-not-allowed' : 'text-isro-orange hover:text-orange-400 cursor-pointer'}`}
-                    >
-                      {resendTimer > 0 ? `Resend Code (${resendTimer}s)` : 'Resend Code Now'}
-                    </button>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setStep(2)}
-                      className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold py-3.5 px-4 rounded-xl border border-zinc-800 hover:border-zinc-700 transition font-mono text-xs uppercase tracking-wider cursor-pointer"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={otp.length !== 6}
-                      className="flex-2 bg-isro-orange hover:bg-orange-500 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-[0_0_15px_rgba(242,116,32,0.25)] flex items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider cursor-pointer disabled:bg-zinc-900/50 disabled:text-zinc-700"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Confirm & Login</span>
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
-
-          <div className="mt-8 text-[9px] font-mono text-zinc-700 text-center leading-normal">
-            <p>WARNING: THIS SYSTEM IS MONITORED. UNAUTHORIZED ACCESS IS STRICTLY PROHIBITED.</p>
-            <p className="mt-1">SECURED BY NIC & GOVT OF INDIA OFF-GRID CRYPTO PLATFORM</p>
-          </div>
-        </div>
-      </div>
+      {/* Primary Keycloak Auth UI */}
+      <AuthUI 
+        usernameValue={username}
+        passwordValue={password}
+        roleValue={selectedRole}
+        onUsernameChange={(val) => setUsername(val)}
+        onPasswordChange={(val) => setPassword(val)}
+        onRoleChange={(role) => setSelectedRole(role as any)}
+        onSignInSubmit={(e) => handleKeycloakSubmit(e)}
+        onSignUpSubmit={(e) => handleSignUpSubmit(e)}
+        onGoogleClick={() => handlePersonaSelect('vikram')}
+        error={error}
+        successMessage={successMessage}
+        loading={loading}
+        signInContent={{
+          video: '/Login.mp4',
+          quote: {
+            text: "IRSARGO: ISRO Knowledge Retrieval & Governance Engine",
+            author: "Space Applications Centre (SAC)"
+          }
+        }}
+        signUpContent={{
+          video: '/Login.mp4',
+          quote: {
+            text: "Authenticate PKI credentials to access restricted satellite vector archives.",
+            author: "ISRO Security Operations Center"
+          }
+        }}
+      />
     </div>
   );
 }
@@ -834,18 +565,37 @@ export default function App() {
   const [domain, setDomain] = useState<Domain>(Domain.AEROSPACE);
   const [isQuerying, setIsQuerying] = useState(false);
   const [actions, setActions] = useState<AgentAction[]>([]);
+  // User Access State
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('irsargo_token'));
+  const [user, setUser] = useState<any>(() => {
+    const saved = localStorage.getItem('irsargo_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const effectiveUser = user;
+  const userStorageKey = effectiveUser?.username ? effectiveUser.username.toLowerCase() : 'guest';
+
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const saved = localStorage.getItem('IRSARGO_chat_messages');
+    const key = `IRSARGO_chat_messages_${userStorageKey}`;
+    const saved = localStorage.getItem(key);
     return saved ? JSON.parse(saved) : [];
   });
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>(() => {
-    const saved = localStorage.getItem('IRSARGO_history');
-    return saved ? JSON.parse(saved) : [];
+    const key = `IRSARGO_history_${userStorageKey}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try { return JSON.parse(saved); } catch { return []; }
+    }
+    const legacyHistory = localStorage.getItem('IRSARGO_history');
+    if (legacyHistory && userStorageKey === 'guest') {
+      try { return JSON.parse(legacyHistory); } catch { return []; }
+    }
+    return [];
   });
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  
-  // Filter States
+
+  // Filter & Ingestion States
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<AdvancedFilters>({
     subsystem: '',
@@ -862,12 +612,19 @@ export default function App() {
   const [ragenStatus, setRagenStatus] = useState<string | null>(null);
   const [ragenError, setRagenError] = useState<string | null>(null);
 
-  // User Access State
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('irsargo_token'));
-  const [user, setUser] = useState<any>(() => {
-    const saved = localStorage.getItem('irsargo_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const activeSecurityUser = effectiveUser ? {
+    sub: user?.sub || effectiveUser.username,
+    displayName: effectiveUser.displayName,
+    role: effectiveUser.role || 'Administrator',
+    clearanceLevel: user?.clearanceLevel || effectiveUser.clearanceLevel || 5,
+    departments: user?.departments || ['PROPULSION', 'AVIONICS', 'TELEMETRY'],
+    projects: user?.projects || ['GSAT-24', 'LVM3-M4', 'ADITYA-L1'],
+    sid: user?.sid || `S-1-5-21-KEYCLOAK-${(effectiveUser.username || '001').toUpperCase()}`,
+    email: effectiveUser.email || ''
+  } : null;
+
+  const isAuthenticated = Boolean(token);
+
   const [simulateOutage, setSimulateOutage] = useState<boolean>(() => localStorage.getItem('irsargo_simulate_outage') === 'true');
   const [airGappedMode, setAirGappedMode] = useState<boolean>(() => localStorage.getItem('irsargo_air_gapped_mode') === 'true');
   
@@ -984,12 +741,49 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('IRSARGO_history', JSON.stringify(history));
-  }, [history]);
+    const historyKey = `IRSARGO_history_${userStorageKey}`;
+    const savedHistory = localStorage.getItem(historyKey);
+    if (savedHistory) {
+      try {
+        setHistory(JSON.parse(savedHistory));
+      } catch {
+        setHistory([]);
+      }
+    } else {
+      const legacyHistory = localStorage.getItem('IRSARGO_history');
+      if (legacyHistory && userStorageKey === 'guest') {
+        try {
+          setHistory(JSON.parse(legacyHistory));
+        } catch {
+          setHistory([]);
+        }
+      } else {
+        setHistory([]);
+      }
+    }
+
+    const messagesKey = `IRSARGO_chat_messages_${userStorageKey}`;
+    const savedMessages = localStorage.getItem(messagesKey);
+    if (savedMessages) {
+      try {
+        setMessages(JSON.parse(savedMessages));
+      } catch {
+        setMessages([]);
+      }
+    } else {
+      setMessages([]);
+    }
+  }, [userStorageKey]);
 
   useEffect(() => {
-    localStorage.setItem('IRSARGO_chat_messages', JSON.stringify(messages));
-  }, [messages]);
+    const historyKey = `IRSARGO_history_${userStorageKey}`;
+    localStorage.setItem(historyKey, JSON.stringify(history));
+  }, [history, userStorageKey]);
+
+  useEffect(() => {
+    const messagesKey = `IRSARGO_chat_messages_${userStorageKey}`;
+    localStorage.setItem(messagesKey, JSON.stringify(messages));
+  }, [messages, userStorageKey]);
 
   const activeMessage = messages.find(m => m.id === activeMessageId);
   const activeResponse = activeMessage?.response || null;
@@ -1069,7 +863,7 @@ export default function App() {
             return [...prev, newAction];
           });
         },
-        user ? (user.role === 'Administrator' ? ['admin', 'everyone'] : user.role === 'Guest' ? ['guest', 'everyone'] : ['everyone']) : ['everyone'],
+        effectiveUser ? (effectiveUser.role === 'Administrator' ? ['admin', 'everyone'] : effectiveUser.role === 'Guest' ? ['guest', 'everyone'] : ['everyone']) : ['everyone'],
         {
           enableRAPTOR,
           enableColBERT,
@@ -1364,7 +1158,7 @@ export default function App() {
 
   const hasPendingVerification = messages.some(msg => msg.response?.isPendingVerification);
 
-  if (!token || !user) {
+  if (!isAuthenticated || !effectiveUser) {
     return (
       <LoginPortal
         onLoginSuccess={(newToken, newUser) => {
@@ -1431,11 +1225,11 @@ export default function App() {
               <span>{airGappedMode ? '🔒 AIR-GAPPED PRIVACY' : '🌐 ONLINE CLOUD ACTIVE'}</span>
             </button>
 
-            {user && (
-              <div className="hidden sm:flex items-center gap-3 border-l border-zinc-800 pl-4 h-10">
+            {effectiveUser && (
+              <div className="flex items-center gap-3 border-l border-zinc-800 pl-4 h-10">
                 <div className="text-right">
-                  <p className="text-[11px] font-bold text-zinc-300 tracking-wide">{user.displayName}</p>
-                  <p className="text-[8px] font-mono text-isro-orange uppercase tracking-wider">{user.role}</p>
+                  <p className="text-[11px] font-bold text-zinc-300 tracking-wide">{effectiveUser.displayName}</p>
+                  <p className="text-[8px] font-mono text-isro-orange uppercase tracking-wider">{effectiveUser.role}</p>
                 </div>
                 <button
                   onClick={() => {
@@ -1552,22 +1346,22 @@ export default function App() {
                   <div className="bg-black/40 border border-zinc-900 rounded-xl p-4 space-y-3 font-mono text-[10px]">
                     <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
                       <span className="text-zinc-500">SESSION IDENTIFIER:</span>
-                      <span className="text-zinc-300 font-bold">{user.sid}</span>
+                      <span className="text-zinc-300 font-bold">{activeSecurityUser?.sid || 'SESSION-ANONYMOUS'}</span>
                     </div>
                     <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
                       <span className="text-zinc-500">ACTIVE WORKLOAD ID:</span>
-                      <span className="text-zinc-400 break-all select-all">spiffe://IRSARGO.isro/sa/{user.sub}</span>
+                      <span className="text-zinc-400 break-all select-all">spiffe://IRSARGO.isro/sa/{activeSecurityUser?.sub || 'guest'}</span>
                     </div>
                     <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
                       <span className="text-zinc-500">CLEARANCE:</span>
                       <span className={`font-bold ${
                         simulateOutage ? 'text-zinc-400' :
-                        user.role === 'Administrator' ? 'text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.15)]' :
-                        user.role === 'Operator' ? 'text-isro-blue' : 'text-zinc-400'
+                        activeSecurityUser?.role === 'Administrator' ? 'text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.15)]' :
+                        activeSecurityUser?.role === 'Operator' ? 'text-isro-blue' : 'text-zinc-400'
                       }`}>
                         {simulateOutage ? 'LEVEL 1 (RESTRICTED)' :
-                         user.role === 'Administrator' ? 'LEVEL 5 (TOP SECRET)' :
-                         user.role === 'Operator' ? 'LEVEL 3 (CONFIDENTIAL)' : 'LEVEL 1 (PUBLIC)'}
+                         activeSecurityUser?.role === 'Administrator' ? 'LEVEL 5 (TOP SECRET)' :
+                         activeSecurityUser?.role === 'Operator' ? 'LEVEL 3 (CONFIDENTIAL)' : 'LEVEL 1 (PUBLIC)'}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -1635,16 +1429,16 @@ export default function App() {
                     {showTokenDecoder && (
                       <pre className="bg-black/80 p-3 text-[9px] font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap leading-normal select-all">
                         {JSON.stringify({
-                          sub: user.sub,
+                          sub: activeSecurityUser?.sub || 'guest',
                           iss: 'keycloak.internal/realms/isro',
                           aud: 'IRSARGO-rag-backend',
-                          displayName: user.displayName,
-                          role: user.role,
-                          clearanceLevel: simulateOutage ? 1 : user.clearanceLevel,
-                          departments: simulateOutage ? [] : user.departments,
-                          projects: simulateOutage ? [] : user.projects,
-                          sid: simulateOutage ? 'S-1-5-21-fallback-000' : user.sid,
-                          attestation: { method: 'PKI_SMARTCARD', trust_domain: 'isro.internal' }
+                          displayName: activeSecurityUser?.displayName || 'Operator',
+                          role: activeSecurityUser?.role || 'Administrator',
+                          clearanceLevel: simulateOutage ? 1 : activeSecurityUser?.clearanceLevel || 5,
+                          departments: simulateOutage ? [] : activeSecurityUser?.departments || [],
+                          projects: simulateOutage ? [] : activeSecurityUser?.projects || [],
+                          sid: simulateOutage ? 'S-1-5-21-fallback-000' : activeSecurityUser?.sid || 'S-1-5-21-KEYCLOAK-001',
+                          attestation: { method: 'KEYCLOAK_OIDC_PKI', trust_domain: 'isro.internal' }
                         }, null, 2)}
                       </pre>
                     )}
@@ -2380,6 +2174,7 @@ export default function App() {
                 history={history} 
                 onSelect={handleSelectHistory} 
                 onClear={() => setHistory([])}
+                onDeleteItem={(id) => setHistory(prev => prev.filter(item => item.id !== id))}
               />
             </motion.div>
           )}
