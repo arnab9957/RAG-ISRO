@@ -1804,7 +1804,8 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
       let accuracyLogs: any[] = [];
       if (fs.existsSync(accuracyLogPath)) {
         try {
-          accuracyLogs = JSON.parse(fs.readFileSync(accuracyLogPath, 'utf8'));
+          const parsed = JSON.parse(fs.readFileSync(accuracyLogPath, 'utf8'));
+          accuracyLogs = Array.isArray(parsed) ? parsed : [parsed];
         } catch (err) {
           accuracyLogs = [];
         }
@@ -1829,7 +1830,8 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
       let groundingLogs: any[] = [];
       if (fs.existsSync(groundingLogPath)) {
         try {
-          groundingLogs = JSON.parse(fs.readFileSync(groundingLogPath, 'utf8'));
+          const parsed = JSON.parse(fs.readFileSync(groundingLogPath, 'utf8'));
+          groundingLogs = Array.isArray(parsed) ? parsed : [parsed];
         } catch (err) {
           groundingLogs = [];
         }
@@ -1854,7 +1856,8 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
       let hallucinationLogs: any[] = [];
       if (fs.existsSync(hallucinationLogPath)) {
         try {
-          hallucinationLogs = JSON.parse(fs.readFileSync(hallucinationLogPath, 'utf8'));
+          const parsed = JSON.parse(fs.readFileSync(hallucinationLogPath, 'utf8'));
+          hallucinationLogs = Array.isArray(parsed) ? parsed : [parsed];
         } catch (err) {
           hallucinationLogs = [];
         }
@@ -1882,7 +1885,8 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
       let domainLogs: any[] = [];
       if (fs.existsSync(domainLogPath)) {
         try {
-          domainLogs = JSON.parse(fs.readFileSync(domainLogPath, 'utf8'));
+          const parsed = JSON.parse(fs.readFileSync(domainLogPath, 'utf8'));
+          domainLogs = Array.isArray(parsed) ? parsed : [parsed];
         } catch (err) {
           domainLogs = [];
         }

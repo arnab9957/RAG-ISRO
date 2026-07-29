@@ -6,7 +6,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { AgentAction, AgentRole, Domain, IRSARGOResponse, SecurityTrace, AdvancedFilters, GroundedNode } from "../types";
 import { searchOntology } from "./ontology";
-import { createTrace, generateQueryProof, calculateConfidence, extractKeyTerms, mockGenerate } from "./verify";
+import { createTrace, generateQueryProof, calculateConfidence, extractKeyTerms, mockGenerate, cleanTopic } from "./verify";
 
 export function stripThinkingTags(text: string): string {
   if (!text) return '';
@@ -339,7 +339,7 @@ Paraphrased Query: [Clean paraphrased query string]`;
       if (responseText && responseText.trim().length > 3) {
         // Extract content after <thinking> if present
         const cleanText = responseText.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').replace(/Paraphrased Query:\s*/i, '').trim();
-        paraphrasedQuery = cleanText || responseText.trim();
+        paraphrasedQuery = cleanTopic(cleanText || responseText.trim());
       }
       paraphraseAction.status = 'completed';
       paraphraseAction.output = `ORIGINAL: "${query}"\nPARAPHRASED: "${paraphrasedQuery}"`;
@@ -362,7 +362,10 @@ Paraphrased Query: [Clean paraphrased query string]`;
       ? `<grounding_context>\n` + nodes.map(n => `  <context_chunk id="${n.id}" filename="${n.metadata.filename}" page="${n.metadata.page || 1}">\n    ${n.content}\n  </context_chunk>`).join('\n') + `\n</grounding_context>`
       : "No matching pages found.";
 
-    addAction(AgentRole.EXECUTOR, `Fused dense/lexical results using RRF. Retrieved ${originalNodes.length} primary chunks. Expanded ${expandedNodes.length} neighboring pages for context continuity.`, 'completed');
+    const statusMsg = nodes.length > 0
+      ? `Fused dense/lexical results using RRF (${domain}). Retrieved ${originalNodes.length} primary chunks. Expanded ${expandedNodes.length} neighboring pages for context continuity.`
+      : `⚠️ No document chunks matched the active index filter (${domain}). Please upload documents for this domain via the Ingest tab.`;
+    addAction(AgentRole.EXECUTOR, statusMsg, 'completed');
 
     // 2. Context Aggregation & Reranking
     const rerankAction = addAction(AgentRole.EXECUTOR, `Executing TF-IDF Relevance Reranker...`);
