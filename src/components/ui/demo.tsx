@@ -1,7 +1,11 @@
-import { AuthUI } from "@/components/ui/auth-ui";
+import NavMenu from "@/components/ui/menu-hover-effects";
 
 const DemoOne = () => {
-  return <AuthUI />;
+  return (
+    <div className="flex w-full h-screen justify-center items-center">
+      <NavMenu />
+    </div>
+  );
 };
 
 export { DemoOne };

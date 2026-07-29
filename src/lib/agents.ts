@@ -362,7 +362,10 @@ Paraphrased Query: [Clean paraphrased query string]`;
       ? `<grounding_context>\n` + nodes.map(n => `  <context_chunk id="${n.id}" filename="${n.metadata.filename}" page="${n.metadata.page || 1}">\n    ${n.content}\n  </context_chunk>`).join('\n') + `\n</grounding_context>`
       : "No matching pages found.";
 
-    addAction(AgentRole.EXECUTOR, `Fused dense/lexical results using RRF. Retrieved ${originalNodes.length} primary chunks. Expanded ${expandedNodes.length} neighboring pages for context continuity.`, 'completed');
+    const statusMsg = nodes.length > 0
+      ? `Fused dense/lexical results using RRF (${domain}). Retrieved ${originalNodes.length} primary chunks. Expanded ${expandedNodes.length} neighboring pages for context continuity.`
+      : `⚠️ No document chunks matched the active index filter (${domain}). Please upload documents for this domain via the Ingest tab.`;
+    addAction(AgentRole.EXECUTOR, statusMsg, 'completed');
 
     // 2. Context Aggregation & Reranking
     const rerankAction = addAction(AgentRole.EXECUTOR, `Executing TF-IDF Relevance Reranker...`);
