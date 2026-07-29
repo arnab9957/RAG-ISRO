@@ -38,7 +38,9 @@ import {
   Eye,
   EyeOff,
   Shield,
-  CheckCircle2
+  CheckCircle2,
+  X,
+  Sparkles
 } from 'lucide-react';
 import { AgentAction, Domain, IRSARGOResponse, AdvancedFilters, HistoryItem, ChatMessage } from './types';
 import { IRSARGOOrchestrator } from './lib/agents';
@@ -54,8 +56,9 @@ import { Dock, DockIcon, DockItem, DockLabel } from './components/ui/dock';
 import NavMenu from './components/ui/menu-hover-effects';
 import { OfflineModeToggle } from './components/ui/OfflineModeToggle';
 import { OllamaTerminal } from './components/ui/OllamaTerminal';
+import { LandingPage } from './components/LandingPage';
 
-type Tab = 'console' | 'activities' | 'database' | 'ingest' | 'history' | 'evaluate';
+type Tab = 'landing' | 'console' | 'activities' | 'database' | 'ingest' | 'history' | 'evaluate';
 
 /**
  * Output Sanitization (Anti-Exfiltration):
@@ -190,13 +193,11 @@ const PERSONAS_INFO = {
 
 interface LoginPortalProps {
   onLoginSuccess: (token: string, user: any) => void;
+  onClose?: () => void;
+  noticeMessage?: string | null;
 }
 
-interface LoginPortalProps {
-  onLoginSuccess: (token: string, user: any) => void;
-}
-
-function LoginPortal({ onLoginSuccess }: LoginPortalProps) {
+function LoginPortal({ onLoginSuccess, onClose, noticeMessage }: LoginPortalProps) {
   const [authMode, setAuthMode] = useState<'keycloak'>('keycloak');
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -540,8 +541,15 @@ function LoginPortal({ onLoginSuccess }: LoginPortalProps) {
   };
 
   return (
-    <div className="relative min-h-screen bg-black overflow-hidden font-sans select-none">
+    <div className="relative w-full flex flex-col items-center justify-center font-sans select-none my-auto">
       <BackgroundPixelStars />
+      
+      {noticeMessage && (
+        <div className="relative z-30 mb-5 px-6 py-3.5 rounded-2xl bg-orange-950/90 border border-orange-500/50 text-orange-200 text-xs font-mono flex items-center gap-3 backdrop-blur-xl shadow-2xl max-w-lg text-center shadow-orange-950/50">
+          <Lock className="w-4 h-4 text-orange-400 shrink-0" />
+          <span>{noticeMessage}</span>
+        </div>
+      )}
       
       {/* Primary Keycloak Auth UI */}
       <AuthUI 
@@ -577,7 +585,7 @@ function LoginPortal({ onLoginSuccess }: LoginPortalProps) {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('console');
+  const [activeTab, setActiveTab] = useState<Tab>('landing');
   const [query, setQuery] = useState('');
   const [domain, setDomain] = useState<Domain>(Domain.AEROSPACE);
   const [isQuerying, setIsQuerying] = useState(false);
@@ -591,6 +599,16 @@ export default function App() {
 
   const effectiveUser = user;
   const userStorageKey = effectiveUser?.username ? effectiveUser.username.toLowerCase() : 'guest';
+
+  // Modal Login & Gatekeeper States
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [pendingTargetTab, setPendingTargetTab] = useState<Tab | null>(null);
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
+
+  const handleTabSelect = (tabId: Tab) => {
+    setActiveTab(tabId);
+  };
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const key = `IRSARGO_chat_messages_${userStorageKey}`;
@@ -835,7 +853,20 @@ export default function App() {
     e.preventDefault();
     if (!query.trim() || isQuerying) return;
 
-    const currentQuery = query;
+    if (!token || !effectiveUser) {
+      setPendingQuery(query);
+      setLoginNotice('Please sign in to execute space intelligence queries.');
+      setShowLoginModal(true);
+      return;
+    }
+
+    await executeSubmittedQuery(query);
+  };
+
+  const executeSubmittedQuery = async (queryText: string) => {
+    if (!queryText.trim() || isQuerying) return;
+
+    const currentQuery = queryText;
     setQuery('');
     setActiveTab('console');
     setIsQuerying(true);
@@ -1094,6 +1125,12 @@ export default function App() {
   const handleIngest = async (e: FormEvent) => {
     e.preventDefault();
 
+    if (!token || !effectiveUser) {
+      setLoginNotice('Please sign in to upload and ingest satellite documents.');
+      setShowLoginModal(true);
+      return;
+    }
+
     if (!ingestFile || isIngesting) {
       return;
     }
@@ -1140,6 +1177,12 @@ export default function App() {
   };
 
   const handleRagenGeneration = async () => {
+    if (!token || !effectiveUser) {
+      setLoginNotice('Please sign in to generate RAGen evaluation triples.');
+      setShowLoginModal(true);
+      return;
+    }
+
     if (isGeneratingRagen) return;
     setIsGeneratingRagen(true);
     setRagenStatus(null);
@@ -1176,19 +1219,6 @@ export default function App() {
 
   const hasPendingVerification = messages.some(msg => msg.response?.isPendingVerification);
 
-  if (!isAuthenticated || !effectiveUser) {
-    return (
-      <LoginPortal
-        onLoginSuccess={(newToken, newUser) => {
-          localStorage.setItem('irsargo_token', newToken);
-          localStorage.setItem('irsargo_user', JSON.stringify(newUser));
-          setToken(newToken);
-          setUser(newUser);
-        }}
-      />
-    );
-  }
-
   return (
     <div className="relative min-h-screen flex flex-col font-sans selection:bg-isro-orange selection:text-white bg-black overflow-hidden">
       <BackgroundPixelStars />
@@ -1217,6 +1247,7 @@ export default function App() {
           <div className="flex items-center gap-4">
             <NavMenu
               items={[
+                { id: 'landing', label: 'home' },
                 { id: 'console', label: 'console' },
                 { id: 'activities', label: 'activities' },
                 { id: 'database', label: 'nodes' },
@@ -1225,10 +1256,20 @@ export default function App() {
                 { id: 'evaluate', label: 'evaluate' }
               ]}
               activeTab={activeTab}
-              onSelectTab={(id) => setActiveTab(id as Tab)}
+              onSelectTab={(id) => handleTabSelect(id as Tab)}
             />
 
-            {effectiveUser && (
+            {!effectiveUser ? (
+              <button
+                onClick={() => {
+                  setLoginNotice(null);
+                  setShowLoginModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-orange-600/30 cursor-pointer"
+              >
+                <Lock className="w-3.5 h-3.5" /> Sign In
+              </button>
+            ) : (
               <div className="flex items-center gap-3 border-l border-zinc-800 pl-4 h-10">
                 <div className="text-right">
                   <p className="text-[11px] font-bold text-zinc-300 tracking-wide">{effectiveUser.displayName}</p>
@@ -1242,6 +1283,7 @@ export default function App() {
                     setToken(null);
                     setUser(null);
                     setLastSecurityContext(null);
+                    setActiveTab('landing');
                   }}
                   className="p-1.5 bg-zinc-900 border border-zinc-800 hover:border-red-950 hover:bg-red-950/20 hover:text-red-400 rounded-lg text-zinc-500 transition cursor-pointer"
                   title="Logout operator session"
@@ -1257,8 +1299,33 @@ export default function App() {
       {/* GSAP ScrollSmoother Container */}
       <div id="smooth-wrapper" className="relative z-10 flex-1 w-full">
         <div id="smooth-content" className="flex flex-col min-h-full">
-          <main className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-6 py-10">
+          <main className={activeTab === 'landing' ? 'relative z-10 flex-1 w-full' : 'relative z-10 flex-1 max-w-7xl mx-auto w-full px-6 py-10'}>
         <AnimatePresence mode="wait">
+          {activeTab === 'landing' && (
+            <motion.div
+              key="landing"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.4 }}
+              className="w-full"
+            >
+              <LandingPage
+                onLaunchConsole={(initQuery) => {
+                  if (initQuery) setQuery(initQuery);
+                  setActiveTab('console');
+                }}
+                onExploreOllama={() => {
+                  setActivityTerminalTab('ollama');
+                  setActiveTab('activities');
+                }}
+                onViewDatabase={() => {
+                  setActiveTab('database');
+                }}
+              />
+            </motion.div>
+          )}
+
           {activeTab === 'console' && (
             <motion.div
               key="console"
@@ -2527,6 +2594,39 @@ export default function App() {
       </footer>
         </div>
       </div>
+
+      {/* Login Portal Modal Overlay for Unauthenticated Users */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-2xl flex items-center justify-center p-4 md:p-8">
+          <div className="relative w-full max-w-5xl my-auto flex flex-col items-center">
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className="absolute -top-3 -right-3 md:top-2 md:right-2 z-50 p-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/80 transition cursor-pointer shadow-2xl"
+              title="Close & return to browsing"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <LoginPortal
+              noticeMessage={loginNotice}
+              onClose={() => setShowLoginModal(false)}
+              onLoginSuccess={(newToken, newUser) => {
+                localStorage.setItem('irsargo_token', newToken);
+                localStorage.setItem('irsargo_user', JSON.stringify(newUser));
+                setToken(newToken);
+                setUser(newUser);
+                setShowLoginModal(false);
+                if (pendingQuery && pendingQuery.trim()) {
+                  const q = pendingQuery;
+                  setPendingQuery(null);
+                  setTimeout(() => {
+                    executeSubmittedQuery(q);
+                  }, 150);
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
