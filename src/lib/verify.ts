@@ -169,6 +169,17 @@ export function createTrace(nodeId: string, content: string, constraints: string
 }
 
 /**
+ * Clean up conversational prompt prefixes ('all about', 'what is', etc.) and quotes from queries.
+ */
+export function cleanTopic(raw: string): string {
+  if (!raw) return '';
+  let topic = raw.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+  topic = topic.replace(/^(all about|tell me about|what is|what are|explain|details on|details about|information on|information about|overview of|give me|show me|summary of|describe)\s+/i, '');
+  topic = topic.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+  return topic || raw;
+}
+
+/**
  * Simple rule-based/heuristic generator when LLM backend/API is unavailable.
  */
 export function mockGenerate(contents: string): string {
@@ -184,7 +195,8 @@ export function mockGenerate(contents: string): string {
     }
 
     const queryMatch = contents.match(/User Query:\s*(.*)/i) || contents.match(/Query:\s*(.*)/i);
-    const query = queryMatch ? queryMatch[1].trim() : 'technical inquiry';
+    const rawQuery = queryMatch ? queryMatch[1].trim() : 'technical inquiry';
+    const query = cleanTopic(rawQuery);
     const queryLower = query.toLowerCase();
 
     if (chunks.length > 0 && !contents.includes("No matching pages found.")) {
@@ -239,8 +251,8 @@ export function mockGenerate(contents: string): string {
       return answer.trim();
     } else {
       // Comprehensive synthesis for queries when no specific grounding chunks were matched
-      return `### 🚀 Grounded Response: ${query}\n\n` +
-        `Based on the air-gapped system documentation and technical framework for **"${query}"**:\n\n` +
+      return `### 🛡️ IRSARGO Framework & Technical Synthesis\n\n` +
+        `Based on the air-gapped system documentation and technical framework for **${query}**:\n\n` +
         `1. **System Architecture & Core Principles:**\n` +
         `   - **Zero-Trust Multi-Agent RAG Framework:** IRSARGO integrates specialized Executor, Retriever, Critic, and Validator agents for domain-adaptive applications.\n` +
         `   - **Formally Verified Grounding:** All outputs undergo Z3 SMT constraint verification and ZK-STARK proof generation to ensure zero hallucination risk.\n` +
@@ -313,10 +325,11 @@ export function mockGenerate(contents: string): string {
 
   // 9. Direct User Query / Fallback Synthesis
   const queryMatch = contents.match(/User Query:\s*(.*)/i) || contents.match(/Query:\s*(.*)/i);
-  const extractedQuery = queryMatch ? queryMatch[1].trim() : '';
+  const rawExtracted = queryMatch ? queryMatch[1].trim() : '';
+  const extractedQuery = rawExtracted.replace(/^["'\s]+|["'\s]+$/g, '').trim();
 
   if (extractedQuery) {
-    return `Based on the local air-gapped technical knowledge base for **"${extractedQuery}"**:\n\n` +
+    return `Based on the local air-gapped technical knowledge base for **${extractedQuery}**:\n\n` +
       `- **Operational Policy:** Parameters and procedures conform to internal mission-critical specifications and security compliance standards.\n` +
       `- **Verification Status:** Formal ZK-STARK query proof and SMT constraint validation passed.\n` +
       `- **Data Safety:** Zero-trust anti-exfiltration active; 100% local privacy maintained.`;

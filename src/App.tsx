@@ -53,8 +53,9 @@ import { AuthUI, AuthVideoPanel } from './components/ui/auth-ui';
 import { Dock, DockIcon, DockItem, DockLabel } from './components/ui/dock';
 import NavMenu from './components/ui/menu-hover-effects';
 import { OfflineModeToggle } from './components/ui/OfflineModeToggle';
+import { OllamaTerminal } from './components/ui/OllamaTerminal';
 
-type Tab = 'console' | 'database' | 'ingest' | 'history' | 'evaluate';
+type Tab = 'console' | 'activities' | 'database' | 'ingest' | 'history' | 'evaluate';
 
 /**
  * Output Sanitization (Anti-Exfiltration):
@@ -67,6 +68,10 @@ export function sanitizeOutput(text: string, sourceNodes: any[] = []): string {
   // 0. Remove Chain-of-Thought thinking tags (<thinking>...</thinking> or unclosed <thinking>...)
   let sanitized = text.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
   sanitized = sanitized.replace(/<thinking>[\s\S]*/gi, '').trim();
+
+  // 0.5. Clean double quotes in text/bold formatting (e.g. ""query"" -> "query")
+  sanitized = sanitized.replace(/\*\*""([^"]+)""\*\*/g, '**"$1"**');
+  sanitized = sanitized.replace(/""([^"]+)""/g, '"$1"');
 
   // 1. Remove markdown image tags: ![alt](url) -> replace with blocked placeholder
   sanitized = sanitized.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
@@ -609,6 +614,7 @@ export default function App() {
 
   // Filter & Ingestion States
   const [showFilters, setShowFilters] = useState(false);
+  const [activityTerminalTab, setActivityTerminalTab] = useState<'swarm' | 'ollama' | 'both'>('both');
   const [filters, setFilters] = useState<AdvancedFilters>({
     subsystem: '',
     dataType: '',
@@ -1212,6 +1218,7 @@ export default function App() {
             <NavMenu
               items={[
                 { id: 'console', label: 'console' },
+                { id: 'activities', label: 'activities' },
                 { id: 'database', label: 'nodes' },
                 { id: 'ingest', label: 'ingest' },
                 { id: 'history', label: 'history' },
@@ -1406,46 +1413,6 @@ export default function App() {
                     </p>
                   </div>
 
-                  {/* Collapsible JWT claims decoder */}
-                  <div className="border border-zinc-900 rounded-xl overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setShowTokenDecoder(!showTokenDecoder)}
-                      className="w-full flex items-center justify-between bg-zinc-900/30 px-3.5 py-2.5 text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-900"
-                    >
-                      <span>🔍 Decrypted JWT Claims</span>
-                      <span>{showTokenDecoder ? '▲' : '▼'}</span>
-                    </button>
-                    {showTokenDecoder && (
-                      <pre className="bg-black/80 p-3 text-[9px] font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap leading-normal select-all">
-                        {JSON.stringify({
-                          sub: activeSecurityUser?.sub || 'guest',
-                          iss: 'keycloak.internal/realms/isro',
-                          aud: 'IRSARGO-rag-backend',
-                          displayName: activeSecurityUser?.displayName || 'Operator',
-                          role: activeSecurityUser?.role || 'Administrator',
-                          clearanceLevel: simulateOutage ? 1 : activeSecurityUser?.clearanceLevel || 5,
-                          departments: simulateOutage ? [] : activeSecurityUser?.departments || [],
-                          projects: simulateOutage ? [] : activeSecurityUser?.projects || [],
-                          sid: simulateOutage ? 'S-1-5-21-fallback-000' : activeSecurityUser?.sid || 'S-1-5-21-KEYCLOAK-001',
-                          attestation: { method: 'KEYCLOAK_OIDC_PKI', trust_domain: 'isro.internal' }
-                        }, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-
-                  {/* FGA ChromaDB rewrite view */}
-                  <div className="border border-zinc-900 rounded-xl overflow-hidden">
-                    <div className="bg-zinc-900/30 px-3.5 py-2.5 text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-900">
-                      <span>🔗 ReBAC ChromaDB Filter Rewrite</span>
-                    </div>
-                    <pre className="bg-black/80 p-3 text-[9px] font-mono text-isro-orange overflow-x-auto whitespace-pre-wrap leading-normal select-all">
-                      {lastSecurityContext?.fgaQueryRewritten
-                        ? JSON.stringify(JSON.parse(lastSecurityContext.fgaQueryRewritten), null, 2)
-                        : '// Execute search to resolve OpenFGA permissions and generate ChromaDB query rewrite.'}
-                    </pre>
-                  </div>
-
                   {/* Advanced Swarm Settings Control */}
                   <div className="border border-zinc-900 rounded-xl overflow-hidden bg-black/40 p-4 space-y-4">
                     <div className="flex items-center gap-2 pb-2 border-b border-zinc-900/60">
@@ -1479,136 +1446,6 @@ export default function App() {
                     </div>
                   </div>
                 </section>
-
-                {/* Filtering Guardrails */}
-                <section className="isro-glass p-6 rounded-2xl">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
-                      <Settings2 className="w-4 h-4" />
-                      Retrieval Guardrails
-                    </h2>
-                    <button 
-                      onClick={() => setShowFilters(!showFilters)}
-                      className={`p-1.5 rounded border transition-colors ${showFilters ? 'bg-isro-orange/10 border-isro-orange text-isro-orange' : 'bg-zinc-800 border-zinc-700 text-zinc-500'}`}
-                    >
-                      <Filter className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <AnimatePresence>
-                    {showFilters && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="space-y-4 overflow-hidden"
-                      >
-                        {domain === Domain.AEROSPACE && (
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-2">
-                              <Layers className="w-3 h-3" /> Subsystem
-                            </label>
-                            <select 
-                              value={filters.subsystem}
-                              onChange={(e) => setFilters({...filters, subsystem: e.target.value})}
-                              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-zinc-300 outline-none focus:border-isro-orange"
-                            >
-                              <option value="">All Subsystems</option>
-                              <option value="Telemetry">Telemetry</option>
-                              <option value="Payload">Payload</option>
-                              <option value="Guidance">Guidance</option>
-                              <option value="Propulsion">Propulsion</option>
-                            </select>
-                          </div>
-                        )}
-
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-2">
-                            <Terminal className="w-3 h-3" /> Data Type
-                          </label>
-                          <select 
-                            value={filters.dataType}
-                            onChange={(e) => setFilters({...filters, dataType: e.target.value})}
-                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-zinc-300 outline-none focus:border-isro-orange"
-                          >
-                            <option value="">All Types</option>
-                            {domain === Domain.AEROSPACE ? (
-                              <>
-                                <option value="Protocol">Protocol</option>
-                                <option value="EngineeringSpec">Engineering Spec</option>
-                                <option value="OrbitalDynamics">Orbital Dynamics</option>
-                                <option value="SecuritySpec">Security Spec</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="Regulation">Regulation</option>
-                                <option value="Standard">Standard</option>
-                              </>
-                            )}
-                          </select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-2">
-                              <Calendar className="w-3 h-3" /> Start Date
-                            </label>
-                            <input 
-                              type="date"
-                              value={filters.dateStart}
-                              onChange={(e) => setFilters({...filters, dateStart: e.target.value})}
-                              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-[10px] text-zinc-300 outline-none focus:border-isro-orange"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-2">
-                              <Calendar className="w-3 h-3" /> End Date
-                            </label>
-                            <input 
-                              type="date"
-                              value={filters.dateEnd}
-                              onChange={(e) => setFilters({...filters, dateEnd: e.target.value})}
-                              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-[10px] text-zinc-300 outline-none focus:border-isro-orange"
-                            />
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  
-                  {!showFilters && (
-                    <div className="text-[10px] font-mono text-zinc-600 italic">
-                      Active Constraints: {Object.values(filters).filter(Boolean).length || 'None'}
-                    </div>
-                  )}
-                </section>
-
-                <section className="isro-glass p-6 rounded-2xl h-100 flex flex-col">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 mb-6 flex items-center gap-2">
-                    <Terminal className="w-4 h-4" />
-                    Agent Swarm Activity
-                  </h2>
-                  
-                  <div 
-                    ref={scrollRef}
-                    className="flex-1 overflow-y-auto pr-2 terminal-scroll space-y-1"
-                  >
-                    <AnimatePresence mode="popLayout">
-                      {displayedActions.map((action) => (
-                        <AgentActionItem key={action.id} action={action} />
-                      ))}
-                    </AnimatePresence>
-                    
-                    {!isQuerying && displayedActions.length === 0 && (
-                      <div className="h-full flex flex-col items-center justify-center opacity-20 grayscale">
-                        <Cpu className="w-12 h-12 mb-4" />
-                        <p className="text-[10px] font-mono tracking-widest uppercase text-center">
-                          Engine Idle.<br/>Waiting for cryptographic input.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </section>
               </div>
 
               {/* Main Interface (Order First on Mobile) */}
@@ -1623,14 +1460,25 @@ export default function App() {
                       INDEX: {domain === Domain.AEROSPACE ? 'AEROSPACE TECHNICAL' : 'GOVERNMENT COMPLIANCE'}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleNewConversation}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-isro-orange border border-zinc-800 hover:border-zinc-700 rounded-xl transition font-mono text-[10px] uppercase tracking-wider cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>New Conversation</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('activities')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-isro-orange/10 hover:bg-isro-orange/20 text-isro-orange border border-isro-orange/30 hover:border-isro-orange/60 rounded-xl transition font-mono text-[10px] uppercase tracking-wider cursor-pointer shadow-xs"
+                      title="View live agent swarm activities and retrieval guardrails"
+                    >
+                      <Activity className="w-3.5 h-3.5 animate-pulse" />
+                      <span>Activities</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNewConversation}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-isro-orange border border-zinc-800 hover:border-zinc-700 rounded-xl transition font-mono text-[10px] uppercase tracking-wider cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>New Conversation</span>
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Query Input */}
@@ -1666,6 +1514,31 @@ export default function App() {
                     </button>
                   </div>
                 </form>
+
+                {/* Active Searching Status & Go To Activities Banner */}
+                {isQuerying && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-between p-3.5 rounded-2xl border border-isro-orange/40 bg-zinc-950/90 backdrop-blur-xl shadow-[0_0_25px_rgba(242,116,32,0.2)] text-xs font-mono"
+                  >
+                    <div className="flex items-center gap-3 text-zinc-200">
+                      <RefreshCcw className="w-4 h-4 text-isro-orange animate-spin shrink-0" />
+                      <div>
+                        <span className="font-bold text-isro-orange uppercase tracking-wider block">SEARCHING & ORCHESTRATING SWARM...</span>
+                        <span className="text-[10px] text-zinc-400">Executing agent sub-goals, RAG retrieval, and zero-knowledge verification.</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('activities')}
+                      className="flex items-center gap-2 px-3.5 py-1.5 bg-isro-orange hover:bg-orange-500 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] transition cursor-pointer shadow-lg shrink-0"
+                    >
+                      <Activity className="w-3.5 h-3.5 animate-bounce" />
+                      <span>Go to Activities →</span>
+                    </button>
+                  </motion.div>
+                )}
 
                 {/* Chat & Results Area */}
                 <AnimatePresence mode="wait">
@@ -1705,17 +1578,28 @@ export default function App() {
                               <span className="px-1.5 py-0.5 rounded border border-zinc-800 bg-zinc-900/40">LNN: PEIRCE</span>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setMessages([]);
-                              setActiveMessageId(null);
-                              setActions([]);
-                            }}
-                            className="text-[9px] font-mono text-zinc-500 hover:text-red-400 transition-colors uppercase tracking-widest cursor-pointer"
-                          >
-                            CLEAR CONVERSATION
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('activities')}
+                              className="flex items-center gap-1.5 px-2.5 py-1 bg-isro-orange/10 hover:bg-isro-orange/20 border border-isro-orange/30 hover:border-isro-orange/60 text-[9px] font-mono text-isro-orange hover:text-white rounded-lg uppercase tracking-wider transition cursor-pointer"
+                              title="Go to Activities tab to view live agent traces and guardrails"
+                            >
+                              <Activity className="w-3 h-3 animate-pulse" />
+                              <span>Go to Activities</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMessages([]);
+                                setActiveMessageId(null);
+                                setActions([]);
+                              }}
+                              className="text-[9px] font-mono text-zinc-500 hover:text-red-400 transition-colors uppercase tracking-widest cursor-pointer px-2 py-1"
+                            >
+                              CLEAR CONVERSATION
+                            </button>
+                          </div>
                         </div>
 
                         <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
@@ -1945,6 +1829,259 @@ export default function App() {
                     </div>
                   )}
                 </AnimatePresence>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'activities' && (
+            <motion.div
+              key="activities"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-8 max-w-7xl mx-auto"
+            >
+              {/* Activities Header Banner */}
+              <div className="isro-glass p-6 rounded-2xl border border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-isro-orange font-mono text-xs font-bold uppercase tracking-widest mb-1">
+                    <Activity className="w-4 h-4 animate-pulse text-isro-orange" />
+                    Live Swarm Monitor, Ollama LLM Telemetry & Guardrails
+                  </div>
+                  <h1 className="text-2xl font-bold font-display text-white">System Activities & Engine Telemetry</h1>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Track live agent swarm execution steps, inspect Ollama LLM slot timing logs, and configure retrieval guardrails.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="px-3 py-1.5 rounded-xl border border-zinc-800 bg-zinc-900/60 font-mono text-[10px] text-zinc-300">
+                    ACTIVE INDEX: <strong className="text-isro-orange">{domain}</strong>
+                  </span>
+                  <span className="px-3 py-1.5 rounded-xl border border-emerald-900/60 bg-emerald-950/40 font-mono text-[10px] text-emerald-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    ENGINE ONLINE
+                  </span>
+                </div>
+              </div>
+
+              {/* Terminal View Switcher Header */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-zinc-900/40 p-3 rounded-2xl border border-zinc-800/80 backdrop-blur-md">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setActivityTerminalTab('both')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition cursor-pointer ${
+                      activityTerminalTab === 'both'
+                        ? 'bg-isro-orange text-white shadow-md'
+                        : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                    }`}
+                  >
+                    ⚡ Split View (Both)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivityTerminalTab('swarm')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition cursor-pointer ${
+                      activityTerminalTab === 'swarm'
+                        ? 'bg-isro-orange text-white shadow-md'
+                        : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                    }`}
+                  >
+                    🤖 Swarm Log Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivityTerminalTab('ollama')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition cursor-pointer ${
+                      activityTerminalTab === 'ollama'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                    }`}
+                  >
+                    🦙 Ollama Server Logs Only
+                  </button>
+                </div>
+                <div className="text-[10px] font-mono text-zinc-500 italic">
+                  Live streaming slot performance & sampler parameters
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left Column: Retrieval Guardrails */}
+                <div className="lg:col-span-4 space-y-6">
+                  {/* Domain Selector Card */}
+                  <section className="isro-glass p-6 rounded-2xl border border-zinc-800 space-y-4">
+                    <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-isro-orange" />
+                      Knowledge Domain Index
+                    </h2>
+                    <div className="grid grid-cols-1 gap-3">
+                      {[Domain.AEROSPACE, Domain.GOVERNMENT].map((d) => (
+                        <button
+                          key={d}
+                          onClick={() => {
+                            setDomain(d);
+                            setFilters({ subsystem: '', dataType: '', dateStart: '', dateEnd: '' });
+                          }}
+                          className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${
+                            domain === d 
+                              ? 'bg-zinc-800 border-isro-orange text-white shadow-[0_0_15px_rgba(242,116,32,0.1)]' 
+                              : 'bg-zinc-900/30 border-zinc-800 text-zinc-500 hover:border-zinc-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 text-left">
+                            {d === Domain.AEROSPACE ? <Rocket className="w-5 h-5" /> : <Landmark className="w-5 h-5" />}
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-tight">{d}</p>
+                              <p className="text-[10px] opacity-60">
+                                {d === Domain.AEROSPACE ? 'Live Chroma Aerospace Index' : 'Live Chroma GFR Index'}
+                              </p>
+                            </div>
+                          </div>
+                          {domain === d && <ArrowRight className="w-4 h-4 text-isro-orange" />}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Retrieval Guardrails Filters */}
+                  <section className="isro-glass p-6 rounded-2xl border border-zinc-800 space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-300 flex items-center gap-2">
+                        <Settings2 className="w-4 h-4 text-isro-orange" />
+                        Retrieval Guardrails
+                      </h2>
+                      <span className="text-[10px] font-mono text-zinc-400 bg-zinc-900 px-2 py-1 rounded border border-zinc-800">
+                        Active: {Object.values(filters).filter(Boolean).length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-4">
+                      {domain === Domain.AEROSPACE && (
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-2">
+                            <Layers className="w-3 h-3" /> Subsystem
+                          </label>
+                          <select 
+                            value={filters.subsystem}
+                            onChange={(e) => setFilters({...filters, subsystem: e.target.value})}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 text-xs text-zinc-300 outline-none focus:border-isro-orange"
+                          >
+                            <option value="">All Subsystems</option>
+                            <option value="Telemetry">Telemetry</option>
+                            <option value="Payload">Payload</option>
+                            <option value="Guidance">Guidance</option>
+                            <option value="Propulsion">Propulsion</option>
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-2">
+                          <Terminal className="w-3 h-3" /> Data Type
+                        </label>
+                        <select 
+                          value={filters.dataType}
+                          onChange={(e) => setFilters({...filters, dataType: e.target.value})}
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 text-xs text-zinc-300 outline-none focus:border-isro-orange"
+                        >
+                          <option value="">All Types</option>
+                          {domain === Domain.AEROSPACE ? (
+                            <>
+                              <option value="Protocol">Protocol</option>
+                              <option value="EngineeringSpec">Engineering Spec</option>
+                              <option value="OrbitalDynamics">Orbital Dynamics</option>
+                              <option value="SecuritySpec">Security Spec</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="Regulation">Regulation</option>
+                              <option value="Standard">Standard</option>
+                            </>
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-2">
+                            <Calendar className="w-3 h-3" /> Start Date
+                          </label>
+                          <input 
+                            type="date"
+                            value={filters.dateStart}
+                            onChange={(e) => setFilters({...filters, dateStart: e.target.value})}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-[10px] text-zinc-300 outline-none focus:border-isro-orange"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-2">
+                            <Calendar className="w-3 h-3" /> End Date
+                          </label>
+                          <input 
+                            type="date"
+                            value={filters.dateEnd}
+                            onChange={(e) => setFilters({...filters, dateEnd: e.target.value})}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-[10px] text-zinc-300 outline-none focus:border-isro-orange"
+                          />
+                        </div>
+                      </div>
+
+                      {Object.values(filters).some(Boolean) && (
+                        <button
+                          type="button"
+                          onClick={() => setFilters({ subsystem: '', dataType: '', dateStart: '', dateEnd: '' })}
+                          className="w-full text-center text-[10px] font-mono text-zinc-500 hover:text-red-400 transition-colors uppercase tracking-wider py-1.5 border border-zinc-800 hover:border-red-950/60 rounded-lg bg-zinc-900/40 cursor-pointer"
+                        >
+                          Clear Guardrail Constraints
+                        </button>
+                      )}
+                    </div>
+                  </section>
+                </div>
+
+                {/* Right Column: Terminal Stream Views (Swarm & Ollama) */}
+                <div className="lg:col-span-8 space-y-6">
+                  {(activityTerminalTab === 'swarm' || activityTerminalTab === 'both') && (
+                    <section className="isro-glass p-6 rounded-2xl border border-zinc-800 flex flex-col h-[680px]">
+                      <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-800">
+                        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-300 flex items-center gap-2">
+                          <Terminal className="w-4 h-4 text-isro-orange" />
+                          Agent Swarm Activity Log
+                        </h2>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-zinc-400 bg-zinc-900 px-2.5 py-1 rounded border border-zinc-800">
+                            TOTAL TRACES: {displayedActions.length}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div 
+                        ref={scrollRef}
+                        className="flex-1 overflow-y-auto pr-2 terminal-scroll space-y-1"
+                      >
+                        <AnimatePresence mode="popLayout">
+                          {displayedActions.map((action) => (
+                            <AgentActionItem key={action.id} action={action} />
+                          ))}
+                        </AnimatePresence>
+                        
+                        {!isQuerying && displayedActions.length === 0 && (
+                          <div className="h-full flex flex-col items-center justify-center opacity-40">
+                            <Cpu className="w-12 h-12 mb-4 text-isro-orange" />
+                            <p className="text-[10px] font-mono tracking-widest uppercase text-center text-zinc-400">
+                              Swarm Engine Idle.<br/>Waiting for cryptographic input to initiate agent reasoning.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {(activityTerminalTab === 'ollama' || activityTerminalTab === 'both') && (
+                    <OllamaTerminal isQuerying={isQuerying} />
+                  )}
+                </div>
               </div>
             </motion.div>
           )}

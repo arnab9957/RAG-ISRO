@@ -84,7 +84,7 @@ export default function NavMenu({
                   {/* Link text */}
                   <span className={`
                     relative z-10 block uppercase font-sans font-semibold tracking-wider transition-colors duration-300 
-                    text-base py-2 px-3 md:text-sm md:py-1.5 md:px-4 lg:text-base lg:py-2 lg:px-5
+                    text-xs py-1.5 px-2.5 md:text-xs md:py-1 md:px-3 lg:text-xs lg:py-1.5 lg:px-3.5
                     ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}
                   `}>
                     {item.label}
