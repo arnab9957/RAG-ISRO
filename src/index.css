@@ -26,20 +26,32 @@
   --color-isro-orange: #f27420;
   --color-isro-blue: #003366;
   --color-success-glow: #10b981;
+
+  --color-telemetry-base: var(--bg-base);
+  --color-telemetry-surface: var(--bg-surface);
+  --color-telemetry-structure: var(--border-structure);
+  --color-telemetry-accent: var(--accent-cyan);
 }
 
 @layer base {
   body {
-    @apply bg-black text-zinc-100 font-sans;
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    font-family: var(--font-sans);
     background-image: 
-      radial-gradient(circle at 50% -20%, rgba(242, 116, 32, 0.15) 0%, transparent 50%),
-      radial-gradient(circle at 0% 100%, rgba(0, 51, 102, 0.2) 0%, transparent 50%);
+      radial-gradient(circle at 50% -20%, rgba(56, 189, 248, 0.12) 0%, transparent 50%),
+      radial-gradient(circle at 0% 100%, rgba(30, 74, 114, 0.25) 0%, transparent 50%);
     background-attachment: fixed;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
 .isro-glass {
-  @apply bg-zinc-900/50 backdrop-blur-md border border-zinc-800 shadow-2xl;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--panel-shadow);
 }
 
 .terminal-scroll::-webkit-scrollbar {

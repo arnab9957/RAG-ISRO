@@ -57,6 +57,7 @@ import NavMenu from './components/ui/menu-hover-effects';
 import { OfflineModeToggle } from './components/ui/OfflineModeToggle';
 import { OllamaTerminal } from './components/ui/OllamaTerminal';
 import { LandingPage } from './components/LandingPage';
+import { ThemeToggle } from './components/ui/ThemeToggle';
 
 type Tab = 'landing' | 'console' | 'activities' | 'database' | 'ingest' | 'history' | 'evaluate';
 
@@ -1220,81 +1221,86 @@ export default function App() {
   const hasPendingVerification = messages.some(msg => msg.response?.isPendingVerification);
 
   return (
-    <div className="relative min-h-screen flex flex-col font-sans selection:bg-isro-orange selection:text-white bg-black overflow-hidden">
+    <div className="relative min-h-screen flex flex-col font-sans selection:bg-[var(--accent-cyan)] selection:text-white bg-[var(--bg-base)] text-[var(--text-main)] overflow-hidden transition-colors duration-300">
       <BackgroundPixelStars />
-      {/* Header */}
-      <header className="relative z-10 border-b border-zinc-800/80 bg-black/70 backdrop-blur-xl sticky top-0">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          {/* Left Group: Logo + Privacy Mode Toggle */}
-          <div className="flex items-center gap-6">
-            <img 
-              src="/logo.png" 
-              alt="IRSARGO Logo" 
-              className="h-12 md:h-14 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(242,116,32,0.4)] transition-all hover:scale-105" 
-            />
-
-            {/* Air-Gapped / Sever Online Cloud Services Toggle Button (button.png design) */}
-            <div className="hidden md:flex items-center">
-              <OfflineModeToggle
-                airGappedMode={airGappedMode}
-                onToggle={toggleAirGappedMode}
-                size="sm"
+      {/* Main App Header (Hidden on Landing Page) */}
+      {activeTab !== 'landing' && (
+        <header className="relative z-10 border-b border-[var(--border-structure)] bg-[var(--glass-bg)] backdrop-blur-xl sticky top-0 transition-colors duration-300">
+          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            {/* Left Group: Logo + Privacy Mode Toggle */}
+            <div className="flex items-center gap-6">
+              <img 
+                src="/logo.png" 
+                alt="IRSARGO Logo" 
+                onClick={() => setActiveTab('landing')}
+                className="h-12 md:h-14 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(56,189,248,0.4)] transition-all hover:scale-105 cursor-pointer" 
+                title="Return to IRSARGO Landing Page"
               />
-            </div>
-          </div>
-          
-          {/* Right Group: Navigation Tabs + User Profile Session */}
-          <div className="flex items-center gap-4">
-            <NavMenu
-              items={[
-                { id: 'landing', label: 'home' },
-                { id: 'console', label: 'console' },
-                { id: 'activities', label: 'activities' },
-                { id: 'database', label: 'nodes' },
-                { id: 'ingest', label: 'ingest' },
-                { id: 'history', label: 'history' },
-                { id: 'evaluate', label: 'evaluate' }
-              ]}
-              activeTab={activeTab}
-              onSelectTab={(id) => handleTabSelect(id as Tab)}
-            />
 
-            {!effectiveUser ? (
-              <button
-                onClick={() => {
-                  setLoginNotice(null);
-                  setShowLoginModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-orange-600/30 cursor-pointer"
-              >
-                <Lock className="w-3.5 h-3.5" /> Sign In
-              </button>
-            ) : (
-              <div className="flex items-center gap-3 border-l border-zinc-800 pl-4 h-10">
-                <div className="text-right">
-                  <p className="text-[11px] font-bold text-zinc-300 tracking-wide">{effectiveUser.displayName}</p>
-                  <p className="text-[8px] font-mono text-isro-orange uppercase tracking-wider">{effectiveUser.role}</p>
-                </div>
+              {/* Air-Gapped / Sever Online Cloud Services Toggle Button */}
+              <div className="hidden md:flex items-center">
+                <OfflineModeToggle
+                  airGappedMode={airGappedMode}
+                  onToggle={toggleAirGappedMode}
+                  size="sm"
+                />
+              </div>
+            </div>
+            
+            {/* Right Group: Navigation Tabs + Theme Toggle + User Profile Session */}
+            <div className="flex items-center gap-4">
+              <NavMenu
+                items={[
+                  { id: 'console', label: 'console' },
+                  { id: 'activities', label: 'activities' },
+                  { id: 'database', label: 'nodes' },
+                  { id: 'ingest', label: 'ingest' },
+                  { id: 'history', label: 'history' },
+                  { id: 'evaluate', label: 'evaluate' }
+                ]}
+                activeTab={activeTab}
+                onSelectTab={(id) => handleTabSelect(id as Tab)}
+              />
+
+              <ThemeToggle />
+
+              {!effectiveUser ? (
                 <button
                   onClick={() => {
-                    localStorage.removeItem('irsargo_token');
-                    localStorage.removeItem('irsargo_user');
-                    localStorage.removeItem('irsargo_last_security_context');
-                    setToken(null);
-                    setUser(null);
-                    setLastSecurityContext(null);
-                    setActiveTab('landing');
+                    setLoginNotice(null);
+                    setShowLoginModal(true);
                   }}
-                  className="p-1.5 bg-zinc-900 border border-zinc-800 hover:border-red-950 hover:bg-red-950/20 hover:text-red-400 rounded-lg text-zinc-500 transition cursor-pointer"
-                  title="Logout operator session"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-orange-600/30 cursor-pointer"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <Lock className="w-3.5 h-3.5" /> Sign In
                 </button>
-              </div>
-            )}
+              ) : (
+                <div className="flex items-center gap-3 border-l border-[var(--border-structure)] pl-4 h-10">
+                  <div className="text-right">
+                    <p className="text-[11px] font-bold text-[var(--text-main)] tracking-wide">{effectiveUser.displayName}</p>
+                    <p className="text-[8px] font-mono text-[var(--accent-cyan)] uppercase tracking-wider">{effectiveUser.role}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('irsargo_token');
+                      localStorage.removeItem('irsargo_user');
+                      localStorage.removeItem('irsargo_last_security_context');
+                      setToken(null);
+                      setUser(null);
+                      setLastSecurityContext(null);
+                      setActiveTab('landing');
+                    }}
+                    className="p-1.5 bg-[var(--bg-surface)] border border-[var(--border-structure)] hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 rounded-lg text-[var(--text-muted)] transition cursor-pointer"
+                    title="Logout operator session"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* GSAP ScrollSmoother Container */}
       <div id="smooth-wrapper" className="relative z-10 flex-1 w-full">
@@ -1322,6 +1328,22 @@ export default function App() {
                 onViewDatabase={() => {
                   setActiveTab('database');
                 }}
+                effectiveUser={effectiveUser}
+                onSignIn={() => {
+                  setLoginNotice(null);
+                  setShowLoginModal(true);
+                }}
+                onLogout={() => {
+                  localStorage.removeItem('irsargo_token');
+                  localStorage.removeItem('irsargo_user');
+                  localStorage.removeItem('irsargo_last_security_context');
+                  setToken(null);
+                  setUser(null);
+                  setLastSecurityContext(null);
+                  setActiveTab('landing');
+                }}
+                airGappedMode={airGappedMode}
+                onToggleAirGappedMode={toggleAirGappedMode}
               />
             </motion.div>
           )}
@@ -2615,6 +2637,9 @@ export default function App() {
                 setToken(newToken);
                 setUser(newUser);
                 setShowLoginModal(false);
+                const target = pendingTargetTab || (activeTab === 'landing' ? 'console' : activeTab);
+                setActiveTab(target);
+                setPendingTargetTab(null);
                 if (pendingQuery && pendingQuery.trim()) {
                   const q = pendingQuery;
                   setPendingQuery(null);
