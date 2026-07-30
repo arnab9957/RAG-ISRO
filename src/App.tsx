@@ -48,6 +48,9 @@ import AgentActionItem from './components/AgentActionItem';
 import TraceAudit from './components/TraceAudit';
 import KnowledgeBaseView from './components/KnowledgeBaseView';
 import HistoryView from './components/HistoryView';
+import IngestionLoader from './components/ui/ingestion-loader';
+import { FileUpload } from './components/ui/file-upload';
+import IngestionLogsPanel from './components/ui/ingestion-logs-panel';
 import ReactMarkdown from 'react-markdown';
 import OutputEditor from './components/OutputEditor';
 import BackgroundPixelStars from './components/BackgroundPixelStars';
@@ -1123,8 +1126,11 @@ export default function App() {
       reader.readAsDataURL(file);
     });
 
-  const handleIngest = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleIngest = async (e?: FormEvent | React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     if (!token || !effectiveUser) {
       setLoginNotice('Please sign in to upload and ingest satellite documents.');
@@ -2197,103 +2203,147 @@ export default function App() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6 max-w-4xl mx-auto"
             >
-              <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-                  <div className="space-y-2">
-                    <div className="inline-flex items-center gap-2 text-isro-orange text-xs font-mono uppercase tracking-widest">
+              {/* Ingest Telemetry Doc Hub (Node Styled) */}
+              <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800/90 bg-zinc-950/80 shadow-2xl relative overflow-hidden space-y-6">
+                <div className="absolute top-0 right-0 w-96 h-full bg-linear-to-l from-sky-500/10 via-isro-orange/5 to-transparent pointer-events-none" />
+
+                {/* Header Title Bar */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-zinc-800/80">
+                  <div className="space-y-1.5">
+                    <div className="inline-flex items-center gap-2 text-isro-orange text-xs font-mono font-bold uppercase tracking-widest">
                       <Upload className="w-4 h-4" />
-                      Frontend Ingestion
+                      Ingest Telemetry Doc • Dataset Pipeline
                     </div>
-                    <h2 className="text-2xl font-display font-bold text-white">Upload data and ingest it into ChromaDB</h2>
-                    <p className="text-sm text-zinc-400 max-w-2xl">
-                      Upload a PDF, TXT, MD, or CSV file. The backend will extract text, split it into chunks, embed it, and store it in the shared knowledge base.
+                    <h2 className="text-2xl font-display font-bold text-white tracking-tight">
+                      Upload Data & Ingest into ChromaDB
+                    </h2>
+                    <p className="text-xs text-zinc-400 max-w-2xl font-sans">
+                      Select or drop a telemetry document (.pdf, .txt, .md, .csv). The backend will extract text structure, perform overlap chunking, compute BGE embeddings, and index into ChromaDB.
                     </p>
                   </div>
-                  <div className="px-4 py-3 rounded-xl border border-zinc-800 bg-zinc-900/60 text-xs font-mono text-zinc-400">
-                    Accepts: .pdf, .txt, .md, .csv
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      VECTOR STORE ONLINE
+                    </span>
                   </div>
                 </div>
 
-                <form onSubmit={handleIngest} className="space-y-6">
+                <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); void handleIngest(e); }} className="space-y-6">
+                  {/* Domain Selector */}
                   <div className="grid gap-4 md:grid-cols-2">
-                    <label className="space-y-2">
-                      <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Target Domain</span>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
+                        Target Subsystem Domain
+                      </label>
                       <select
                         value={ingestDomain}
                         onChange={(e) => setIngestDomain(e.target.value as Domain)}
-                        className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-sm text-zinc-200 outline-none focus:border-isro-orange"
+                        className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 outline-none focus:border-isro-orange font-sans"
                       >
                         <option value={Domain.AEROSPACE}>{Domain.AEROSPACE}</option>
                         <option value={Domain.GOVERNMENT}>{Domain.GOVERNMENT}</option>
                       </select>
-                    </label>
+                    </div>
 
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Selected File</span>
-                      <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 px-4 py-3">
-                        <div className="min-w-0">
-                          <p className="text-sm text-zinc-200 truncate">
-                            {ingestFile ? ingestFile.name : 'No file selected'}
-                          </p>
-                          <p className="text-[10px] text-zinc-500 truncate">
-                            {ingestFile ? `${Math.ceil(ingestFile.size / 1024)} KB` : 'Choose a file to send to the backend'}
-                          </p>
-                        </div>
-                        <label className="shrink-0 cursor-pointer inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-bold uppercase tracking-wider text-zinc-200 hover:border-isro-orange hover:text-isro-orange transition-colors">
-                          <Upload className="w-3.5 h-3.5" />
-                          Browse
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".pdf,.txt,.md,.csv"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0] || null;
-                              setIngestFile(file);
-                              setIngestStatus(null);
-                              setIngestError(null);
-                            }}
-                          />
-                        </label>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
+                        Active Collection & Vector Specs
+                      </label>
+                      <div className="p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/60 text-xs font-mono text-zinc-300 flex items-center justify-between">
+                        <span>COLLECTION: <strong className="text-isro-orange">isro_telemetry_vectors</strong></span>
+                        <span className="text-sky-400">1024 d</span>
                       </div>
                     </div>
                   </div>
 
+                  {/* Animated File Upload Zone */}
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
+                      Telemetry Document Drop Zone
+                    </label>
+                    <div className="border border-dashed border-zinc-800/90 rounded-2xl bg-zinc-900/30 overflow-hidden p-2">
+                      <FileUpload
+                        onChange={(files) => {
+                          if (files && files.length > 0) {
+                            const file = files[files.length - 1];
+                            setIngestFile(file);
+                            setIngestStatus(null);
+                            setIngestError(null);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Selected File Details */}
+                  {ingestFile && (
+                    <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/70 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-white">{ingestFile.name}</p>
+                        <p className="text-[10px] font-mono text-zinc-400">
+                          Size: {(ingestFile.size / 1024).toFixed(1)} KB • Type: {ingestFile.type || 'document'}
+                        </p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded text-[10px] font-mono bg-isro-orange/20 text-isro-orange border border-isro-orange/30">
+                        READY FOR INGESTION
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Dynamic Glowing Loader (matches loding.mp4) */}
+                  {isIngesting && (
+                    <div className="py-4 bg-zinc-950/90 rounded-2xl border border-zinc-800/90 p-4">
+                      <IngestionLoader isIngesting={isIngesting} />
+                    </div>
+                  )}
+
+                  {/* Error & Status Banners */}
                   {ingestError && (
-                    <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                    <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
                       {ingestError}
                     </div>
                   )}
 
                   {ingestStatus && (
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-200">
                       {ingestStatus}
                     </div>
                   )}
 
-                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                    <p className="text-xs text-zinc-500">
-                      The backend will chunk the file and insert it into the existing knowledge collection.
+                  {/* Submit Action Controls */}
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-2">
+                    <p className="text-xs text-zinc-500 font-mono">
+                      Supported formats: .pdf, .txt, .md, .csv
                     </p>
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); void handleIngest(e); }}
                       disabled={!ingestFile || isIngesting}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-isro-orange px-5 py-3 text-sm font-bold uppercase tracking-wider text-white transition-colors hover:bg-orange-500 disabled:bg-zinc-800 disabled:text-zinc-600"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-isro-orange px-6 py-3 text-xs font-mono font-bold uppercase tracking-wider text-white transition-all hover:bg-orange-500 shadow-lg shadow-isro-orange/20 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:shadow-none cursor-pointer"
                     >
                       {isIngesting ? (
                         <>
                           <RefreshCcw className="w-4 h-4 animate-spin" />
-                          Uploading
+                          Ingesting...
                         </>
                       ) : (
                         <>
                           <Upload className="w-4 h-4" />
-                          Upload and ingest
+                          Start Telemetry Ingestion
                         </>
                       )}
                     </button>
                   </div>
                 </form>
               </section>
+
+              {/* Ingestion Pipeline Live Audit & Telemetry Logs Panel */}
+              <IngestionLogsPanel 
+                isIngesting={isIngesting} 
+                activeFileName={ingestFile?.name || null} 
+                activeDomain={ingestDomain} 
+              />
 
               {/* RAGen Synthetic Data Pipeline */}
               <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black space-y-6">

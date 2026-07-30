@@ -1,0 +1,398 @@
+[
+  {
+    "subject": "GSLV-F15",
+    "relation": "is the 17th flight of",
+    "object": "India's Geosynchronous Satellite Launch Vehicle",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GSLV-F15",
+    "relation": "has a payload fairing",
+    "object": "metallic version with a diameter of 3.4 meters",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GSLV-F15",
+    "relation": "will place",
+    "object": "NVS-02 satellite into a Geosynchronous Transfer Orbit",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GSLV-F15",
+    "relation": "will launch from",
+    "object": "Second Launch Pad at Satish Dhawan Space Centre",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "NVS-02",
+    "relation": "is part of",
+    "object": "Navigation with Indian Constellation",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "Navigation with Indian Constellation",
+    "relation": "provides",
+    "object": "Position, Velocity and Timing service",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GSLV-F15",
+    "relation": "has a vehicle configuration",
+    "object": "GS3(CUS15), GS2(GL40 HT), GS1(S139+4L40H)",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GSLV-F15",
+    "relation": "has a vehicle height",
+    "object": "50.9 m",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GSLV-F15",
+    "relation": "has a lift off mass",
+    "object": "420.7 t",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GSLV-F15",
+    "relation": "has",
+    "object": "3 stages",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GS1",
+    "relation": "is the first stage of",
+    "object": "GSLV-F15",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GS2",
+    "relation": "is the second stage of",
+    "object": "GSLV-F15",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GS3",
+    "relation": "is the third stage of",
+    "object": "GSLV-F15",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GS1",
+    "relation": "has a length",
+    "object": "20.17 m",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GS2",
+    "relation": "has a length",
+    "object": "19.68 m",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GS3",
+    "relation": "has a length",
+    "object": "11.95 m",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "NVS-02",
+    "relation": "has a payload mass",
+    "object": "2250 kg",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GSLV-F15",
+    "relation": "will follow",
+    "object": "GSLV-F15 Mission Specification",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GSLV-F15",
+    "relation": "will follow",
+    "object": "GSLV-F15 Flight Sequence",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "NavIC",
+    "relation": "provides",
+    "object": "Standard Positioning Service",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "NavIC",
+    "relation": "provides",
+    "object": "Restricted Service",
+    "source": "GSLV-F15_NVS-02_EngBrochure240125.pdf"
+  },
+  {
+    "subject": "GSLV-F16",
+    "relation": "is the",
+    "object": "18th flight of India’s Geosynchronous Satellite Launch Vehicle",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GSLV-F16",
+    "relation": "has",
+    "object": "Indigenous Cryogenic stage",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GSLV-F16",
+    "relation": "will place",
+    "object": "NISAR satellite",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "NISAR satellite",
+    "relation": "will be placed into",
+    "object": "Sun-Synchronous Polar Orbit",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GSLV-F16",
+    "relation": "will launch from",
+    "object": "Second Launch Pad (SLP) at Satish Dhawan Space Centre",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GSLV-F16",
+    "relation": "has",
+    "object": "Payload Fairing (OPLF)",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "Payload Fairing (OPLF)",
+    "relation": "is",
+    "object": "4m dia Ogive configuration",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GSLV-F16",
+    "relation": "consists of",
+    "object": "Three stages (GS1, GS2, GS3)",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GS1",
+    "relation": "is",
+    "object": "First Stage (S139+4L40H)",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GS2",
+    "relation": "is",
+    "object": "Second Stage (GL40HT)",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GS3",
+    "relation": "is",
+    "object": "Third Stage (CUS15)",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "NISAR",
+    "relation": "is",
+    "object": "NASA ISRO Synthetic Aperture Radar Mission",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "NISAR mission",
+    "relation": "aims to study",
+    "object": "land & ice deformation, land ecosystems, and oceanic regions",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "NISAR",
+    "relation": "carries",
+    "object": "L-band and S-band Synthetic Aperture Radar (SAR)",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GSLV-F16",
+    "relation": "has",
+    "object": "Vehicle Configuration",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "Vehicle Configuration",
+    "relation": "includes",
+    "object": "Vehicle Height (51.70m)",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "Vehicle Configuration",
+    "relation": "includes",
+    "object": "Lift off Mass (420.5t)",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GSLV-F16",
+    "relation": "follows",
+    "object": "Flight Profile",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "Flight Profile",
+    "relation": "includes",
+    "object": "Flight Sequence",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GSLV-F16",
+    "relation": "is",
+    "object": "12th flight with Indigenous Cryogenic stage",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "GSLV-F16",
+    "relation": "is",
+    "object": "9th operational flight of GSLV with indigenous Cryogenic stage",
+    "source": "GSLV_F16NISAR_Launch_Brochure.pdf"
+  },
+  {
+    "subject": "Central Stores",
+    "relation": "is part of",
+    "object": "Stores Wing",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Stores Wing",
+    "relation": "is under",
+    "object": "Purchase & Stores Division",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Central Stores",
+    "relation": "has",
+    "object": "Receiving Section",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Central Stores",
+    "relation": "has",
+    "object": "Holding Section",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Divisional Stores",
+    "relation": "is located in",
+    "object": "vicinity of divisions",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Divisional Stores",
+    "relation": "can be",
+    "object": "Common Divisional Stores",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Divisional Stores",
+    "relation": "can be",
+    "object": "Individual Divisional Stores",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Central Stores",
+    "relation": "follows",
+    "object": "Two Tier System",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Stores Procedure",
+    "relation": "is divided into",
+    "object": "Three Parts",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Part-I",
+    "relation": "deals with",
+    "object": "Central Stores",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Part-II",
+    "relation": "deals with",
+    "object": "Divisional Stores",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Part-III",
+    "relation": "deals with",
+    "object": "General points",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Stores Wing",
+    "relation": "has responsibility of",
+    "object": "Material Control",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Stores Wing",
+    "relation": "has responsibility of",
+    "object": "Accounting",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Central Stores",
+    "relation": "has function of",
+    "object": "Receipt of Materials",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Central Stores",
+    "relation": "has function of",
+    "object": "Storage",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Central Stores",
+    "relation": "has function of",
+    "object": "Preservation",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Central Stores",
+    "relation": "has function of",
+    "object": "Issue of Materials",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Central Stores",
+    "relation": "has function of",
+    "object": "Accounting of Materials",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Divisional Stores",
+    "relation": "has function of",
+    "object": "Accounting of Materials",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Divisional Stores",
+    "relation": "has function of",
+    "object": "Issue of Materials",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Divisional Stores",
+    "relation": "has function of",
+    "object": "Storage",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Divisional Stores",
+    "relation": "has function of",
+    "object": "Preservation",
+    "source": "stores_procedure.pdf"
+  },
+  {
+    "subject": "Divisional Stores",
+    "relation": "has function of",
+    "object": "Safe Custody of Stock",
+    "source": "stores_procedure.pdf"
+  }
+]

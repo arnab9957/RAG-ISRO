@@ -21,6 +21,8 @@ import type { GroundedNode } from '../types';
 interface GraphVisualizerProps {
   nodes: GroundedNode[];
   onQueryNode?: (content: string) => void;
+  onSelectNode?: (node: GroundedNode | null) => void;
+  selectedNodeId?: string;
 }
 
 interface SimNode {
@@ -38,7 +40,7 @@ interface SimLink {
   id: string;
 }
 
-export default function GraphVisualizer({ nodes, onQueryNode }: GraphVisualizerProps) {
+export default function GraphVisualizer({ nodes, onQueryNode, onSelectNode, selectedNodeId }: GraphVisualizerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Graph Data States
@@ -46,6 +48,13 @@ export default function GraphVisualizer({ nodes, onQueryNode }: GraphVisualizerP
   const [simLinks, setSimLinks] = useState<SimLink[]>([]);
   const [selectedNode, setSelectedNode] = useState<GroundedNode | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedNodeId) {
+      const match = nodes.find(n => n.id === selectedNodeId);
+      if (match) setSelectedNode(match);
+    }
+  }, [selectedNodeId, nodes]);
 
   // Pan and Zoom States
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -414,6 +423,7 @@ export default function GraphVisualizer({ nodes, onQueryNode }: GraphVisualizerP
                 onClick={(e) => {
                   e.stopPropagation();
                   setSelectedNode(node.data);
+                  onSelectNode?.(node.data);
                 }}
                 className="cursor-pointer"
                 style={{ opacity, transition: 'opacity 0.2s' }}

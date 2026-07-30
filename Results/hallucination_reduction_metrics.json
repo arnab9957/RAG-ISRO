@@ -77,5 +77,13 @@
     "hallucinationReduction": 1,
     "overallConfidence": 0.8055,
     "sourcesCount": 10
+  },
+  {
+    "timestamp": "2026-07-30T11:15:45.646Z",
+    "query": "About Arnab Kumar Dey",
+    "hallucinationRisk": 0,
+    "hallucinationReduction": 1,
+    "overallConfidence": 0.976,
+    "sourcesCount": 5
   }
 ]

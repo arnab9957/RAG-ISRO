@@ -1422,12 +1422,6 @@ app.post('/api/ingest', requireAuth, async (req: Request, res: Response) => {
       ? redactedText.split('\f')
       : chunkText(redactedText, 600); // Approximation if no form feeds
 
-    // Create page images directory
-    const imagesDir = path.resolve(process.cwd(), 'public', 'page_images', path.basename(filename));
-    try {
-      fs.mkdirSync(imagesDir, { recursive: true });
-    } catch (_) {}
-
     const childChunksStored: { id: string; content: string; metadata: any }[] = [];
     const childEmbeddings: number[][] = [];
     let insertedChunks = 0;
@@ -1436,31 +1430,8 @@ app.post('/api/ingest', requireAuth, async (req: Request, res: Response) => {
       const pageText = pages[pIdx];
       if (pageText.trim().length < 5) continue;
 
-      // Save page image placeholder PNG
-      const placeholderPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
-      try {
-        fs.writeFileSync(path.join(imagesDir, `page_${pIdx + 1}.png`), placeholderPng);
-      } catch (err) {
-        console.error('Failed to write page image:', err);
-      }
-
-      // Get layout description
-      let visualDescription = '';
-      try {
-        const layoutPrompt = `You are a document layout analyzer.
-
-CHAIN-OF-THOUGHT INSTRUCTIONS:
-Step 1: Identify structural headers and section headings on page ${pIdx + 1}.
-Step 2: Detect any embedded tables and transcribe them in Markdown table format.
-Step 3: Extract diagram captions, callouts, and formatting structure.
-
-Describe the visual layout of page ${pIdx + 1} of document "${path.basename(filename)}":
-Page Content:
-${pageText.slice(0, 2000)}`;
-        visualDescription = await generateInternal(layoutPrompt);
-      } catch (err) {
-        console.warn('Failed to extract visual description:', err);
-      }
+      // Image generation & visual description analysis disabled during ingestion
+      const visualDescription = '';
 
       // Chunk page into parent chunks (500 words)
       const parentChunks = chunkText(pageText, 500);

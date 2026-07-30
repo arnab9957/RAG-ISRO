@@ -88,5 +88,13 @@
     "overallConfidence": 0.8055,
     "groundingFidelity": 1,
     "sourcesCount": 10
+  },
+  {
+    "timestamp": "2026-07-30T11:15:45.637Z",
+    "query": "About Arnab Kumar Dey",
+    "retrievalAccuracy": 0.9281,
+    "overallConfidence": 0.976,
+    "groundingFidelity": 1,
+    "sourcesCount": 5
   }
 ]

@@ -40,6 +40,7 @@ Thumbs.db
 
 # IDE and editor generated files
 .idea/
+.vscode/mcp.json
 *.sublime-*
 
 # Local environment files
