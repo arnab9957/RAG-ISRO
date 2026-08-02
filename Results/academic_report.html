@@ -47,7 +47,7 @@
     </div>
     <div class="stat-card">
       <div class="stat-title">Load Capacity (RPS)</div>
-      <div class="stat-value text-blue">12.44 RPS</div>
+      <div class="stat-value text-blue">132.74 RPS</div>
       <div class="stat-sub">Cache Hit Absorption: 0%</div>
     </div>
     <div class="stat-card">
@@ -112,29 +112,29 @@
           
             <tr>
               <td><strong>Full IRSARGO</strong></td>
-              <td>947 ms</td>
-              <td style="color: #10b981; font-weight: bold;">95%</td>
+              <td>1665 ms</td>
+              <td style="color: #10b981; font-weight: bold;">0%</td>
               <td style="color: #3b82f6; font-weight: bold;">98.2%</td>
             </tr>
           
             <tr>
               <td><strong>IRSARGO w/o SMT</strong></td>
-              <td>516 ms</td>
-              <td style="color: #10b981; font-weight: bold;">95%</td>
+              <td>1254 ms</td>
+              <td style="color: #10b981; font-weight: bold;">0%</td>
               <td style="color: #3b82f6; font-weight: bold;">85%</td>
             </tr>
           
             <tr>
               <td><strong>IRSARGO w/o Cache</strong></td>
-              <td>880 ms</td>
-              <td style="color: #10b981; font-weight: bold;">95%</td>
+              <td>1838 ms</td>
+              <td style="color: #10b981; font-weight: bold;">0%</td>
               <td style="color: #3b82f6; font-weight: bold;">98.2%</td>
             </tr>
           
             <tr>
               <td><strong>Baseline Naive RAG</strong></td>
-              <td>393 ms</td>
-              <td style="color: #10b981; font-weight: bold;">72%</td>
+              <td>1922 ms</td>
+              <td style="color: #10b981; font-weight: bold;">0%</td>
               <td style="color: #3b82f6; font-weight: bold;">8.4%</td>
             </tr>
           
@@ -167,7 +167,7 @@ Precision (1-FPR) (\%) & 100.0\% & 100.0\% & +0.0\% \\
 False Positive Rate (FPR) (\%) & 35.0\% & 0.0\% & -35.0\% \\
 F1-Score Quality & 0.62 & 1 & +0.38 \\
 TruthfulQA Benchmark (\%) & 50\% & 100\% & +50\% \\
-Max Load Throughput (RPS) & 4.2 RPS & 12.44 RPS & +8.2 RPS \\
+Max Load Throughput (RPS) & 4.2 RPS & 132.74 RPS & +128.5 RPS \\
 Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
 \hline
 \end{tabular}
@@ -192,7 +192,7 @@ Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
           },
           {
             label: 'Total Pipeline Latency (ms)',
-            data: [473,1364,2282,3625,4532],
+            data: [462,1365,2264,3616,4514],
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
             fill: true,

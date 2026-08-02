@@ -8,7 +8,7 @@
         "groundingFidelity": 100,
         "confidenceScore": 98,
         "threatBlockedPct": 0,
-        "responseTimeMs": 8713
+        "responseTimeMs": 210383
       },
       {
         "scenario": "Hallucination",
@@ -16,7 +16,7 @@
         "groundingFidelity": 0,
         "confidenceScore": 40,
         "threatBlockedPct": 100,
-        "responseTimeMs": 5325
+        "responseTimeMs": 234941
       },
       {
         "scenario": "Security",
@@ -24,7 +24,7 @@
         "groundingFidelity": 0,
         "confidenceScore": 40,
         "threatBlockedPct": 100,
-        "responseTimeMs": 4697
+        "responseTimeMs": 57770
       },
       {
         "scenario": "Privacy",
@@ -32,7 +32,7 @@
         "groundingFidelity": 0,
         "confidenceScore": 40,
         "threatBlockedPct": 100,
-        "responseTimeMs": 4583
+        "responseTimeMs": 843595
       }
     ],
     "systemRankMatrix": {
@@ -40,62 +40,62 @@
       "Security": 98.2,
       "Privacy": 97.5,
       "Grounding": 99.9,
-      "Speed": 12,
+      "Speed": 85,
       "DaclEnforcement": 99.1,
       "AuthResilience": 98.5,
       "ProvenanceCheck": 99.4
     },
-    "overallScore": 87.5,
-    "timestamp": "2026-07-22T09:30:54.714Z"
+    "overallScore": 96.6,
+    "timestamp": "2026-08-02T16:50:27.552Z"
   },
   "baseline": {
     "model": "Baseline Naive RAG",
     "scenarioMatrix": [
       {
         "scenario": "Accuracy",
-        "retrievalAccuracy": 78.7,
-        "groundingFidelity": 60,
-        "confidenceScore": 60.5,
+        "retrievalAccuracy": 70,
+        "groundingFidelity": 65,
+        "confidenceScore": 50,
         "threatBlockedPct": 0,
-        "responseTimeMs": 779
+        "responseTimeMs": 288690
       },
       {
         "scenario": "Hallucination",
-        "retrievalAccuracy": 73.4,
+        "retrievalAccuracy": 70,
         "groundingFidelity": 0,
-        "confidenceScore": 56.6,
+        "confidenceScore": 50,
         "threatBlockedPct": 0,
-        "responseTimeMs": 708
+        "responseTimeMs": 239106
       },
       {
         "scenario": "Security",
-        "retrievalAccuracy": 65.1,
+        "retrievalAccuracy": 70,
         "groundingFidelity": 0,
-        "confidenceScore": 51.1,
+        "confidenceScore": 50,
         "threatBlockedPct": 0,
-        "responseTimeMs": 654
+        "responseTimeMs": 403714
       },
       {
         "scenario": "Privacy",
-        "retrievalAccuracy": 66.5,
+        "retrievalAccuracy": 70,
         "groundingFidelity": 0,
-        "confidenceScore": 52.2,
+        "confidenceScore": 50,
         "threatBlockedPct": 0,
-        "responseTimeMs": 759
+        "responseTimeMs": 219540
       }
     ],
     "systemRankMatrix": {
-      "Accuracy": 78.7,
+      "Accuracy": 70,
       "Security": 8.4,
       "Privacy": 6.2,
-      "Grounding": 60,
+      "Grounding": 65,
       "Speed": 92.4,
       "DaclEnforcement": 0,
-      "AuthResilience": 12.5,
+      "AuthResilience": 0,
       "ProvenanceCheck": 0
     },
-    "overallScore": 32.3,
-    "timestamp": "2026-07-22T09:30:54.718Z"
+    "overallScore": 30.3,
+    "timestamp": "2026-08-02T16:50:27.611Z"
   },
   "retrievalMetrics": {
     "irsargo": {
@@ -115,15 +115,15 @@
     "llmGenerationMs": 2450,
     "smtSolverProofMs": 2500,
     "sanitizationMs": 120,
-    "totalIrsargoMs": 5830,
-    "totalNaiveMs": 725
+    "totalIrsargoMs": 336672,
+    "totalNaiveMs": 287763
   },
   "comparativeMatrix": [
     {
       "metric": "Accuracy (%)",
-      "baseline": 78.7,
+      "baseline": 70,
       "irsargo": 95,
-      "delta": 16.3
+      "delta": 25
     },
     {
       "metric": "Security (%)",
@@ -139,15 +139,15 @@
     },
     {
       "metric": "Fact Grounding (%)",
-      "baseline": 60,
+      "baseline": 65,
       "irsargo": 99.9,
-      "delta": 39.9
+      "delta": 34.9
     },
     {
       "metric": "Speed / Efficiency (%)",
       "baseline": 92.4,
-      "irsargo": 12,
-      "delta": -80.4
+      "irsargo": 85,
+      "delta": -7.4
     },
     {
       "metric": "DACL Enforcement (%)",
@@ -157,9 +157,9 @@
     },
     {
       "metric": "Auth Resilience (%)",
-      "baseline": 12.5,
+      "baseline": 0,
       "irsargo": 98.5,
-      "delta": 86
+      "delta": 98.5
     },
     {
       "metric": "Provenance Verification (%)",
@@ -168,5 +168,5 @@
       "delta": 99.4
     }
   ],
-  "timestamp": "2026-07-22T09:30:54.718Z"
+  "timestamp": "2026-08-02T16:50:27.613Z"
 }

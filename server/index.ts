@@ -1040,11 +1040,13 @@ app.post('/api/search', requireAuth, async (req: Request, res: Response) => {
       embeddingFunction: null,
     });
     
+    const isNaive = req.body.isNaive === true;
+    const bypassDacl = req.body.bypassDacl === true;
     const advancedSettings = req.body.advancedSettings || {};
-    const enableQueryExpansion = advancedSettings.enableQueryExpansion === true;
-    const enableHyDE = advancedSettings.enableHyDE === true;
-    const enableColBERT = advancedSettings.enableColBERT === true;
-    const enableGraphRAG = advancedSettings.enableGraphRAG === true;
+    const enableQueryExpansion = !isNaive && advancedSettings.enableQueryExpansion === true;
+    const enableHyDE = !isNaive && advancedSettings.enableHyDE === true;
+    const enableColBERT = !isNaive && advancedSettings.enableColBERT === true;
+    const enableGraphRAG = !isNaive && advancedSettings.enableGraphRAG === true;
 
     // Collect query variants for embedding search
     const queryVariants = [query];
@@ -1102,30 +1104,32 @@ Query: ${query}`;
       andConditions.push({ domain: mapped });
     }
 
-    // Dynamic FGA rules:
-    let userGroups: string[] = ['everyone'];
-    if (searchIdentity.role === 'Administrator') {
-      userGroups = ['admin', 'everyone'];
-    } else if (searchIdentity.role === 'Operator') {
-      userGroups = ['everyone'];
-    } else {
-      userGroups = ['everyone', 'guest'];
-    }
+    // Dynamic FGA rules (bypassed if bypassDacl is true, simulating naive RAG without DACL):
+    if (!bypassDacl) {
+      let userGroups: string[] = ['everyone'];
+      if (searchIdentity.role === 'Administrator') {
+        userGroups = ['admin', 'everyone'];
+      } else if (searchIdentity.role === 'Operator') {
+        userGroups = ['everyone'];
+      } else {
+        userGroups = ['everyone', 'guest'];
+      }
 
-    const escapedGroups = userGroups.map(escapeFilterLiteral);
+      const escapedGroups = userGroups.map(escapeFilterLiteral);
 
-    if (escapedGroups.length === 1) {
-      andConditions.push({ allowed_groups: escapedGroups[0] });
-    } else {
-      andConditions.push({
-        allowed_groups: {
-          $in: escapedGroups
-        }
-      });
-    }
+      if (escapedGroups.length === 1) {
+        andConditions.push({ allowed_groups: escapedGroups[0] });
+      } else {
+        andConditions.push({
+          allowed_groups: {
+            $in: escapedGroups
+          }
+        });
+      }
 
-    if (searchIdentity.role === 'Guest') {
-      andConditions.push({ denied_groups: { $ne: 'guest' } });
+      if (searchIdentity.role === 'Guest') {
+        andConditions.push({ denied_groups: { $ne: 'guest' } });
+      }
     }
 
     if (filters) {
