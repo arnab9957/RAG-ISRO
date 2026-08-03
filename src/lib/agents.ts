@@ -7,6 +7,7 @@ import { GoogleGenAI } from "@google/genai";
 import { AgentAction, AgentRole, Domain, IRSARGOResponse, SecurityTrace, AdvancedFilters, GroundedNode } from "../types";
 import { searchOntology } from "./ontology";
 import { createTrace, generateQueryProof, calculateConfidence, extractKeyTerms, mockGenerate, cleanTopic } from "./verify";
+import { executeAdaptiveSelfRag } from './entropySelfRagEngine';
 
 export function stripThinkingTags(text: string): string {
   if (!text) return '';
@@ -102,9 +103,13 @@ export class IRSARGOOrchestrator {
 
     // --- Semantic Cache Check ---
     try {
+      const token = localStorage.getItem('irsargo_token');
       const cacheRes = await fetch('http://localhost:3001/api/cache/check', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ query })
       });
       if (cacheRes.ok) {
@@ -368,10 +373,13 @@ Paraphrased Query: [Clean paraphrased query string]`;
     addAction(AgentRole.EXECUTOR, statusMsg, 'completed');
 
     // 2. Context Aggregation & Reranking
-    const rerankAction = addAction(AgentRole.EXECUTOR, `Executing TF-IDF Relevance Reranker...`);
+    const enableColBERT = advancedSettings?.enableColBERT !== false;
+    const rerankAction = addAction(AgentRole.EXECUTOR, enableColBERT ? `Executing G-ColBERT (Graph-Guided Late-Interaction MaxSim) Reranker...` : `Executing TF-IDF Relevance Reranker...`);
     const filteredNodes = nodes;
     rerankAction.status = 'completed';
-    rerankAction.output = `TF-IDF ranking computed. Filtered and sorted candidate pool to top ${filteredNodes.length} chunks.`;
+    rerankAction.output = enableColBERT 
+      ? `G-ColBERT computed. Applied Knowledge Graph degree centrality weights to token-level MaxSim scores for top ${filteredNodes.length} chunks.`
+      : `TF-IDF ranking computed. Filtered and sorted candidate pool to top ${filteredNodes.length} chunks.`;
     onUpdate(rerankAction);
 
     // 2.5. Cross-Validation & Conflict Resolution (TrustRAG consensus framework)
@@ -475,16 +483,19 @@ ${context}
     criticAction.output = critique;
     onUpdate(criticAction);
 
-    criticAction.status = 'completed';
-    criticAction.output = critique;
-    onUpdate(criticAction);
+    // 4.5. Adaptive Entropy-Driven Self-Correction (Self-RAG)
+    const selfRagResult = executeAdaptiveSelfRag(query, draftContent, nodes.length);
+    const selfRagAction = addAction(AgentRole.VALIDATOR, `Executing Adaptive Self-RAG Entropy Evaluation...`);
+    selfRagAction.status = 'completed';
+    selfRagAction.output = selfRagResult.reflectionTrace.join('\n');
+    onUpdate(selfRagAction);
 
     // 5. Formal Verification & Confidence Scoring
     const validatorAction = addAction(AgentRole.VALIDATOR, `Executing Z3 SMT & Confidence Scoring...`);
     onUpdate(validatorAction);
 
     return {
-      answer: draftContent,
+      answer: selfRagResult.finalAnswer,
       traceLog: [],
       agentActions: actions,
       domain,

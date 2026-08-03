@@ -40,8 +40,17 @@ export interface GroundedNode {
 export interface SecurityTrace {
   nodeId: string;
   zkpStatus: 'verified' | 'failed';
+  zkProofHash?: string;
+  zkMerkleRoot?: string;
+  zkProverLatencyMs?: number;
+  zkVerificationTrace?: string;
   provenanceHash: string;
   smtApproval: boolean;
+  smtStatus?: 'SAT' | 'UNSAT' | 'UNKNOWN';
+  smtLatencyMs?: number;
+  smtConstraintsCount?: number;
+  smtConflicts?: string[];
+  smtProofTrace?: string;
   timestamp: string;
   relevanceScore: number;
 }

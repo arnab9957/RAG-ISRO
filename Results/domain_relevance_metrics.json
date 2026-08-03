@@ -22,5 +22,53 @@
     "detectedDomain": "AEROSPACE",
     "overallConfidence": 0.8423,
     "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-08-03T07:38:56.478Z",
+    "query": "About Arnab Kumar Dey",
+    "domainRelevance": 0.7,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.9706,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-08-03T08:22:41.937Z",
+    "query": "of aerosols' role in radiative forcing and their climate impacts. • Estimation of seasonal variation on optical properties of aerosols. Correlation analysis with radiation data variation, heat and other data which may be found relevant. RES-SDSC-2025-005 Name of ISRO/DOS Centre/Unit Satish Dawan Space Centre, Sriharikota Title of the research proposal Numerical simulation of propellant slurry casting Area of Research Simulation of non-Newtonian slurry flow Name of Co-PI (Focal Point) from ISRO Centre/Unit Shri. Srinivas Yara Shri. Chandra Prakash Kotwal Email ID of Co-PI (Focal Point) from ISRO Centre/Unit srinivas.yara@shar.gov.in chandraprakash.kotwal@shar.gov.in Summary of the Proposed Research Solid motors are being used of boosters for launch vehicles. Solid motor processing involves raw material preparation, mixing, casting, curing and finishing operations. After propellant mixing, propellant slurry will be cast into the rocket case by maintaining vacuum and slurry feed rate. Slurry flows from the mixer bowl/hopper to rocket case through the feedline and falls into the rocket case. Propellant slurry is consisting of 68% oxidiser, 18% fuel, 10% binder and 0.8% curator. Slurry viscosity increases from 600 Pa-s (end of mix) to 1600 Pa-s in 4 hours on account of curing reaction. This propellant slurry is considered as non-Newtonian fluid. 161 RESPOND BASKET 2025 Satish Dhawan Space Centre For processing the large rocket case, casting is being carried out with vertical feed line and for small rocket cases, multi feed (inclined feedline) is being used. Any bubble formed/present during propellant casting, rises through propellant slurry with varying viscosity regions. Now, it is proposed to carryout numerical simulation of propellant casting using ANSYS Fluent and bubble rise phenomenon in slurry. Scope of the work: • Develop a methodology for steady state numerical analysis of propellant slurry casting for a given vertical feedline and multi feed. • Unsteady bubbles rise phenomenon in propellant slurry with",
+    "domainRelevance": 0.9333,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.7252,
+    "sourcesCount": 15
+  },
+  {
+    "timestamp": "2026-08-03T10:43:00.830Z",
+    "query": "What is the cryogenic engine CE-20 vacuum thrust specification?\"",
+    "domainRelevance": 0.9,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.6802,
+    "sourcesCount": 15
+  },
+  {
+    "timestamp": "2026-08-03T12:41:45.382Z",
+    "query": "About Arnab Kumar Dey",
+    "domainRelevance": 0,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0,
+    "sourcesCount": 0
+  },
+  {
+    "timestamp": "2026-08-03T12:45:13.623Z",
+    "query": "About Arnab Kumar Dey",
+    "domainRelevance": 0,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0,
+    "sourcesCount": 0
+  },
+  {
+    "timestamp": "2026-08-03T13:39:26.286Z",
+    "query": "all about Secure and Accurate Retrieval-Augmented Generation Framework for Domain-Adaptive Applications",
+    "domainRelevance": 0.8333,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.9762,
+    "sourcesCount": 15
   }
 ]
