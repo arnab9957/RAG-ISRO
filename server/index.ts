@@ -11,6 +11,7 @@ import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import nodemailer from 'nodemailer';
 import { extractKeyTerms, createTrace, calculateConfidence, mockGenerate } from '../src/lib/verify';
+import { computeGraphGuidedMaxSim } from '../src/lib/graphColbertEngine';
 import { authenticateKeycloakUser, registerKeycloakUser } from './keycloak';
 
 // --- RAG Security Helper Functions ---
@@ -1216,7 +1217,7 @@ Query: ${query}`;
       return node;
     });
 
-    // ColBERT-style Late-Interaction Reranking (MaxSim operator)
+    // ColBERT-style Late-Interaction Reranking (Graph-Guided MaxSim operator)
     if (enableColBERT && query.length > 3 && fusedNodes.length > 0) {
       try {
         const queryTokenVectors = await getTokenEmbeddings(query);
@@ -1225,18 +1226,21 @@ Query: ${query}`;
         await Promise.all(topCandidates.map(async (node) => {
           try {
             const docTokenVectors = await getTokenEmbeddings(node.content);
-            const maxSimScore = computeMaxSim(queryTokenVectors, docTokenVectors);
-            node.colbertScore = maxSimScore;
+            const baseMaxSimScore = computeMaxSim(queryTokenVectors, docTokenVectors);
+            const gColbert = computeGraphGuidedMaxSim(query, node.content);
+            node.colbertScore = gColbert.graphGuidedMaxSimScore;
+            node.graphCentralityBoost = gColbert.graphCentralityBoost;
+            node.hubEntities = gColbert.hubEntities;
           } catch (err) {
             node.colbertScore = 0;
           }
         }));
         
-        // Sort top candidates by ColBERT score and merge back with remaining nodes
+        // Sort top candidates by G-ColBERT score and merge back with remaining nodes
         topCandidates.sort((a, b) => (b.colbertScore || 0) - (a.colbertScore || 0));
         fusedNodes = [...topCandidates, ...fusedNodes.slice(10)];
       } catch (colbertErr) {
-        console.warn('Failed ColBERT late-interaction reranking, using default RRF ranking:', colbertErr);
+        console.warn('Failed G-ColBERT late-interaction reranking, using default RRF ranking:', colbertErr);
       }
     }
 

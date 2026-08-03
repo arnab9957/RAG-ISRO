@@ -48,5 +48,13 @@
     "overallConfidence": 0.7252,
     "groundingFidelity": 0.9,
     "sourcesCount": 15
+  },
+  {
+    "timestamp": "2026-08-03T10:43:00.697Z",
+    "query": "What is the cryogenic engine CE-20 vacuum thrust specification?\"",
+    "retrievalAccuracy": 0.8978,
+    "overallConfidence": 0.6802,
+    "groundingFidelity": 1,
+    "sourcesCount": 15
   }
 ]

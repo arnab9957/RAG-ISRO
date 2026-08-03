@@ -372,10 +372,13 @@ Paraphrased Query: [Clean paraphrased query string]`;
     addAction(AgentRole.EXECUTOR, statusMsg, 'completed');
 
     // 2. Context Aggregation & Reranking
-    const rerankAction = addAction(AgentRole.EXECUTOR, `Executing TF-IDF Relevance Reranker...`);
+    const enableColBERT = advancedSettings?.enableColBERT !== false;
+    const rerankAction = addAction(AgentRole.EXECUTOR, enableColBERT ? `Executing G-ColBERT (Graph-Guided Late-Interaction MaxSim) Reranker...` : `Executing TF-IDF Relevance Reranker...`);
     const filteredNodes = nodes;
     rerankAction.status = 'completed';
-    rerankAction.output = `TF-IDF ranking computed. Filtered and sorted candidate pool to top ${filteredNodes.length} chunks.`;
+    rerankAction.output = enableColBERT 
+      ? `G-ColBERT computed. Applied Knowledge Graph degree centrality weights to token-level MaxSim scores for top ${filteredNodes.length} chunks.`
+      : `TF-IDF ranking computed. Filtered and sorted candidate pool to top ${filteredNodes.length} chunks.`;
     onUpdate(rerankAction);
 
     // 2.5. Cross-Validation & Conflict Resolution (TrustRAG consensus framework)
