@@ -1,0 +1,173 @@
+/**
+ * Design Tokens & Theme Engine
+ * Dark-first design tokens (#0a1628 base, #12253f surface, #1e4a72 structure, #38bdf8 cyan accent)
+ * Console Gradients, Panel Shadows, Accent Glows & Light Theme Support
+ */
+
+:root,
+[data-theme="dark"],
+.dark {
+  /* Core Telemetry Color Tokens */
+  --bg-base: #0a1628;
+  --bg-surface: #12253f;
+  --bg-surface-hover: #1a3254;
+  --border-structure: #1e4a72;
+  --border-structure-light: #2c6396;
+  --accent-cyan: #38bdf8;
+  --accent-cyan-hover: #7dd3fc;
+  --accent-cyan-glow: rgba(56, 189, 248, 0.4);
+  
+  --text-main: #f0f6fc;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+
+  /* Console Gradient Tokens */
+  --console-gradient: linear-gradient(135deg, #0a1628 0%, #12253f 60%, #1e4a72 100%);
+  --surface-gradient: linear-gradient(180deg, rgba(18, 37, 63, 0.85) 0%, rgba(10, 22, 40, 0.95) 100%);
+  --accent-gradient: linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);
+  --header-gradient: linear-gradient(180deg, rgba(10, 22, 40, 0.95) 0%, rgba(18, 37, 63, 0.75) 100%);
+  --card-gradient: linear-gradient(145deg, rgba(18, 37, 63, 0.9) 0%, rgba(10, 22, 40, 0.95) 100%);
+
+  /* Panel Shadow Tokens */
+  --panel-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px #1e4a72;
+  --panel-shadow-hover: 0 15px 35px -5px rgba(0, 0, 0, 0.65), 0 0 0 1px #38bdf8;
+  --elevation-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+
+  /* Accent Glow Tokens */
+  --accent-glow: 0 0 15px rgba(56, 189, 248, 0.4), 0 0 30px rgba(56, 189, 248, 0.15);
+  --accent-glow-sm: 0 0 8px rgba(56, 189, 248, 0.5);
+  --structure-glow: 0 0 12px rgba(30, 74, 114, 0.6);
+  --glow-cyan: 0 0 20px rgba(56, 189, 248, 0.35);
+
+  /* Glassmorphism Tokens */
+  --glass-bg: rgba(18, 37, 63, 0.7);
+  --glass-border: rgba(30, 74, 114, 0.8);
+  --glass-blur: blur(12px);
+
+  color-scheme: dark;
+}
+
+[data-theme="light"],
+.light {
+  /* Core Telemetry Color Tokens - Light Theme (Soft Slate Canvas, White Panels, Deep Navy #1e4a72 Primary, #0284c7 Telemetry Accent) */
+  --bg-base: #e2e8f0;            /* Soft Slate Canvas */
+  --bg-surface: #ffffff;         /* Crisp White Panels */
+  --bg-surface-hover: #f8fafc;   /* Soft Slate Panel Hover */
+  --border-structure: #cbd5e1;   /* Soft Slate Border */
+  --border-structure-light: #94a3b8;
+  
+  --color-primary: #1e4a72;      /* Deep Navy Primary */
+  --accent-cyan: #0284c7;        /* Telemetry Accent */
+  --accent-cyan-hover: #0369a1;
+  --accent-cyan-glow: rgba(2, 132, 199, 0.25);
+  
+  --text-main: #1e4a72;          /* Deep Navy Primary Text */
+  --text-muted: #334155;         /* Muted Slate Text */
+  --text-subtle: #64748b;        /* Subtle Slate Text */
+
+  /* Console Gradient Tokens - Light Theme */
+  --console-gradient: linear-gradient(135deg, #e2e8f0 0%, #ffffff 60%, #cbd5e1 100%);
+  --surface-gradient: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+  --accent-gradient: linear-gradient(90deg, #1e4a72 0%, #0284c7 100%);
+  --header-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(226, 232, 240, 0.85) 100%);
+  --card-gradient: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+
+  /* Panel Shadow Tokens - Light Theme */
+  --panel-shadow: 0 10px 25px -5px rgba(30, 74, 114, 0.08), 0 0 0 1px #cbd5e1;
+  --panel-shadow-hover: 0 15px 30px -5px rgba(2, 132, 199, 0.15), 0 0 0 1px #0284c7;
+  --elevation-shadow: 0 20px 25px -5px rgba(30, 74, 114, 0.1), 0 8px 10px -6px rgba(30, 74, 114, 0.05);
+
+  /* Accent Glow Tokens - Light Theme */
+  --accent-glow: 0 0 15px rgba(2, 132, 199, 0.25), 0 0 25px rgba(2, 132, 199, 0.1);
+  --accent-glow-sm: 0 0 8px rgba(2, 132, 199, 0.3);
+  --structure-glow: 0 0 10px rgba(30, 74, 114, 0.2);
+  --glow-cyan: 0 0 15px rgba(2, 132, 199, 0.25);
+
+  /* Glassmorphism Tokens - Light Theme */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(203, 213, 225, 0.8);
+  --glass-blur: blur(12px);
+
+  color-scheme: light;
+}
+
+/* Base Body Application */
+body {
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Utility Token Helper Classes */
+.bg-telemetry-base {
+  background-color: var(--bg-base);
+}
+
+.bg-telemetry-surface {
+  background-color: var(--bg-surface);
+}
+
+.bg-telemetry-surface-hover:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.border-telemetry-structure {
+  border-color: var(--border-structure);
+}
+
+.border-telemetry-structure-light {
+  border-color: var(--border-structure-light);
+}
+
+.text-telemetry-accent {
+  color: var(--accent-cyan);
+}
+
+.bg-telemetry-accent {
+  background-color: var(--accent-cyan);
+}
+
+.console-gradient-bg {
+  background: var(--console-gradient);
+}
+
+.surface-gradient-bg {
+  background: var(--surface-gradient);
+}
+
+.accent-gradient-bg {
+  background: var(--accent-gradient);
+}
+
+.card-gradient-bg {
+  background: var(--card-gradient);
+}
+
+.panel-shadow-box {
+  box-shadow: var(--panel-shadow);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.panel-shadow-box:hover {
+  box-shadow: var(--panel-shadow-hover);
+}
+
+.accent-glow-box {
+  box-shadow: var(--accent-glow);
+}
+
+.accent-glow-sm-box {
+  box-shadow: var(--accent-glow-sm);
+}
+
+.glow-cyan-box {
+  box-shadow: var(--glow-cyan);
+}
+
+.isro-glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--panel-shadow);
+}

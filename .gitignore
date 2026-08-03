@@ -22,6 +22,7 @@ env/
 .env
 *.so
 datasets/
+Results/
 
 # JavaScript
 # Add JavaScript-specific ignores here
@@ -40,9 +41,13 @@ Thumbs.db
 
 # IDE and editor generated files
 .idea/
+.vscode/mcp.json
 *.sublime-*
 
 # Local environment files
 .env
 .env.local
 .env.*.local
+
+
+

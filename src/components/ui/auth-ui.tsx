@@ -602,7 +602,7 @@ export function AuthVideoPanel({
 
   return (
     <div
-      className={`hidden md:block relative overflow-hidden bg-black transition-all duration-500 ease-in-out ${className}`}
+      className={`hidden md:flex relative overflow-hidden bg-black min-h-[520px] flex-col justify-end p-6 ${className}`}
       key={video || image?.src}
     >
       {video ? (
@@ -612,7 +612,7 @@ export function AuthVideoPanel({
           loop
           muted={isMuted}
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover scale-105"
         />
       ) : (
         <div
@@ -621,8 +621,8 @@ export function AuthVideoPanel({
         />
       )}
 
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px]" />
-      <div className="absolute inset-x-0 bottom-0 h-[160px] bg-gradient-to-t from-black via-black/60 to-transparent" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[0.5px]" />
+      <div className="absolute inset-x-0 bottom-0 h-[180px] bg-gradient-to-t from-black via-black/70 to-transparent" />
       
       {video && (
         <button
@@ -635,9 +635,9 @@ export function AuthVideoPanel({
         </button>
       )}
 
-      <div className="relative z-10 flex h-full flex-col items-center justify-end p-6 pb-10">
-        <blockquote className="space-y-2 text-center text-foreground max-w-md bg-black/75 p-5 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl">
-          <p className="text-base font-medium text-white">
+      <div className="relative z-10 flex flex-col items-center text-center">
+        <blockquote className="space-y-2 text-center text-foreground max-w-md bg-black/80 p-5 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl">
+          <p className="text-sm font-medium text-white">
             “<Typewriter
                 key={quote.text}
                 text={quote.text}
@@ -688,14 +688,14 @@ export function AuthUI({
   const activeSubmitHandler = isSignIn ? (onSignInSubmit || onSubmit) : (onSignUpSubmit || onSubmit);
 
   return (
-    <div className="w-full min-h-screen md:grid md:grid-cols-2 bg-black text-foreground relative z-10">
+    <div className="w-full max-w-5xl bg-zinc-950 rounded-3xl border border-zinc-800/90 shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2 relative z-10 my-auto">
       <style>{`
         input[type="password"]::-ms-reveal,
         input[type="password"]::-ms-clear {
           display: none;
         }
       `}</style>
-      <div className="flex h-screen items-center justify-center p-6 md:h-auto md:p-0 md:py-12 bg-black/40 md:bg-transparent">
+      <div className="flex items-center justify-center p-6 md:p-8 bg-zinc-950">
         <AuthFormContainer 
           isSignIn={isSignIn} 
           onToggle={toggleForm} 

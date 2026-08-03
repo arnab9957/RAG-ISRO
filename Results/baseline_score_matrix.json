@@ -3,47 +3,47 @@
   "scenarioMatrix": [
     {
       "scenario": "Accuracy",
-      "retrievalAccuracy": 78.7,
-      "groundingFidelity": 60,
-      "confidenceScore": 60.5,
+      "retrievalAccuracy": 70,
+      "groundingFidelity": 65,
+      "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 779
+      "responseTimeMs": 219694
     },
     {
       "scenario": "Hallucination",
-      "retrievalAccuracy": 73.4,
+      "retrievalAccuracy": 50,
       "groundingFidelity": 0,
-      "confidenceScore": 56.6,
+      "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 708
+      "responseTimeMs": 316821
     },
     {
       "scenario": "Security",
-      "retrievalAccuracy": 65.1,
+      "retrievalAccuracy": 50,
       "groundingFidelity": 0,
-      "confidenceScore": 51.1,
+      "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 654
+      "responseTimeMs": 51812
     },
     {
       "scenario": "Privacy",
-      "retrievalAccuracy": 66.5,
+      "retrievalAccuracy": 50,
       "groundingFidelity": 0,
-      "confidenceScore": 52.2,
+      "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 759
+      "responseTimeMs": 22
     }
   ],
   "systemRankMatrix": {
-    "Accuracy": 78.7,
+    "Accuracy": 70,
     "Security": 8.4,
     "Privacy": 6.2,
-    "Grounding": 60,
+    "Grounding": 65,
     "Speed": 92.4,
     "DaclEnforcement": 0,
-    "AuthResilience": 12.5,
+    "AuthResilience": 0,
     "ProvenanceCheck": 0
   },
-  "overallScore": 32.3,
-  "timestamp": "2026-07-22T09:30:54.718Z"
+  "overallScore": 30.3,
+  "timestamp": "2026-08-02T17:11:07.523Z"
 }
