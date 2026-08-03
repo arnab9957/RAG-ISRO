@@ -40,12 +40,17 @@ export function extractKeyTerms(text: string): string[] {
   return terms.slice(0, 8); // Return up to 8 key terms
 }
 
+import { extractSMTConstraints, solveSMTConstraints, SMTVerificationResult } from './z3SolverEngine';
+
 /**
- * Simulates SMT-based (Satisfiability Modulo Theories) formal verification.
- * Checks if the answer satisfies domain constraints by verifying if a reasonable
- * threshold of extracted key concepts are mentioned.
+ * Executes SMT-based (Satisfiability Modulo Theories) formal verification using the Z3 WASM Engine.
+ * Checks if candidate text satisfies extracted relational/numerical predicates from retrieved nodes.
  */
-export function formalVerification(answer: string, constraints: string[]): boolean {
+export function formalVerification(answer: string, constraints: string[] | string): boolean {
+  if (typeof constraints === 'string') {
+    const extracted = extractSMTConstraints(constraints);
+    return solveSMTConstraints(answer, extracted).isSatisfiable;
+  }
   if (constraints.length === 0) return true;
   const lowerAnswer = answer.toLowerCase();
 
@@ -56,7 +61,6 @@ export function formalVerification(answer: string, constraints: string[]): boole
     }
   }
 
-  // Pass if we match at least 25% of the key constraints (or at least 1 if constraints count is small)
   const requiredMatches = Math.max(1, Math.ceil(constraints.length * 0.25));
   return matches >= requiredMatches;
 }
@@ -148,21 +152,34 @@ export function calculateConfidence(traces: SecurityTrace[], answer: string, que
   };
 }
 
-export function createTrace(nodeId: string, content: string, constraints: string[]): SecurityTrace {
-  // Generate a deterministic relevance score based on nodeId hash (between 0.85 and 0.99)
+export function createTrace(
+  nodeId: string, 
+  content: string, 
+  constraintsOrAnswer: string[] | string,
+  answerOverride?: string
+): SecurityTrace {
   let hash = 0;
   for (let i = 0; i < nodeId.length; i++) {
     hash = (hash << 5) - hash + nodeId.charCodeAt(i);
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0;
   }
   const normHash = Math.abs(hash) % 100;
   const relevanceScore = 0.85 + (normHash / 100) * 0.14;
+
+  const answerText = typeof constraintsOrAnswer === 'string' ? constraintsOrAnswer : (answerOverride || '');
+  const docConstraints = extractSMTConstraints(content);
+  const smtRes = solveSMTConstraints(answerText, docConstraints);
 
   return {
     nodeId,
     zkpStatus: verifyZKP(nodeId),
     provenanceHash: generateC2PAHash(content),
-    smtApproval: formalVerification(content, constraints),
+    smtApproval: smtRes.isSatisfiable,
+    smtStatus: smtRes.smtStatus,
+    smtLatencyMs: smtRes.latencyMs,
+    smtConstraintsCount: smtRes.constraintsEvaluated.length,
+    smtConflicts: smtRes.conflicts,
+    smtProofTrace: smtRes.proofTrace,
     timestamp: new Date().toISOString(),
     relevanceScore
   };

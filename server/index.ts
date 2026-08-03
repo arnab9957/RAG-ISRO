@@ -1751,10 +1751,10 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
     }
 
     const traces = nodes.map((node: any) => {
-      const nodeConstraints = extractKeyTerms(node.content);
-      const trace = createTrace(node.id, answer, nodeConstraints);
+      const trace = createTrace(node.id, node.content || '', answer);
       if (disableSMT) {
         trace.smtApproval = true; // SMT check bypassed in ablation
+        trace.smtStatus = 'SAT';
       }
       return trace;
     });

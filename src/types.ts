@@ -42,6 +42,11 @@ export interface SecurityTrace {
   zkpStatus: 'verified' | 'failed';
   provenanceHash: string;
   smtApproval: boolean;
+  smtStatus?: 'SAT' | 'UNSAT' | 'UNKNOWN';
+  smtLatencyMs?: number;
+  smtConstraintsCount?: number;
+  smtConflicts?: string[];
+  smtProofTrace?: string;
   timestamp: string;
   relevanceScore: number;
 }
