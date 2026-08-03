@@ -7,6 +7,7 @@ import { GoogleGenAI } from "@google/genai";
 import { AgentAction, AgentRole, Domain, IRSARGOResponse, SecurityTrace, AdvancedFilters, GroundedNode } from "../types";
 import { searchOntology } from "./ontology";
 import { createTrace, generateQueryProof, calculateConfidence, extractKeyTerms, mockGenerate, cleanTopic } from "./verify";
+import { executeAdaptiveSelfRag } from './entropySelfRagEngine';
 
 export function stripThinkingTags(text: string): string {
   if (!text) return '';
@@ -482,16 +483,19 @@ ${context}
     criticAction.output = critique;
     onUpdate(criticAction);
 
-    criticAction.status = 'completed';
-    criticAction.output = critique;
-    onUpdate(criticAction);
+    // 4.5. Adaptive Entropy-Driven Self-Correction (Self-RAG)
+    const selfRagResult = executeAdaptiveSelfRag(query, draftContent, nodes.length);
+    const selfRagAction = addAction(AgentRole.VALIDATOR, `Executing Adaptive Self-RAG Entropy Evaluation...`);
+    selfRagAction.status = 'completed';
+    selfRagAction.output = selfRagResult.reflectionTrace.join('\n');
+    onUpdate(selfRagAction);
 
     // 5. Formal Verification & Confidence Scoring
     const validatorAction = addAction(AgentRole.VALIDATOR, `Executing Z3 SMT & Confidence Scoring...`);
     onUpdate(validatorAction);
 
     return {
-      answer: draftContent,
+      answer: selfRagResult.finalAnswer,
       traceLog: [],
       agentActions: actions,
       domain,
