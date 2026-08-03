@@ -61,5 +61,13 @@
     "overallConfidence": 0,
     "retrievalAccuracy": 0,
     "sourcesCount": 0
+  },
+  {
+    "timestamp": "2026-08-03T13:39:26.262Z",
+    "query": "all about Secure and Accurate Retrieval-Augmented Generation Framework for Domain-Adaptive Applications",
+    "groundingFidelity": 1,
+    "overallConfidence": 0.9762,
+    "retrievalAccuracy": 0.9286,
+    "sourcesCount": 15
   }
 ]

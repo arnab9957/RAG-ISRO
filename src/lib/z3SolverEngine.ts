@@ -40,15 +40,15 @@ export function extractSMTConstraints(text: string): SMTConstraint[] {
   const patterns = [
     // Pattern 1: Parameter of X [unit] / Parameter is X [unit]
     {
-      regex: /(thrust|impulse|isp|pressure|temperature|weight|mass|payload|length|diameter|value|amount|budget|response time|timeline)\s*(?:is|of|=|:)?\s*(?:at least|minimum|above|greater than|>=)\s*([0-9,]+(?:\.[0-9]+)?)\s*([a-zA-Z%]+)?/i,
+      regex: /(thrust|impulse|isp|pressure|temperature|weight|mass|payload|length|diameter|value|amount|budget|response time|timeline)[\s\w]{0,25}?(?:at least|minimum|above|greater than|>=)\s*([0-9,]+(?:\.[0-9]+)?)\s*([a-zA-Z%]+)?/i,
       op: '>=' as const
     },
     {
-      regex: /(thrust|impulse|isp|pressure|temperature|weight|mass|payload|length|diameter|value|amount|budget|response time|timeline)\s*(?:is|of|=|:)?\s*(?:at most|maximum|below|less than|<=)\s*([0-9,]+(?:\.[0-9]+)?)\s*([a-zA-Z%]+)?/i,
+      regex: /(thrust|impulse|isp|pressure|temperature|weight|mass|payload|length|diameter|value|amount|budget|response time|timeline)[\s\w]{0,25}?(?:at most|maximum|below|less than|<=)\s*([0-9,]+(?:\.[0-9]+)?)\s*([a-zA-Z%]+)?/i,
       op: '<=' as const
     },
     {
-      regex: /(thrust|impulse|isp|pressure|temperature|weight|mass|payload|length|diameter|value|amount|budget|response time|timeline)\s*(?:is|of|=|:)?\s*([0-9,]+(?:\.[0-9]+)?)\s*(kN|seconds|sec|s|kg|tonnes|t|bar|K|C|Rs|INR|weeks|days|months)?/i,
+      regex: /(thrust|impulse|isp|pressure|temperature|weight|mass|payload|length|diameter|value|amount|budget|response time|timeline)[\s\w]{0,25}?(?:is|of|measured at|set to|=|:)\s*([0-9,]+(?:\.[0-9]+)?)\s*(kN|seconds|sec|s|kg|tonnes|t|bar|K|C|Rs|INR|weeks|days|months)?/i,
       op: '==' as const
     }
   ];

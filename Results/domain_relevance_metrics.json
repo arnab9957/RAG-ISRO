@@ -62,5 +62,13 @@
     "detectedDomain": "AEROSPACE",
     "overallConfidence": 0,
     "sourcesCount": 0
+  },
+  {
+    "timestamp": "2026-08-03T13:39:26.286Z",
+    "query": "all about Secure and Accurate Retrieval-Augmented Generation Framework for Domain-Adaptive Applications",
+    "domainRelevance": 0.8333,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.9762,
+    "sourcesCount": 15
   }
 ]
