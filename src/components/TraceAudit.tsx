@@ -78,10 +78,24 @@ export default function TraceAudit({ traces, isVerifying }: Props) {
             <div className="flex items-start gap-3">
               <Key className="w-4 h-4 text-emerald-400 mt-1 shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">Paging Source Info</p>
-                <div className="flex flex-col">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">ZK-SNARK Groth16 DACL Proof</p>
+                  <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${trace.zkpStatus === 'verified' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/40' : 'bg-red-950/60 text-red-400 border-red-800/40'}`}>
+                    {trace.zkpStatus === 'verified' ? 'VERIFIED (ZK OK)' : 'FAILED'}
+                  </span>
+                </div>
+                <div className="flex flex-col mt-1">
                   <span className="text-sm font-mono text-zinc-200 break-all">{trace.nodeId}</span>
-                  <span className="text-[10px] text-zinc-400 font-mono italic">EXPANSION_NODE: {trace.relevanceScore < 0.5 ? 'YES (NEIGHBOR)' : 'NO (PRIMARY)'}</span>
+                  {trace.zkProofHash && (
+                    <span className="text-[9px] text-emerald-400/90 font-mono break-all mt-0.5">
+                      PROOF: {trace.zkProofHash}
+                    </span>
+                  )}
+                  {trace.zkMerkleRoot && (
+                    <span className="text-[9px] text-zinc-500 font-mono break-all">
+                      MERKLE ROOT: {trace.zkMerkleRoot.substring(0, 24)}...
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

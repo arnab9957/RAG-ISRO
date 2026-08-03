@@ -1011,9 +1011,13 @@ export default function App() {
           // --- Save to Semantic Cache ---
           // Only cache if grounding fidelity is high and no hallucinations
           if (finalVerifiedResponse.metrics.groundingFidelity > 0.8 && finalVerifiedResponse.metrics.hallucinationRisk < 0.2) {
+            const activeToken = token || localStorage.getItem('irsargo_token');
             fetch('http://localhost:3001/api/cache/save', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                ...(activeToken ? { 'Authorization': `Bearer ${activeToken}` } : {})
+              },
               body: JSON.stringify({ query: currentQuery, response: finalVerifiedResponse })
             }).catch(e => console.warn('Failed to save to semantic cache:', e));
           }

@@ -2070,7 +2070,21 @@ Output strictly valid JSON and nothing else.`;
 // --- Semantic Caching Implementation ---
 const semanticCache = new Map<string, { vector: number[]; response: any }>();
 
-app.post('/api/cache/check', requireAuth, async (req: Request, res: Response) => {
+function optionalAuth(req: Request, res: Response, next: any) {
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.substring(7);
+      const decoded = verifyJwt(token);
+      (req as any).user = decoded;
+    } catch (e) {
+      // Degrade gracefully for caching if token is invalid or guest
+    }
+  }
+  next();
+}
+
+app.post('/api/cache/check', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { query, ablation, disableCache } = req.body;
     if (!query) return res.status(400).json({ error: 'Query required' });
@@ -2102,7 +2116,7 @@ app.post('/api/cache/check', requireAuth, async (req: Request, res: Response) =>
   }
 });
 
-app.post('/api/cache/save', requireAuth, async (req: Request, res: Response) => {
+app.post('/api/cache/save', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { query, response } = req.body;
     if (!query || !response) return res.status(400).json({ error: 'Query and response required' });

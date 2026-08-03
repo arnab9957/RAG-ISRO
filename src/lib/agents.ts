@@ -102,9 +102,13 @@ export class IRSARGOOrchestrator {
 
     // --- Semantic Cache Check ---
     try {
+      const token = localStorage.getItem('irsargo_token');
       const cacheRes = await fetch('http://localhost:3001/api/cache/check', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ query })
       });
       if (cacheRes.ok) {
