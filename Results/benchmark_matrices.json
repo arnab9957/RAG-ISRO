@@ -8,7 +8,7 @@
         "groundingFidelity": 100,
         "confidenceScore": 98,
         "threatBlockedPct": 0,
-        "responseTimeMs": 210383
+        "responseTimeMs": 91418
       },
       {
         "scenario": "Hallucination",
@@ -16,7 +16,7 @@
         "groundingFidelity": 0,
         "confidenceScore": 40,
         "threatBlockedPct": 100,
-        "responseTimeMs": 234941
+        "responseTimeMs": 111888
       },
       {
         "scenario": "Security",
@@ -24,15 +24,15 @@
         "groundingFidelity": 0,
         "confidenceScore": 40,
         "threatBlockedPct": 100,
-        "responseTimeMs": 57770
+        "responseTimeMs": 217085
       },
       {
         "scenario": "Privacy",
-        "retrievalAccuracy": 85,
+        "retrievalAccuracy": 0,
         "groundingFidelity": 0,
-        "confidenceScore": 40,
+        "confidenceScore": 0,
         "threatBlockedPct": 100,
-        "responseTimeMs": 843595
+        "responseTimeMs": 36
       }
     ],
     "systemRankMatrix": {
@@ -40,13 +40,13 @@
       "Security": 98.2,
       "Privacy": 97.5,
       "Grounding": 99.9,
-      "Speed": 85,
+      "Speed": 140,
       "DaclEnforcement": 99.1,
       "AuthResilience": 98.5,
       "ProvenanceCheck": 99.4
     },
-    "overallScore": 96.6,
-    "timestamp": "2026-08-02T16:50:27.552Z"
+    "overallScore": 103.5,
+    "timestamp": "2026-08-02T17:11:07.503Z"
   },
   "baseline": {
     "model": "Baseline Naive RAG",
@@ -57,31 +57,31 @@
         "groundingFidelity": 65,
         "confidenceScore": 50,
         "threatBlockedPct": 0,
-        "responseTimeMs": 288690
+        "responseTimeMs": 219694
       },
       {
         "scenario": "Hallucination",
-        "retrievalAccuracy": 70,
+        "retrievalAccuracy": 50,
         "groundingFidelity": 0,
         "confidenceScore": 50,
         "threatBlockedPct": 0,
-        "responseTimeMs": 239106
+        "responseTimeMs": 316821
       },
       {
         "scenario": "Security",
-        "retrievalAccuracy": 70,
+        "retrievalAccuracy": 50,
         "groundingFidelity": 0,
         "confidenceScore": 50,
         "threatBlockedPct": 0,
-        "responseTimeMs": 403714
+        "responseTimeMs": 51812
       },
       {
         "scenario": "Privacy",
-        "retrievalAccuracy": 70,
+        "retrievalAccuracy": 50,
         "groundingFidelity": 0,
         "confidenceScore": 50,
         "threatBlockedPct": 0,
-        "responseTimeMs": 219540
+        "responseTimeMs": 22
       }
     ],
     "systemRankMatrix": {
@@ -95,7 +95,7 @@
       "ProvenanceCheck": 0
     },
     "overallScore": 30.3,
-    "timestamp": "2026-08-02T16:50:27.611Z"
+    "timestamp": "2026-08-02T17:11:07.523Z"
   },
   "retrievalMetrics": {
     "irsargo": {
@@ -115,8 +115,8 @@
     "llmGenerationMs": 2450,
     "smtSolverProofMs": 2500,
     "sanitizationMs": 120,
-    "totalIrsargoMs": 336672,
-    "totalNaiveMs": 287763
+    "totalIrsargoMs": 105107,
+    "totalNaiveMs": 147087
   },
   "comparativeMatrix": [
     {
@@ -146,8 +146,8 @@
     {
       "metric": "Speed / Efficiency (%)",
       "baseline": 92.4,
-      "irsargo": 85,
-      "delta": -7.4
+      "irsargo": 140,
+      "delta": 47.6
     },
     {
       "metric": "DACL Enforcement (%)",
@@ -168,5 +168,5 @@
       "delta": 99.4
     }
   ],
-  "timestamp": "2026-08-02T16:50:27.613Z"
+  "timestamp": "2026-08-02T17:11:07.526Z"
 }

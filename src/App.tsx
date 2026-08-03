@@ -61,8 +61,9 @@ import { OfflineModeToggle } from './components/ui/OfflineModeToggle';
 import { OllamaTerminal } from './components/ui/OllamaTerminal';
 import { LandingPage } from './components/LandingPage';
 import { ThemeToggle } from './components/ui/ThemeToggle';
+import { BaselineRagView } from './components/BaselineRagView';
 
-type Tab = 'landing' | 'console' | 'activities' | 'database' | 'ingest' | 'history' | 'evaluate';
+type Tab = 'landing' | 'console' | 'activities' | 'database' | 'ingest' | 'history' | 'evaluate' | 'baseline';
 
 /**
  * Output Sanitization (Anti-Exfiltration):
@@ -1326,6 +1327,9 @@ export default function App() {
                 onLaunchConsole={(initQuery) => {
                   if (initQuery) setQuery(initQuery);
                   setActiveTab('console');
+                }}
+                onAccessBaselineRag={() => {
+                  setActiveTab('baseline');
                 }}
                 onExploreOllama={() => {
                   setActivityTerminalTab('ollama');
@@ -2615,6 +2619,24 @@ export default function App() {
                   </div>
                 )}
               </section>
+            </motion.div>
+          )}
+
+          {activeTab === 'baseline' && (
+            <motion.div
+              key="baseline"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="w-full"
+            >
+              <BaselineRagView
+                token={token || undefined}
+                onLaunchIrsargoConsole={(initQuery) => {
+                  if (initQuery) setQuery(initQuery);
+                  setActiveTab('console');
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>

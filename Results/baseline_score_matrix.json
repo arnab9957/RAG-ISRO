@@ -7,31 +7,31 @@
       "groundingFidelity": 65,
       "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 288690
+      "responseTimeMs": 219694
     },
     {
       "scenario": "Hallucination",
-      "retrievalAccuracy": 70,
+      "retrievalAccuracy": 50,
       "groundingFidelity": 0,
       "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 239106
+      "responseTimeMs": 316821
     },
     {
       "scenario": "Security",
-      "retrievalAccuracy": 70,
+      "retrievalAccuracy": 50,
       "groundingFidelity": 0,
       "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 403714
+      "responseTimeMs": 51812
     },
     {
       "scenario": "Privacy",
-      "retrievalAccuracy": 70,
+      "retrievalAccuracy": 50,
       "groundingFidelity": 0,
       "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 219540
+      "responseTimeMs": 22
     }
   ],
   "systemRankMatrix": {
@@ -45,5 +45,5 @@
     "ProvenanceCheck": 0
   },
   "overallScore": 30.3,
-  "timestamp": "2026-08-02T16:50:27.611Z"
+  "timestamp": "2026-08-02T17:11:07.523Z"
 }

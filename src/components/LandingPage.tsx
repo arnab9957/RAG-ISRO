@@ -12,6 +12,7 @@ interface LandingPageProps {
   onLaunchConsole: (initialQuery?: string) => void;
   onExploreOllama: () => void;
   onViewDatabase: () => void;
+  onAccessBaselineRag?: () => void;
   effectiveUser?: any;
   onSignIn?: () => void;
   onLogout?: () => void;
@@ -23,6 +24,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onLaunchConsole,
   onExploreOllama,
   onViewDatabase,
+  onAccessBaselineRag,
   effectiveUser,
   onSignIn,
   onLogout,
@@ -67,6 +69,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* Right: Theme Toggle & Sign In / User Profile */}
         <div className="flex items-center gap-4">
           <ThemeToggle />
+
+          {onAccessBaselineRag && (
+            <button
+              type="button"
+              onClick={onAccessBaselineRag}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-950/60 hover:bg-red-900/60 border border-red-500/40 text-red-300 font-mono text-xs font-bold transition shadow-lg hover:scale-105 cursor-pointer"
+            >
+              <Layers className="w-3.5 h-3.5 text-red-400" /> Baseline RAG
+            </button>
+          )}
 
           {!effectiveUser ? (
             <button
@@ -180,10 +192,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--bg-surface)] border border-[var(--border-structure)] text-[var(--accent-cyan)] text-xs font-mono uppercase tracking-widest mb-8 backdrop-blur-md panel-shadow-box"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--bg-surface)] border border-[var(--border-structure)] shadow-lg backdrop-blur-xl mb-8 group hover:border-[var(--accent-cyan)] transition-all cursor-pointer"
         >
-          <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
-          <Rocket className="w-4 h-4 text-orange-400" /> IRSARGO • ISRO Multi-Agent RAG Intelligence Platform
+          <Sparkles className="w-4 h-4 text-orange-400 animate-pulse" />
+          <span className="text-xs font-mono text-[var(--text-main)] tracking-wide">
+            Multi-Agent SMT Formal Logic RAG Architecture
+          </span>
+          <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] group-hover:translate-x-1 transition-transform" />
         </motion.div>
 
         {/* Hero Title */}
@@ -191,11 +206,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight max-w-5xl leading-tight mb-6 text-[var(--text-main)]"
+          className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight"
         >
-          Autonomous Space Intelligence & <br />
-          <span className="bg-gradient-to-r from-orange-400 via-amber-300 to-[var(--accent-cyan)] bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(56,189,248,0.4)]">
-            Multi-Agent Swarm Reasoning
+          Zero-Trust Formal Logic <br className="hidden sm:inline" />
+          <span className="bg-gradient-to-r from-orange-400 via-amber-300 to-cyan-400 bg-clip-text text-transparent filter drop-shadow-lg">
+            Space Mission RAG Engine
           </span>
         </motion.h1>
 
@@ -204,7 +219,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="text-base sm:text-xl text-[var(--text-muted)] max-w-3xl font-light leading-relaxed mb-10 text-balance"
+          className="text-base sm:text-xl text-[var(--text-muted)] max-w-3xl mb-12 font-sans font-normal leading-relaxed"
         >
           Air-gapped offline RAG engine powered by local <span className="text-[var(--accent-cyan)] font-semibold">Ollama Moondream2 VLM</span> page parsing, <span className="text-orange-400 font-semibold">ChromaDB Vector Retrieval</span>, and Keycloak Enterprise Security.
         </motion.p>
@@ -225,6 +240,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Launch Intelligence Console
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
+
+          {onAccessBaselineRag && (
+            <button
+              type="button"
+              onClick={onAccessBaselineRag}
+              className="px-7 py-4 rounded-2xl bg-gradient-to-r from-red-950/80 via-rose-900/60 to-red-900/80 hover:from-red-900 hover:to-rose-800 border border-red-500/40 text-red-300 font-mono text-sm font-semibold flex items-center gap-2.5 backdrop-blur-xl transition-all duration-300 hover:scale-105 cursor-pointer shadow-lg shadow-red-950/40"
+            >
+              <Layers className="w-5 h-5 text-red-400" />
+              Access Baseline Naive RAG
+            </button>
+          )}
 
           <button
             type="button"
