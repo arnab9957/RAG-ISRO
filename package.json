@@ -10,7 +10,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "docker:up": "docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up -d chromadb keycloak keycloak-db openldap phpldapadmin",
-    "ollama:serve": "ollama serve",
+    "ollama:serve": "ollama serve || exit 0",
     "server:backend": "tsx server/index.ts",
     "server": "npm run docker:up && concurrently -k -n \"OLLAMA,BACKEND,FRONTEND\" -c \"yellow,cyan,magenta\" \"npm run ollama:serve\" \"npm run server:backend\" \"npm run dev\"",
     "start": "npm run server",
