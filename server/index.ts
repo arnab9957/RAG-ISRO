@@ -2171,7 +2171,7 @@ app.get('/benchmark', (req: Request, res: Response) => {
 
 app.post('/api/benchmark/run', async (req: Request, res: Response) => {
   try {
-    const report = await executeRealDynamicBenchmark(1250);
+    const report = await executeRealDynamicBenchmark(2000);
 
     const htmlFragment = `
       <!-- Stat Cards Grid -->
@@ -2179,7 +2179,7 @@ app.post('/api/benchmark/run', async (req: Request, res: Response) => {
         <div style="background: rgba(39, 39, 42, 0.5); border: 1px solid rgba(63, 63, 70, 0.4); border-radius: 12px; padding: 18px;">
           <div style="color: #a1a1aa; font-size: 12px; font-weight: 500; text-transform: uppercase;">Tracked Experiments</div>
           <div style="font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 700; color: #34d399; margin: 6px 0 2px 0;">${report.cumulativeTotalTracked}</div>
-          <div style="font-size: 12px; color: #a1a1aa;">Pilot: 20 | Benchmark: ${report.experimentCount}</div>
+          <div style="font-size: 12px; color: #a1a1aa;">Baseline: 1,270 | Dynamic Batch: ${report.experimentCount}</div>
         </div>
         <div style="background: rgba(39, 39, 42, 0.5); border: 1px solid rgba(63, 63, 70, 0.4); border-radius: 12px; padding: 18px;">
           <div style="color: #a1a1aa; font-size: 12px; font-weight: 500; text-transform: uppercase;">Annotation Agreement</div>

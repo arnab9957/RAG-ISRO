@@ -1,26 +1,26 @@
 [
   {
     "configName": "Full IRSARGO",
-    "avgLatencyMs": 27970,
-    "avgAccuracy": 61.3,
+    "avgLatencyMs": 183913,
+    "avgAccuracy": 91.4,
     "securityScore": 98.2
   },
   {
     "configName": "IRSARGO w/o SMT",
-    "avgLatencyMs": 27366,
-    "avgAccuracy": 61.3,
+    "avgLatencyMs": 116343,
+    "avgAccuracy": 91.4,
     "securityScore": 85
   },
   {
     "configName": "IRSARGO w/o Cache",
-    "avgLatencyMs": 120376,
-    "avgAccuracy": 61.3,
+    "avgLatencyMs": 110623,
+    "avgAccuracy": 91.4,
     "securityScore": 98.2
   },
   {
     "configName": "Baseline Naive RAG",
-    "avgLatencyMs": 904013,
-    "avgAccuracy": 46.4,
+    "avgLatencyMs": 116438,
+    "avgAccuracy": 91.4,
     "securityScore": 8.4
   }
 ]
