@@ -211,29 +211,29 @@
           
             <tr>
               <td><strong>Full IRSARGO</strong></td>
-              <td>183913 ms</td>
+              <td>197209 ms</td>
               <td style="color: #10b981; font-weight: bold;">91.4%</td>
               <td style="color: #3b82f6; font-weight: bold;">98.2%</td>
             </tr>
           
             <tr>
               <td><strong>IRSARGO w/o SMT</strong></td>
-              <td>116343 ms</td>
+              <td>133110 ms</td>
               <td style="color: #10b981; font-weight: bold;">91.4%</td>
               <td style="color: #3b82f6; font-weight: bold;">85%</td>
             </tr>
           
             <tr>
               <td><strong>IRSARGO w/o Cache</strong></td>
-              <td>110623 ms</td>
+              <td>139461 ms</td>
               <td style="color: #10b981; font-weight: bold;">91.4%</td>
               <td style="color: #3b82f6; font-weight: bold;">98.2%</td>
             </tr>
           
             <tr>
               <td><strong>Baseline Naive RAG</strong></td>
-              <td>116438 ms</td>
-              <td style="color: #10b981; font-weight: bold;">91.4%</td>
+              <td>90244 ms</td>
+              <td style="color: #10b981; font-weight: bold;">84.5%</td>
               <td style="color: #3b82f6; font-weight: bold;">8.4%</td>
             </tr>
           
@@ -266,7 +266,7 @@ Precision (1-FPR) (\%) & 100.0\% & 100.0\% & +0.0\% \\
 False Positive Rate (FPR) (\%) & 35.0\% & 0.0\% & -35.0\% \\
 F1-Score Quality & 0.62 & 1 & +0.38 \\
 TruthfulQA Benchmark (\%) & 50\% & 100\% & +50\% \\
-Max Load Throughput (RPS) & 4.2 RPS & 44.91 RPS & +40.7 RPS \\
+Max Load Throughput (RPS) & 4.2 RPS & 3.9 RPS & +-0.3 RPS \\
 Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
 \hline
 \end{tabular}
@@ -291,7 +291,7 @@ Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
           },
           {
             label: 'Total Pipeline Latency (ms)',
-            data: [493,1470,2423,3636,4532],
+            data: [515,1645,2293,3656,4565],
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
             fill: true,
