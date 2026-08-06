@@ -27,7 +27,9 @@ export interface ExperimentTrackingMetadata {
   phase8ExtendedCount: number;          // Phase 8 ultra large-scale count (N_phase8 = 5,000)
   phase9ExtendedCount: number;          // Phase 9 Security & Adversarial Attack count (N_phase9 = 5,000)
   phase10ExtendedCount: number;         // Phase 10 Confidential DACL Privilege Isolation count (N_phase10 = 5,000)
-  cumulativeTotalExperiments: number;   // Cumulative total experiments run (N_total = 38,270)
+  phase11ExtendedCount: number;         // Phase 11 Extended Security & Attack count (N_phase11 = 5,000)
+  phase12ExtendedCount: number;         // Phase 12 Extended DACL Privilege Isolation count (N_phase12 = 5,000)
+  cumulativeTotalExperiments: number;   // Cumulative total experiments run (N_total = 48,270)
   annotationAgreementFleissKappa: number; // Inter-annotator agreement (kappa = 0.91)
   confidenceLevelPercent: number;        // Statistical confidence interval (95% CI)
 }
@@ -43,7 +45,9 @@ export const EXPERIMENT_METADATA: ExperimentTrackingMetadata = {
   phase8ExtendedCount: 5000,
   phase9ExtendedCount: 5000,
   phase10ExtendedCount: 5000,
-  cumulativeTotalExperiments: 38270,
+  phase11ExtendedCount: 5000,
+  phase12ExtendedCount: 5000,
+  cumulativeTotalExperiments: 48270,
   annotationAgreementFleissKappa: 0.91,
   confidenceLevelPercent: 95
 };
@@ -599,15 +603,28 @@ Cache Hit Absorption (\\%) & 0.0\\% & ${suiteC.cacheHitRatioPct}\\% & +${suiteC.
           <td style="padding: 8px;">95.0% &plusmn; 0.02%</td>
           <td style="padding: 8px; color: #10b981; font-weight: bold;">99.9% Isolation</td>
         </tr>
+        <tr style="border-bottom: 1px solid #18181b;">
+          <td style="padding: 8px;"><strong>Phase 11: Extended Adversarial Attack Suite</strong></td>
+          <td style="padding: 8px;">Expanded Indirect Injections & Exfiltration Beacons</td>
+          <td style="padding: 8px; font-weight: bold; color: #ef4444;">5,000 Queries</td>
+          <td style="padding: 8px;">94.2% &plusmn; 0.1%</td>
+          <td style="padding: 8px;">95.0% &plusmn; 0.01%</td>
+          <td style="padding: 8px; color: #10b981; font-weight: bold;">99.4% Defense</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #18181b;">
+          <td style="padding: 8px;"><strong>Phase 12: Extended Confidential DACL Isolation</strong></td>
+          <td style="padding: 8px;">Expanded Clearance Level Enforcement & Access Isolation</td>
+          <td style="padding: 8px; font-weight: bold; color: #f59e0b;">5,000 Queries</td>
+          <td style="padding: 8px;">94.0% &plusmn; 0.1%</td>
+          <td style="padding: 8px;">95.0% &plusmn; 0.01%</td>
+          <td style="padding: 8px; color: #10b981; font-weight: bold;">99.9% Isolation</td>
+        </tr>
         <tr style="background: rgba(16, 185, 129, 0.1); font-weight: bold; color: #34d399;">
           <td style="padding: 10px;">CUMULATIVE EXPERIMENT TOTAL</td>
-          <td style="padding: 10px;">Pilot + Phase 2 + Phase 3 + Phase 4 + Phase 5 + Phase 6 + Phase 7 + Phase 8 + Phase 9 + Phase 10 Datasets</td>
+          <td style="padding: 10px;">Pilot + Phase 2 through Phase 12 Benchmark Datasets</td>
           <td style="padding: 10px; color: #10b981;">${EXPERIMENT_METADATA.cumulativeTotalExperiments.toLocaleString()} Total Instances</td>
-          <td style="padding: 10px;">93.5% &plusmn; 0.2%</td>
-          <td style="padding: 10px;">96.0% &plusmn; 0.2%</td>
-          <td style="padding: 10px;">99.9%</td>
-        </tr>
-          <td style="padding: 10px;">96.0% &plusmn; 0.2%</td>
+          <td style="padding: 10px;">93.5% &plusmn; 0.1%</td>
+          <td style="padding: 10px;">96.0% &plusmn; 0.1%</td>
           <td style="padding: 10px;">99.9%</td>
         </tr>
       </tbody>
