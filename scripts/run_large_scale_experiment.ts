@@ -330,6 +330,10 @@ export async function executeRealDynamicBenchmark(totalQueries: number = 10000, 
     baselinePIDR.push(basePidr);
     irsargoPIDR.push(irsPidr);
     latenciesMs.push(latency);
+
+    if ((i + 1) % 1000 === 0 || i === 0) {
+      console.log(`  [⚡ Live Solver Exec ${i + 1}/${dataset.length}] ID: ${item.id} | Cat: ${item.category} | Z3 SMT SAT: ${smtResult.isSatisfiable} | ColBERT MaxSim: ${gColbertResult.graphGuidedMaxSimScore.toFixed(3)} | Latency: ${latency}ms`);
+    }
   }
 
   // Compute exact statistical summaries

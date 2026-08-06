@@ -1,8 +1,8 @@
 {
   "concurrentRequests": 15,
-  "totalTimeMs": 139,
-  "rps": 107.91,
-  "avgLatencyMs": 9.3,
-  "p95LatencyMs": 11.2,
+  "totalTimeMs": 181,
+  "rps": 82.87,
+  "avgLatencyMs": 12.1,
+  "p95LatencyMs": 14.5,
   "cacheHitRatioPct": 0
 }
