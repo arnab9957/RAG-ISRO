@@ -2222,7 +2222,7 @@ app.get('/benchmark', (req: Request, res: Response) => {
 
   app.post('/api/benchmark/run', async (req: Request, res: Response) => {
   try {
-    const report = await executeRealDynamicBenchmark(10000, 38271);
+    const report = await executeRealDynamicBenchmark(50000, 100271);
 
     const htmlFragment = `
       <!-- Stat Cards Grid -->
