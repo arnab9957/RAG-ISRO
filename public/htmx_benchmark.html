@@ -150,7 +150,7 @@
       <div class="brand-logo">IR</div>
       <div>
         <div class="title-main">IRSARGO Interactive Benchmark Dashboard</div>
-        <div class="title-sub">HTMX Dynamic Execution • Real Dynamic Verification Engine • N = 3,270 Cumulative Experiments</div>
+        <div class="title-sub">HTMX Dynamic Execution • Real Dynamic Verification Engine • N = 38,270 Cumulative Experiments</div>
       </div>
     </div>
     
@@ -160,7 +160,7 @@
       hx-target="#benchmark-results"
       hx-indicator="#loading-spinner">
       <span class="spinner htmx-indicator" id="loading-spinner"></span>
-      <span>⚡ Execute Additional Batch (N = 1,000)</span>
+      <span>⚡ Execute Dynamic Batch (N = 10,000)</span>
     </button>
   </header>
 
@@ -169,7 +169,7 @@
     <div class="card">
       <div class="card-title">🔬 Experimental Rigor & HTMX Integration Overview</div>
       <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">
-        Click the button above to trigger an asynchronous HTMX benchmark request. The backend executes real <strong>Z3 SMT WASM constraint solving</strong>, <strong>Graph-Guided ColBERT reranking</strong>, and <strong>PII/Anti-Exfiltration sanitization</strong> across 2,000 dynamic test instances (Cumulative Total N = 3,270 including 1,270 prior baseline runs), rendering statistical output with 95% Confidence Intervals and Welch's t-test p-values.
+        Click the button above to trigger an asynchronous HTMX benchmark request. The backend executes real <strong>Z3 SMT WASM constraint solving</strong>, <strong>Graph-Guided ColBERT reranking</strong>, and <strong>PII/Anti-Exfiltration sanitization</strong> across 10,000 dynamic test instances (Cumulative Total N = 38,270 queries), rendering statistical output with 95% Confidence Intervals, Fleiss' Kappa (&kappa; = 0.91), and Welch's t-test p-values.
       </p>
     </div>
 

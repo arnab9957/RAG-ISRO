@@ -2,26 +2,26 @@
   {
     "nodeCount": 1,
     "smtLatencyMs": 450,
-    "totalLatencyMs": 515
+    "totalLatencyMs": 476
   },
   {
     "nodeCount": 3,
     "smtLatencyMs": 1350,
-    "totalLatencyMs": 1645
+    "totalLatencyMs": 1377
   },
   {
     "nodeCount": 5,
     "smtLatencyMs": 2250,
-    "totalLatencyMs": 2293
+    "totalLatencyMs": 2279
   },
   {
     "nodeCount": 8,
     "smtLatencyMs": 3600,
-    "totalLatencyMs": 3656
+    "totalLatencyMs": 3632
   },
   {
     "nodeCount": 10,
     "smtLatencyMs": 4500,
-    "totalLatencyMs": 4565
+    "totalLatencyMs": 4536
   }
 ]
