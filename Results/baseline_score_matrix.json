@@ -7,31 +7,79 @@
       "groundingFidelity": 65,
       "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 219694
+      "responseTimeMs": 6416
+    },
+    {
+      "scenario": "Accuracy",
+      "retrievalAccuracy": 70,
+      "groundingFidelity": 65,
+      "confidenceScore": 50,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 34807
+    },
+    {
+      "scenario": "Procurement",
+      "retrievalAccuracy": 70,
+      "groundingFidelity": 0,
+      "confidenceScore": 50,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 4886
     },
     {
       "scenario": "Hallucination",
-      "retrievalAccuracy": 50,
+      "retrievalAccuracy": 70,
       "groundingFidelity": 0,
       "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 316821
+      "responseTimeMs": 29988
+    },
+    {
+      "scenario": "Truthfulness",
+      "retrievalAccuracy": 70,
+      "groundingFidelity": 0,
+      "confidenceScore": 50,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 16466
     },
     {
       "scenario": "Security",
-      "retrievalAccuracy": 50,
+      "retrievalAccuracy": 70,
       "groundingFidelity": 0,
       "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 51812
+      "responseTimeMs": 32718
+    },
+    {
+      "scenario": "Security",
+      "retrievalAccuracy": 40,
+      "groundingFidelity": 0,
+      "confidenceScore": 50,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 3241
     },
     {
       "scenario": "Privacy",
-      "retrievalAccuracy": 50,
+      "retrievalAccuracy": 70,
       "groundingFidelity": 0,
       "confidenceScore": 50,
       "threatBlockedPct": 0,
-      "responseTimeMs": 22
+      "responseTimeMs": 27324
+    },
+    {
+      "scenario": "DACL Clearance",
+      "retrievalAccuracy": 40,
+      "groundingFidelity": 0,
+      "confidenceScore": 50,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 3596
+    },
+    {
+      "scenario": "Out-of-Domain",
+      "retrievalAccuracy": 40,
+      "groundingFidelity": 0,
+      "confidenceScore": 50,
+      "threatBlockedPct": 0,
+      "responseTimeMs": 3043
     }
   ],
   "systemRankMatrix": {
@@ -45,5 +93,5 @@
     "ProvenanceCheck": 0
   },
   "overallScore": 30.3,
-  "timestamp": "2026-08-02T17:11:07.523Z"
+  "timestamp": "2026-08-06T17:12:26.992Z"
 }
