@@ -23,6 +23,8 @@ env/
 *.so
 datasets/
 Results/
+chroma_data/
+non_essential_files/
 
 # JavaScript
 # Add JavaScript-specific ignores here
