@@ -44,6 +44,16 @@
     background-attachment: fixed;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
+
+  [data-theme="light"] body,
+  .light body,
+  html[data-theme="light"] body,
+  html.light body {
+    background-color: var(--bg-base);
+    background-image: 
+      radial-gradient(circle at 50% -20%, rgba(2, 132, 199, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 0% 100%, rgba(203, 213, 225, 0.2) 0%, transparent 50%);
+  }
 }
 
 .isro-glass {
@@ -80,16 +90,18 @@
   @apply list-decimal pl-5 mb-3 space-y-1;
 }
 .markdown-content li {
-  @apply text-zinc-300;
+  color: var(--text-main);
+  @apply opacity-90;
 }
 .markdown-content li > p {
   @apply mb-0;
 }
 .markdown-content strong {
-  @apply font-bold text-white;
+  color: var(--text-main);
+  @apply font-bold;
 }
 .markdown-content code {
-  @apply font-mono bg-zinc-900 border border-zinc-800 text-isro-orange px-1 py-0.5 rounded text-[11px];
+  @apply font-mono bg-zinc-900/60 border border-zinc-800 text-isro-orange px-1 py-0.5 rounded text-[11px];
 }
 .markdown-content pre {
   @apply font-mono bg-zinc-950/80 border border-zinc-800 p-3 rounded-lg overflow-x-auto my-3 text-xs leading-relaxed;
@@ -98,7 +110,8 @@
   @apply p-0 border-none bg-transparent text-zinc-300 text-xs;
 }
 .markdown-content h1, .markdown-content h2, .markdown-content h3 {
-  @apply font-display font-bold text-white mt-4 mb-2 tracking-tight;
+  color: var(--text-main);
+  @apply font-display font-bold mt-4 mb-2 tracking-tight;
 }
 .markdown-content h1 { @apply text-base; }
 .markdown-content h2 { @apply text-sm; }

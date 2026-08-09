@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Rocket, Search, Cpu, ShieldCheck, Terminal, Database, Activity, 
   ArrowRight, Shield, Layers, Zap, Globe, Sparkles, Video, Play, Pause, 
-  Volume2, VolumeX, CheckCircle2, ChevronRight, HelpCircle, Lock, LogOut, Gauge
+  Volume2, VolumeX, CheckCircle2, ChevronRight, HelpCircle, Lock, LogOut, Gauge, Github
 } from 'lucide-react';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { OfflineModeToggle } from './ui/OfflineModeToggle';
+import { LiquidButton } from './ui/liquid-glass-button';
 
 interface LandingPageProps {
   onLaunchConsole: (initialQuery?: string) => void;
@@ -46,7 +47,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     <div className="relative min-h-screen w-full text-[var(--text-main)] selection:bg-orange-500 selection:text-white flex flex-col">
       
       {/* 0. LANDING PAGE DEDICATED HEADER TOP BAR */}
-      <header className="relative z-30 w-full max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <header className="relative z-30 w-full px-6 lg:px-10 h-20 flex items-center justify-between">
         {/* Left: Landing Logo & Air-Gapped Mode Toggle */}
         <div className="flex items-center gap-6">
           <img 
@@ -57,18 +58,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {onToggleAirGappedMode && (
             <div className="hidden md:flex items-center">
-              <OfflineModeToggle
-                airGappedMode={airGappedMode}
-                onToggle={onToggleAirGappedMode}
+              <LiquidButton
+                onClick={onToggleAirGappedMode}
+                glassClassName={
+                  airGappedMode
+                    ? "bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 border-2 border-amber-200/90 shadow-[0_0_30px_rgba(245,100,2,0.85),0_0_12px_rgba(239,68,68,0.7),inset_0_2px_4px_rgba(255,255,255,0.95)] group-hover:brightness-125 group-hover:scale-105"
+                    : "bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500 border-2 border-emerald-200/90 shadow-[0_0_30px_rgba(16,185,129,0.85),0_0_12px_rgba(6,182,212,0.7),inset_0_2px_4px_rgba(255,255,255,0.95)] group-hover:brightness-125 group-hover:scale-105"
+                }
                 size="sm"
-              />
+                className="flex items-center justify-center gap-1.5 py-1.5 px-4 text-[11px] font-mono font-bold text-white shadow-xl cursor-pointer"
+              >
+                <ShieldCheck className={`w-3.5 h-3.5 ${airGappedMode ? 'text-white animate-pulse drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]' : 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]'}`} />
+                <span className="tracking-widest font-black uppercase text-[10px] text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]">
+                  {airGappedMode ? 'OFFLINE' : 'ONLINE'}
+                </span>
+              </LiquidButton>
             </div>
           )}
         </div>
 
-        {/* Right: Theme Toggle & Sign In / User Profile */}
+        {/* Right: Theme Toggle & GitHub & Sign In / User Profile */}
         <div className="flex items-center gap-4">
           <ThemeToggle />
+
+          <a
+            href="https://github.com/arnab9957/RAG-ISRO.git"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View Source Code on GitHub"
+          >
+            <LiquidButton
+              size="sm"
+              glassClassName="bg-gradient-to-r from-zinc-900/80 via-black/80 to-zinc-900/80 border border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.2)] group-hover:border-white/80 group-hover:scale-105"
+              className="flex items-center justify-center gap-1.5 py-1.5 px-3.5 text-[11px] font-mono font-bold text-white shadow-xl cursor-pointer"
+            >
+              <Github className="w-3.5 h-3.5 text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+              <span className="tracking-wider font-extrabold text-[10px] text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]">
+                GitHub
+              </span>
+            </LiquidButton>
+          </a>
 
           {onAccessBaselineRag && (
             <button
@@ -231,44 +260,56 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           transition={{ duration: 0.8, delay: 0.4 }}
           className="flex flex-wrap items-center justify-center gap-4 mb-16"
         >
-          <button
-            type="button"
+          <LiquidButton
             onClick={() => onLaunchConsole()}
-            className="group px-8 py-4 rounded-2xl bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-base flex items-center gap-3 transition-all duration-300 shadow-[0_0_30px_rgba(249,115,22,0.4)] hover:shadow-[0_0_45px_rgba(249,115,22,0.7)] hover:scale-105 cursor-pointer"
+            glassClassName="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 border-2 border-amber-200/90 shadow-[0_0_40px_rgba(245,100,2,0.85),0_0_15px_rgba(239,68,68,0.7),inset_0_2px_4px_rgba(255,255,255,0.95)] group-hover:brightness-125 group-hover:scale-105"
+            size="lg"
+            className="px-8 py-4 text-base font-bold text-white shadow-2xl cursor-pointer"
           >
-            <Rocket className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-            Launch Intelligence Console
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+            <Rocket className="w-5 h-5 text-white animate-bounce drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+            <span className="tracking-wide text-white font-extrabold drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]">
+              Launch Intelligence Console
+            </span>
+            <ArrowRight className="w-5 h-5 text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+          </LiquidButton>
 
           {onAccessBaselineRag && (
-            <button
-              type="button"
+            <LiquidButton
               onClick={onAccessBaselineRag}
-              className="px-7 py-4 rounded-2xl bg-gradient-to-r from-red-950/80 via-rose-900/60 to-red-900/80 hover:from-red-900 hover:to-rose-800 border border-red-500/40 text-red-300 font-mono text-sm font-semibold flex items-center gap-2.5 backdrop-blur-xl transition-all duration-300 hover:scale-105 cursor-pointer shadow-lg shadow-red-950/40"
+              glassClassName="bg-gradient-to-r from-red-600 via-rose-500 to-pink-600 border-2 border-rose-200/90 shadow-[0_0_35px_rgba(225,29,72,0.8),inset_0_2px_4px_rgba(255,255,255,0.95)] group-hover:brightness-125 group-hover:scale-105"
+              size="lg"
+              className="px-7 py-4 text-sm font-mono font-bold text-white shadow-xl cursor-pointer"
             >
-              <Layers className="w-5 h-5 text-red-400" />
-              Access Baseline Naive RAG
-            </button>
+              <Layers className="w-5 h-5 text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+              <span className="tracking-wide text-white font-bold drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]">
+                Access Baseline Naive RAG
+              </span>
+            </LiquidButton>
           )}
 
-          <button
-            type="button"
+          <LiquidButton
             onClick={onExploreOllama}
-            className="px-7 py-4 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-structure)] hover:border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-mono text-sm flex items-center gap-2.5 backdrop-blur-xl transition-all duration-300 hover:scale-105 cursor-pointer panel-shadow-box"
+            glassClassName="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500 border-2 border-cyan-200/90 shadow-[0_0_35px_rgba(6,182,212,0.8),inset_0_2px_4px_rgba(255,255,255,0.95)] group-hover:brightness-125 group-hover:scale-105"
+            size="lg"
+            className="px-7 py-4 text-sm font-mono font-bold text-white shadow-xl cursor-pointer"
           >
-            <Cpu className="w-5 h-5 text-[var(--accent-cyan)]" />
-            Inspect Ollama LLM Telemetry
-          </button>
+            <Cpu className="w-5 h-5 text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+            <span className="tracking-wide text-white font-bold drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]">
+              Inspect Ollama LLM Telemetry
+            </span>
+          </LiquidButton>
 
-          <button
-            type="button"
+          <LiquidButton
             onClick={onViewDatabase}
-            className="px-7 py-4 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-structure)] hover:border-purple-500/50 text-purple-400 font-mono text-sm flex items-center gap-2.5 backdrop-blur-xl transition-all duration-300 hover:scale-105 cursor-pointer panel-shadow-box"
+            glassClassName="bg-gradient-to-r from-purple-500 via-indigo-500 to-violet-600 border-2 border-purple-200/90 shadow-[0_0_35px_rgba(168,85,247,0.8),inset_0_2px_4px_rgba(255,255,255,0.95)] group-hover:brightness-125 group-hover:scale-105"
+            size="lg"
+            className="px-7 py-4 text-sm font-mono font-bold text-white shadow-xl cursor-pointer"
           >
-            <Database className="w-5 h-5 text-purple-400" />
-            Browse Knowledge Base
-          </button>
+            <Database className="w-5 h-5 text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+            <span className="tracking-wide text-white font-bold drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]">
+              Browse Knowledge Base
+            </span>
+          </LiquidButton>
         </motion.div>
 
         {/* 4. LIVE METRICS & TELEMETRY COUNTER BAR */}

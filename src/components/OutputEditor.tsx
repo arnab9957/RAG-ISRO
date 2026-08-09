@@ -28,7 +28,7 @@ export default function OutputEditor({ content }: Props) {
       try {
         // Create a dedicated child container for Milkdown
         editorDiv = document.createElement("div");
-        editorDiv.className = "milkdown markdown-content text-zinc-300 font-sans w-full";
+        editorDiv.className = "milkdown markdown-content text-white font-sans text-sm md:text-base leading-relaxed w-full font-medium drop-shadow-xs";
         containerRef.current.appendChild(editorDiv);
 
         const crepe = new Crepe({
@@ -80,8 +80,8 @@ export default function OutputEditor({ content }: Props) {
 
   if (hasError) {
     return (
-      <div className="relative border border-zinc-800 bg-zinc-950/40 rounded-xl p-6 min-h-[200px] max-h-[550px] overflow-y-auto isro-glass">
-        <div className="prose prose-invert max-w-none text-zinc-300 font-sans text-sm leading-relaxed">
+      <div className="relative border border-zinc-800 bg-black/80 rounded-xl p-6 min-h-[200px] max-h-[550px] overflow-y-auto shadow-2xl">
+        <div className="prose prose-invert max-w-none text-white font-sans text-sm md:text-base leading-relaxed font-medium">
           <ReactMarkdown>{content}</ReactMarkdown>
         </div>
       </div>
@@ -89,12 +89,12 @@ export default function OutputEditor({ content }: Props) {
   }
 
   return (
-    <div className="relative border border-zinc-800 bg-zinc-950/40 rounded-xl p-6 min-h-[250px] max-h-[550px] overflow-y-auto isro-glass">
-      <div className="absolute top-3 right-4 flex items-center gap-1.5 text-[8px] font-mono text-zinc-500 uppercase tracking-widest pointer-events-none z-10">
+    <div className="relative border border-zinc-800 bg-black/80 rounded-xl p-6 min-h-[250px] max-h-[550px] overflow-y-auto shadow-2xl">
+      <div className="absolute top-3 right-4 flex items-center gap-1.5 text-[9px] font-mono text-orange-400 font-bold uppercase tracking-widest pointer-events-none z-10">
         <span className="w-1.5 h-1.5 rounded-full bg-isro-orange animate-pulse" />
         Interactive Synthesis Editor
       </div>
-      <div ref={containerRef} className="milkdown markdown-content text-zinc-300 font-sans" />
+      <div ref={containerRef} className="milkdown markdown-content text-white font-sans text-sm md:text-base font-medium" />
     </div>
   );
 }
