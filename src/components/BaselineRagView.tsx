@@ -5,6 +5,7 @@ import {
   Terminal, ArrowRight, RefreshCcw, Layers, Zap, Info, Shield, Eye
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { GeneratingGlobe } from './ui/generating-globe';
 
 interface BaselineRagViewProps {
   token?: string;

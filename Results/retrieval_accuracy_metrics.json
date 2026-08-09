@@ -464,5 +464,37 @@
     "overallConfidence": 0.989,
     "groundingFidelity": 1,
     "sourcesCount": 10
+  },
+  {
+    "timestamp": "2026-08-09T16:42:22.317Z",
+    "query": "about any mission in ISRO",
+    "retrievalAccuracy": 0.9203,
+    "overallConfidence": 0.9734,
+    "groundingFidelity": 1,
+    "sourcesCount": 9
+  },
+  {
+    "timestamp": "2026-08-09T16:47:05.302Z",
+    "query": "about any recent  mission in ISRO in details ",
+    "retrievalAccuracy": 0.9043,
+    "overallConfidence": 0.8848,
+    "groundingFidelity": 1,
+    "sourcesCount": 11
+  },
+  {
+    "timestamp": "2026-08-09T16:53:23.253Z",
+    "query": "What are Developmental activities through academia and industry?",
+    "retrievalAccuracy": 0.9236,
+    "overallConfidence": 0.919,
+    "groundingFidelity": 1,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-08-09T16:54:02.117Z",
+    "query": "What are Developmental activities through academia and industry?",
+    "retrievalAccuracy": 0.9119,
+    "overallConfidence": 0.9151,
+    "groundingFidelity": 1,
+    "sourcesCount": 13
   }
 ]

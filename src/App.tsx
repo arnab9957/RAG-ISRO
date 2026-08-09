@@ -40,7 +40,8 @@ import {
   Shield,
   CheckCircle2,
   X,
-  Sparkles
+  Sparkles,
+  Github
 } from 'lucide-react';
 import { AgentAction, Domain, IRSARGOResponse, AdvancedFilters, HistoryItem, ChatMessage } from './types';
 import { IRSARGOOrchestrator } from './lib/agents';
@@ -48,6 +49,8 @@ import AgentActionItem from './components/AgentActionItem';
 import TraceAudit from './components/TraceAudit';
 import KnowledgeBaseView from './components/KnowledgeBaseView';
 import HistoryView from './components/HistoryView';
+import { LiquidButton } from './components/ui/liquid-glass-button';
+import { GeneratingGlobe } from './components/ui/generating-globe';
 import IngestionLoader from './components/ui/ingestion-loader';
 import { FileUpload } from './components/ui/file-upload';
 import IngestionLogsPanel from './components/ui/ingestion-logs-panel';
@@ -1239,7 +1242,7 @@ export default function App() {
       {/* Main App Header (Hidden on Landing Page) */}
       {activeTab !== 'landing' && (
         <header className="relative z-10 border-b border-[var(--border-structure)] bg-[var(--glass-bg)] backdrop-blur-xl sticky top-0 transition-colors duration-300">
-          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="w-full px-6 lg:px-10 h-20 flex items-center justify-between">
             {/* Left Group: Logo + Privacy Mode Toggle */}
             <div className="flex items-center gap-6">
               <img 
@@ -1252,16 +1255,26 @@ export default function App() {
 
               {/* Air-Gapped / Sever Online Cloud Services Toggle Button */}
               <div className="hidden md:flex items-center">
-                <OfflineModeToggle
-                  airGappedMode={airGappedMode}
-                  onToggle={toggleAirGappedMode}
+                <LiquidButton
+                  onClick={toggleAirGappedMode}
+                  glassClassName={
+                    airGappedMode
+                      ? "bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 border-2 border-amber-200/90 shadow-[0_0_30px_rgba(245,100,2,0.85),0_0_12px_rgba(239,68,68,0.7),inset_0_2px_4px_rgba(255,255,255,0.95)] group-hover:brightness-125 group-hover:scale-105"
+                      : "bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500 border-2 border-emerald-200/90 shadow-[0_0_30px_rgba(16,185,129,0.85),0_0_12px_rgba(6,182,212,0.7),inset_0_2px_4px_rgba(255,255,255,0.95)] group-hover:brightness-125 group-hover:scale-105"
+                  }
                   size="sm"
-                />
+                  className="flex items-center justify-center gap-1.5 py-1.5 px-4 text-[11px] font-mono font-bold text-white shadow-xl cursor-pointer"
+                >
+                  <ShieldCheck className={`w-3.5 h-3.5 ${airGappedMode ? 'text-white animate-pulse drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]' : 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]'}`} />
+                  <span className="tracking-widest font-black uppercase text-[10px] text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]">
+                    {airGappedMode ? 'OFFLINE' : 'ONLINE'}
+                  </span>
+                </LiquidButton>
               </div>
             </div>
             
-            {/* Right Group: Navigation Tabs + Theme Toggle + User Profile Session */}
-            <div className="flex items-center gap-4">
+            {/* Center Group: Navigation Tabs */}
+            <div className="hidden lg:flex items-center justify-center">
               <NavMenu
                 items={[
                   { id: 'console', label: 'console' },
@@ -1274,8 +1287,44 @@ export default function App() {
                 activeTab={activeTab}
                 onSelectTab={(id) => handleTabSelect(id as Tab)}
               />
+            </div>
+
+            {/* Right Group: Theme Toggle + GitHub + User Profile Session */}
+            <div className="flex items-center gap-4">
+              <div className="flex lg:hidden items-center">
+                <NavMenu
+                  items={[
+                    { id: 'console', label: 'console' },
+                    { id: 'activities', label: 'activities' },
+                    { id: 'database', label: 'nodes' },
+                    { id: 'ingest', label: 'ingest' },
+                    { id: 'history', label: 'history' },
+                    { id: 'evaluate', label: 'evaluate' }
+                  ]}
+                  activeTab={activeTab}
+                  onSelectTab={(id) => handleTabSelect(id as Tab)}
+                />
+              </div>
 
               <ThemeToggle />
+
+              <a
+                href="https://github.com/arnab9957/RAG-ISRO.git"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="View Source Code on GitHub"
+              >
+                <LiquidButton
+                  size="sm"
+                  glassClassName="bg-gradient-to-r from-zinc-900/80 via-black/80 to-zinc-900/80 border border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.2)] group-hover:border-white/80 group-hover:scale-105"
+                  className="flex items-center justify-center gap-1.5 py-1.5 px-3.5 text-[11px] font-mono font-bold text-white shadow-xl cursor-pointer"
+                >
+                  <Github className="w-3.5 h-3.5 text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+                  <span className="tracking-wider font-extrabold text-[10px] text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]">
+                    GitHub
+                  </span>
+                </LiquidButton>
+              </a>
 
               {!effectiveUser ? (
                 <button
@@ -1376,25 +1425,25 @@ export default function App() {
               <div className="order-last lg:order-0 lg:col-span-4 space-y-6">
                 {/* Database Metrics Card */}
                 <section className="isro-glass p-6 rounded-2xl space-y-4">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white flex items-center gap-2 drop-shadow-sm">
                     <Database className="w-4 h-4 text-isro-orange animate-pulse" />
                     ChromaDB Knowledge Base
                   </h2>
-                  <div className="bg-black/40 border border-zinc-900 rounded-xl p-4 space-y-3 font-mono text-[10px]">
-                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
-                      <span className="text-zinc-500">DATABASE STATUS:</span>
-                      <span className="text-emerald-500 font-bold flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="bg-black/40 border border-white/20 rounded-xl p-4 space-y-3 font-mono text-[10px] backdrop-blur-md">
+                    <div className="flex justify-between items-center pb-2 border-b border-white/15">
+                      <span className="text-zinc-300 font-medium">DATABASE STATUS:</span>
+                      <span className="text-emerald-400 font-bold flex items-center gap-1.5 drop-shadow-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         CONNECTED
                       </span>
                     </div>
-                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
-                      <span className="text-zinc-500">COLLECTION:</span>
-                      <span className="text-zinc-300">IRSARGO_knowledge_base</span>
+                    <div className="flex justify-between items-center pb-2 border-b border-white/15">
+                      <span className="text-zinc-300 font-medium">COLLECTION:</span>
+                      <span className="text-white font-bold">IRSARGO_knowledge_base</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-zinc-500">TOTAL CHUNKS:</span>
-                      <span className="text-isro-orange font-bold text-xs">
+                      <span className="text-zinc-300 font-medium">TOTAL CHUNKS:</span>
+                      <span className="text-isro-orange font-bold text-xs drop-shadow-sm">
                         {totalChunks !== null ? totalChunks.toLocaleString() : 'Loading...'}
                       </span>
                     </div>
@@ -1402,7 +1451,6 @@ export default function App() {
                 </section>
 
                 <section className="isro-glass p-6 rounded-2xl">
-                  
                   <div className="grid grid-cols-1 gap-3">
                     {[Domain.AEROSPACE, Domain.GOVERNMENT].map((d) => (
                       <button
@@ -1413,15 +1461,15 @@ export default function App() {
                         }}
                         className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${
                           domain === d 
-                            ? 'bg-zinc-800 border-isro-orange text-white shadow-[0_0_15px_rgba(242,116,32,0.1)]' 
-                            : 'bg-zinc-900/30 border-zinc-800 text-zinc-500 hover:border-zinc-700'
+                            ? 'bg-zinc-900/80 border-isro-orange text-white font-bold shadow-[0_0_15px_rgba(242,116,32,0.2)]' 
+                            : 'bg-black/30 border-white/20 text-zinc-200 hover:border-isro-orange/50 hover:bg-black/50'
                         }`}
                       >
                         <div className="flex items-center gap-3 text-left">
-                          {d === Domain.AEROSPACE ? <Rocket className="w-5 h-5" /> : <Landmark className="w-5 h-5" />}
+                          {d === Domain.AEROSPACE ? <Rocket className="w-5 h-5 text-isro-orange" /> : <Landmark className="w-5 h-5 text-isro-orange" />}
                           <div>
-                            <p className="text-xs font-bold uppercase tracking-tight">{d}</p>
-                            <p className="text-[10px] opacity-60">
+                            <p className="text-xs font-bold uppercase tracking-tight text-white">{d}</p>
+                            <p className="text-[10px] text-zinc-300 font-medium">
                               {d === Domain.AEROSPACE ? 'Live Chroma Aerospace Index' : 'Live Chroma GFR Index'}
                             </p>
                           </div>
@@ -1434,38 +1482,38 @@ export default function App() {
 
                 {/* Identity & Access Control */}
                 <section className="isro-glass p-6 rounded-2xl space-y-4">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2 mb-4">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white flex items-center gap-2 mb-4 drop-shadow-sm">
                     <ShieldCheck className="w-4 h-4 text-isro-orange" />
                     Security Session & FGA Console
                   </h2>
 
                   {/* Outage Warning */}
                   {simulateOutage && (
-                    <div className="bg-red-950/20 border border-red-900/50 rounded-xl p-3 animate-pulse text-[10px] font-mono text-red-400 flex items-start gap-2.5 leading-normal">
-                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+                    <div className="bg-red-950/40 border border-red-500/50 rounded-xl p-3 animate-pulse text-[10px] font-mono text-red-300 flex items-start gap-2.5 leading-normal">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
                       <div>
-                        <span className="font-bold text-red-500 uppercase tracking-widest block mb-0.5">⚠️ IDP DISCONNECTED</span>
+                        <span className="font-bold text-red-400 uppercase tracking-widest block mb-0.5">⚠️ IDP DISCONNECTED</span>
                         RAG server failed OIDC token-exchange. Fallback Guest clearance active. Auditing alert logged.
                       </div>
                     </div>
                   )}
 
                   {/* Active Profile Info */}
-                  <div className="bg-black/40 border border-zinc-900 rounded-xl p-4 space-y-3 font-mono text-[10px]">
-                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
-                      <span className="text-zinc-500">SESSION IDENTIFIER:</span>
-                      <span className="text-zinc-300 font-bold">{activeSecurityUser?.sid || 'SESSION-ANONYMOUS'}</span>
+                  <div className="bg-black/40 border border-white/20 rounded-xl p-4 space-y-3 font-mono text-[10px] backdrop-blur-md">
+                    <div className="flex justify-between items-center pb-2 border-b border-white/15">
+                      <span className="text-zinc-300 font-medium">SESSION IDENTIFIER:</span>
+                      <span className="text-white font-bold">{activeSecurityUser?.sid || 'SESSION-ANONYMOUS'}</span>
                     </div>
-                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
-                      <span className="text-zinc-500">ACTIVE WORKLOAD ID:</span>
-                      <span className="text-zinc-400 break-all select-all">spiffe://IRSARGO.isro/sa/{activeSecurityUser?.sub || 'guest'}</span>
+                    <div className="flex justify-between items-center pb-2 border-b border-white/15">
+                      <span className="text-zinc-300 font-medium">ACTIVE WORKLOAD ID:</span>
+                      <span className="text-zinc-200 break-all select-all font-medium">spiffe://IRSARGO.isro/sa/{activeSecurityUser?.sub || 'guest'}</span>
                     </div>
-                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
-                      <span className="text-zinc-500">CLEARANCE:</span>
+                    <div className="flex justify-between items-center pb-2 border-b border-white/15">
+                      <span className="text-zinc-300 font-medium">CLEARANCE:</span>
                       <span className={`font-bold ${
                         simulateOutage ? 'text-zinc-400' :
-                        activeSecurityUser?.role === 'Administrator' ? 'text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.15)]' :
-                        activeSecurityUser?.role === 'Operator' ? 'text-isro-blue' : 'text-zinc-400'
+                        activeSecurityUser?.role === 'Administrator' ? 'text-emerald-400' :
+                        activeSecurityUser?.role === 'Operator' ? 'text-cyan-300 font-bold' : 'text-zinc-300'
                       }`}>
                         {simulateOutage ? 'LEVEL 1 (RESTRICTED)' :
                          activeSecurityUser?.role === 'Administrator' ? 'LEVEL 5 (TOP SECRET)' :
@@ -1473,18 +1521,18 @@ export default function App() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-zinc-500">TOKEN EXCHANGE (RFC 8693):</span>
-                      <span className={`font-bold ${simulateOutage ? 'text-red-500' : 'text-emerald-500'}`}>
+                      <span className="text-zinc-300 font-medium">TOKEN EXCHANGE (RFC 8693):</span>
+                      <span className={`font-bold ${simulateOutage ? 'text-red-400' : 'text-emerald-400'}`}>
                         {simulateOutage ? 'FAILED / OUTAGE' : 'COMPLETED'}
                       </span>
                     </div>
                   </div>
 
                   {/* Simulate IDP Outage Control */}
-                  <div className="flex items-center justify-between p-3.5 rounded-xl border border-zinc-900 bg-black/40">
+                  <div className="flex items-center justify-between p-3.5 rounded-xl border border-white/20 bg-black/40 backdrop-blur-md">
                     <div>
-                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Simulate IDP Outage</p>
-                      <p className="text-[8px] text-zinc-600 mt-0.5 leading-normal">Forces token exchange failure & tests graceful degradation fallback.</p>
+                      <p className="text-[10px] font-bold text-white uppercase tracking-wider">Simulate IDP Outage</p>
+                      <p className="text-[8px] text-zinc-300 mt-0.5 leading-normal font-medium">Forces token exchange failure & tests graceful degradation fallback.</p>
                     </div>
                     <button
                       type="button"
@@ -1493,25 +1541,35 @@ export default function App() {
                         localStorage.setItem('irsargo_simulate_outage', String(newVal));
                         setSimulateOutage(newVal);
                       }}
-                      className={`w-10 h-5 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${simulateOutage ? 'bg-red-600' : 'bg-zinc-800'}`}
+                      className={`w-10 h-5 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${simulateOutage ? 'bg-red-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`w-4 h-4 rounded-full bg-white transition-transform ${simulateOutage ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   </div>
 
-                  {/* Air-Gapped Data Privacy Control (Futuristic Mode Switcher based on button.png) */}
-                  <div className="p-4 rounded-2xl border border-zinc-800/80 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center space-y-3 text-center">
-                    <div className="flex items-center gap-2 text-zinc-300 text-[10px] font-bold uppercase tracking-wider">
-                      <ShieldCheck className={`w-4 h-4 ${airGappedMode ? 'text-cyan-400 animate-pulse' : 'text-zinc-500'}`} />
+                  {/* Air-Gapped Data Privacy Control */}
+                  <div className="p-4 rounded-2xl border border-zinc-800/80 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center space-y-4 text-center shadow-xl">
+                    <div className="flex items-center gap-2 text-zinc-200 text-[10px] font-bold uppercase tracking-wider">
+                      <ShieldCheck className={`w-4 h-4 ${airGappedMode ? 'text-orange-400 animate-pulse' : 'text-emerald-400'}`} />
                       <span>Security Boundary Mode</span>
                     </div>
-                    <OfflineModeToggle
-                      airGappedMode={airGappedMode}
-                      onToggle={toggleAirGappedMode}
-                      size="md"
-                      showStatusBadges={true}
-                    />
-                    <p className="text-[9px] text-zinc-500 max-w-xs leading-normal">
+
+                    <LiquidButton
+                      onClick={toggleAirGappedMode}
+                      glassClassName={
+                        airGappedMode
+                          ? "bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 border-2 border-amber-200/90 shadow-[0_0_35px_rgba(245,100,2,0.85),0_0_15px_rgba(239,68,68,0.7),inset_0_2px_4px_rgba(255,255,255,0.95)] group-hover:brightness-125 group-hover:scale-105"
+                          : "bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500 border-2 border-emerald-200/90 shadow-[0_0_35px_rgba(16,185,129,0.85),0_0_15px_rgba(6,182,212,0.7),inset_0_2px_4px_rgba(255,255,255,0.95)] group-hover:brightness-125 group-hover:scale-105"
+                      }
+                      className="w-full flex items-center justify-center gap-2 py-3 px-6 text-xs font-mono font-bold text-white shadow-2xl cursor-pointer"
+                    >
+                      <ShieldCheck className={`w-4 h-4 ${airGappedMode ? 'text-white animate-pulse drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]' : 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]'}`} />
+                      <span className="tracking-widest font-black uppercase text-xs text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]">
+                        {airGappedMode ? 'OFFLINE' : 'ONLINE'}
+                      </span>
+                    </LiquidButton>
+
+                    <p className="text-[9px] text-zinc-300 max-w-xs leading-normal font-medium">
                       {airGappedMode 
                         ? '🔒 AIR-GAPPED ACTIVE: Outbound Groq & Gemini cloud APIs are severed. 100% local data confidentiality.' 
                         : '🌐 ONLINE CLOUD ACTIVE: Cloud models allowed for response generation.'}
@@ -1519,13 +1577,13 @@ export default function App() {
                   </div>
 
                   {/* Advanced Swarm Settings Control */}
-                  <div className="border border-zinc-900 rounded-xl overflow-hidden bg-black/40 p-4 space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-zinc-900/60">
+                  <div className="border border-white/20 rounded-xl overflow-hidden bg-black/40 p-4 space-y-4 backdrop-blur-md">
+                    <div className="flex items-center gap-2 pb-2 border-b border-white/15">
                       <Cpu className="w-4 h-4 text-isro-orange" />
-                      <h3 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Advanced RAG Settings</h3>
+                      <h3 className="text-[10px] font-mono font-bold text-white uppercase tracking-wider">Advanced RAG Settings</h3>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3 text-[9px] font-mono text-zinc-500">
+                    <div className="grid grid-cols-2 gap-3 text-[9px] font-mono text-zinc-300">
                       {[
                         { label: 'RAPTOR Trees', state: enableRAPTOR, setter: setEnableRAPTOR, desc: 'Clustered summaries' },
                         { label: 'ColBERT Rerank', state: enableColBERT, setter: setEnableColBERT, desc: 'Late-Interaction' },
@@ -1534,15 +1592,15 @@ export default function App() {
                         { label: 'GraphRAG Context', state: enableGraphRAG, setter: setEnableGraphRAG, desc: 'Nodes & relations' },
                         { label: 'ReAct Agent', state: enableReAct, setter: setEnableReAct, desc: 'Sub-goal planning' }
                       ].map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/40 border border-zinc-900">
+                        <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-black/50 border border-white/20">
                           <div>
-                            <p className="font-bold text-zinc-400">{item.label}</p>
-                            <p className="text-[8px] text-zinc-600 mt-0.5">{item.desc}</p>
+                            <p className="font-bold text-white">{item.label}</p>
+                            <p className="text-[8px] text-zinc-300 mt-0.5 font-medium">{item.desc}</p>
                           </div>
                           <button
                             type="button"
                             onClick={() => item.setter(!item.state)}
-                            className={`w-7 h-4 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${item.state ? 'bg-isro-orange' : 'bg-zinc-800'}`}
+                            className={`w-7 h-4 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${item.state ? 'bg-isro-orange' : 'bg-zinc-700'}`}
                           >
                             <div className={`w-3 h-3 rounded-full bg-white transition-transform ${item.state ? 'translate-x-3' : 'translate-x-0'}`} />
                           </button>
@@ -1620,11 +1678,12 @@ export default function App() {
                   </div>
                 </form>
 
-                {/* Active Searching Status & Go To Activities Banner */}
+                {/* Active Searching Status Banner */}
                 {isQuerying && (
                   <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
                     className="flex items-center justify-between p-3.5 rounded-2xl border border-isro-orange/40 bg-zinc-950/90 backdrop-blur-xl shadow-[0_0_25px_rgba(242,116,32,0.2)] text-xs font-mono"
                   >
                     <div className="flex items-center gap-3 text-zinc-200">
@@ -1827,11 +1886,13 @@ export default function App() {
                           })}
                           
                           {isQuerying && (
-                            <div className="flex items-start">
-                              <div className="bg-zinc-950/60 border border-zinc-800 rounded-2xl rounded-tl-none p-4 max-w-[85%] flex items-center gap-3">
-                                <RefreshCcw className="w-4 h-4 text-isro-orange animate-spin" />
-                                <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest animate-pulse font-bold">IRSARGO IS ORCHESTRATING SWARM...</span>
-                              </div>
+                            <div className="flex items-start flex-col gap-3 w-full">
+                              <GeneratingGlobe
+                                statusText="IRSARGO IS ORCHESTRATING SWARM..."
+                                subText="Synthesizing context & verifying zero-knowledge constraints"
+                                accentColor="orange"
+                                className="w-full max-w-xl"
+                              />
                             </div>
                           )}
                         </div>
@@ -1845,30 +1906,30 @@ export default function App() {
                           animate={{ opacity: 1, y: 0 }}
                           className="space-y-6"
                         >
-                          <section className="isro-glass p-4 md:p-8 rounded-2xl bg-linear-to-br from-zinc-900/80 to-black">
+                          <section className="p-4 md:p-8 rounded-2xl border border-zinc-800/80 bg-black/80 backdrop-blur-xl shadow-2xl space-y-6">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                                   <ShieldCheck className="w-5 h-5 text-emerald-500" />
                                 </div>
-                                <h2 className="text-lg md:text-xl font-display font-medium text-white tracking-tight">Verified Technical Synthesis</h2>
+                                <h2 className="text-lg md:text-xl font-display font-bold text-white tracking-tight">Verified Technical Synthesis</h2>
                               </div>
                               <div className="flex items-center gap-3">
                                 <button 
                                   onClick={handleExport}
-                                  className="flex items-center gap-2 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-full border border-zinc-700 text-[10px] font-mono transition-colors cursor-pointer"
+                                  className="flex items-center gap-2 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-white hover:text-white rounded-full border border-zinc-700 text-[10px] font-mono font-bold transition-colors cursor-pointer"
                                 >
                                   <Download className="w-3 h-3" />
                                   EXPORT_JSON
                                 </button>
-                                <div className="px-3 py-1 bg-zinc-800 rounded-full border border-zinc-700 text-[10px] font-mono text-zinc-400">
+                                <div className="px-3 py-1 bg-zinc-800 rounded-full border border-zinc-700 text-[10px] font-mono text-zinc-300 font-bold">
                                   TOKEN_ID: {activeMessageId}
                                 </div>
                               </div>
                             </div>
 
-                            <div className="prose prose-invert max-w-none text-zinc-300 leading-relaxed space-y-4">
-                              <p className="border-l-2 border-emerald-500 pl-4 md:pl-6 italic text-zinc-400 text-xs md:text-sm mb-8 bg-emerald-500/5 py-4 rounded-r-lg">
+                            <div className="prose prose-invert max-w-none text-zinc-200 leading-relaxed space-y-4">
+                              <p className="border-l-2 border-emerald-500 pl-4 md:pl-6 italic text-zinc-200 text-xs md:text-sm mb-8 bg-emerald-500/10 py-4 rounded-r-lg font-medium">
                                 "Grounded in verified {domain} ontologies and formally verified via neuro-symbolic swarm validation."
                               </p>
                             </div>
@@ -1877,17 +1938,17 @@ export default function App() {
                               <OutputEditor key={activeMessageId} content={sanitizeOutput(activeResponse.answer, activeResponse.retrievedNodes || [])} />
                             </div>
 
-                            <div className="mt-8 pt-8 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="mt-8 pt-8 border-t border-zinc-800/80 grid grid-cols-1 md:grid-cols-4 gap-4">
                               {[
                                 { label: 'Retrieval Accuracy', value: activeResponse.metrics?.retrievalAccuracy, icon: Database, color: 'text-isro-blue' },
                                 { label: 'Grounding Fidelity', value: activeResponse.metrics?.groundingFidelity, icon: ShieldCheck, color: 'text-emerald-500' },
                                 { label: 'Hallucination Risk', value: activeResponse.metrics?.hallucinationRisk, icon: AlertTriangle, color: 'text-red-500', inverse: true },
                                 { label: 'Overall Confidence', value: activeResponse.metrics?.overallConfidence, icon: Gauge, color: 'text-isro-orange' },
                               ].map((item) => (
-                                <div key={item.label} className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 flex flex-col gap-2">
+                                <div key={item.label} className="bg-black/60 p-4 rounded-xl border border-zinc-800/80 flex flex-col gap-2 shadow-lg">
                                   <div className="flex items-center gap-2">
                                     <item.icon className={`w-3.5 h-3.5 ${item.color}`} />
-                                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-tighter">{item.label}</span>
+                                    <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase tracking-tighter">{item.label}</span>
                                   </div>
                                   <div className="flex items-end justify-between">
                                     <span className="text-xl font-display font-medium text-white">

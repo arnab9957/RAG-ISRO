@@ -17,9 +17,9 @@
   --accent-cyan-hover: #7dd3fc;
   --accent-cyan-glow: rgba(56, 189, 248, 0.4);
   
-  --text-main: #f0f6fc;
-  --text-muted: #94a3b8;
-  --text-subtle: #64748b;
+  --text-main: #ffffff;          /* Pure White Text over dark/black background */
+  --text-muted: #cbd5e1;         /* Bright Muted Text */
+  --text-subtle: #94a3b8;        /* Subtle Slate Text */
 
   /* Console Gradient Tokens */
   --console-gradient: linear-gradient(135deg, #0a1628 0%, #12253f 60%, #1e4a72 100%);
@@ -49,33 +49,33 @@
 
 [data-theme="light"],
 .light {
-  /* Core Telemetry Color Tokens - Light Theme (Soft Slate Canvas, White Panels, Deep Navy #1e4a72 Primary, #0284c7 Telemetry Accent) */
-  --bg-base: #e2e8f0;            /* Soft Slate Canvas */
-  --bg-surface: #ffffff;         /* Crisp White Panels */
-  --bg-surface-hover: #f8fafc;   /* Soft Slate Panel Hover */
-  --border-structure: #cbd5e1;   /* Soft Slate Border */
-  --border-structure-light: #94a3b8;
+  /* Core Telemetry Color Tokens - Light Theme (Translucent Glass Canvas, Deep Black Text #000000) */
+  --bg-base: transparent;
+  --bg-surface: rgba(255, 255, 255, 0.22);       /* Translucent Glass Panels */
+  --bg-surface-hover: rgba(255, 255, 255, 0.35); /* Translucent Panel Hover */
+  --border-structure: rgba(255, 255, 255, 0.4);   /* Glass Border */
+  --border-structure-light: rgba(255, 255, 255, 0.5);
   
-  --color-primary: #1e4a72;      /* Deep Navy Primary */
+  --color-primary: #000000;      /* Deep Black Primary */
   --accent-cyan: #0284c7;        /* Telemetry Accent */
   --accent-cyan-hover: #0369a1;
   --accent-cyan-glow: rgba(2, 132, 199, 0.25);
   
-  --text-main: #1e4a72;          /* Deep Navy Primary Text */
-  --text-muted: #334155;         /* Muted Slate Text */
-  --text-subtle: #64748b;        /* Subtle Slate Text */
+  --text-main: #000000;          /* Deep Black Text for high legibility over noisy background */
+  --text-muted: #1e293b;         /* Dark Slate Muted Text */
+  --text-subtle: #334155;        /* Dark Subtle Text */
 
   /* Console Gradient Tokens - Light Theme */
-  --console-gradient: linear-gradient(135deg, #e2e8f0 0%, #ffffff 60%, #cbd5e1 100%);
-  --surface-gradient: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-  --accent-gradient: linear-gradient(90deg, #1e4a72 0%, #0284c7 100%);
-  --header-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(226, 232, 240, 0.85) 100%);
-  --card-gradient: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  --console-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.45) 60%, rgba(255, 255, 255, 0.3) 100%);
+  --surface-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
+  --accent-gradient: linear-gradient(90deg, #000000 0%, #0284c7 100%);
+  --header-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.15) 100%);
+  --card-gradient: linear-gradient(145deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.15) 100%);
 
   /* Panel Shadow Tokens - Light Theme */
-  --panel-shadow: 0 10px 25px -5px rgba(30, 74, 114, 0.08), 0 0 0 1px #cbd5e1;
+  --panel-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.4);
   --panel-shadow-hover: 0 15px 30px -5px rgba(2, 132, 199, 0.15), 0 0 0 1px #0284c7;
-  --elevation-shadow: 0 20px 25px -5px rgba(30, 74, 114, 0.1), 0 8px 10px -6px rgba(30, 74, 114, 0.05);
+  --elevation-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
 
   /* Accent Glow Tokens - Light Theme */
   --accent-glow: 0 0 15px rgba(2, 132, 199, 0.25), 0 0 25px rgba(2, 132, 199, 0.1);
@@ -83,10 +83,10 @@
   --structure-glow: 0 0 10px rgba(30, 74, 114, 0.2);
   --glow-cyan: 0 0 15px rgba(2, 132, 199, 0.25);
 
-  /* Glassmorphism Tokens - Light Theme */
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(203, 213, 225, 0.8);
-  --glass-blur: blur(12px);
+  /* Glassmorphism Tokens - Light Theme (Translucent glass to display full noisy background) */
+  --glass-bg: rgba(255, 255, 255, 0.22);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-blur: blur(16px);
 
   color-scheme: light;
 }

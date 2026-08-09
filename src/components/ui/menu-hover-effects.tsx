@@ -85,14 +85,14 @@ export default function NavMenu({
                   <span className={`
                     relative z-10 block uppercase font-sans font-semibold tracking-wider transition-colors duration-300 
                     text-xs py-1.5 px-2.5 md:text-xs md:py-1 md:px-3 lg:text-xs lg:py-1.5 lg:px-3.5
-                    ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}
+                    ${isActive ? 'text-[var(--text-main)] font-bold' : 'text-[var(--text-muted)] group-hover:text-[var(--text-main)]'}
                   `}>
                     {item.label}
                   </span>
 
                   {/* Top & bottom border animation */}
                   <span className={`
-                    absolute inset-0 border-t-2 border-b-2 border-zinc-100
+                    absolute inset-0 border-t-2 border-b-2 border-[var(--border-structure)]
                     transform transition-all duration-300 origin-center
                     ${isActive 
                       ? 'scale-y-100 opacity-100 border-isro-orange' 
@@ -101,10 +101,10 @@ export default function NavMenu({
 
                   {/* Background fill animation */}
                   <span className={`
-                    absolute top-[2px] left-0 w-full h-full bg-[#262626]
+                    absolute top-[2px] left-0 w-full h-full bg-[var(--bg-surface)]
                     transform transition-all duration-300 origin-top
                     ${isActive 
-                      ? 'scale-100 opacity-100' 
+                      ? 'scale-100 opacity-100 shadow-sm' 
                       : 'scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100'}
                   `} />
                 </a>

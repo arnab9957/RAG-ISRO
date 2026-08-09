@@ -454,5 +454,37 @@
     "detectedDomain": "AEROSPACE",
     "overallConfidence": 0.989,
     "sourcesCount": 10
+  },
+  {
+    "timestamp": "2026-08-09T16:42:22.329Z",
+    "query": "about any mission in ISRO",
+    "domainRelevance": 0.9444,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.9734,
+    "sourcesCount": 9
+  },
+  {
+    "timestamp": "2026-08-09T16:47:05.335Z",
+    "query": "about any recent  mission in ISRO in details ",
+    "domainRelevance": 0.9091,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.8848,
+    "sourcesCount": 11
+  },
+  {
+    "timestamp": "2026-08-09T16:53:23.267Z",
+    "query": "What are Developmental activities through academia and industry?",
+    "domainRelevance": 0.4,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.919,
+    "sourcesCount": 5
+  },
+  {
+    "timestamp": "2026-08-09T16:54:02.129Z",
+    "query": "What are Developmental activities through academia and industry?",
+    "domainRelevance": 0.8846,
+    "detectedDomain": "AEROSPACE",
+    "overallConfidence": 0.9151,
+    "sourcesCount": 13
   }
 ]
