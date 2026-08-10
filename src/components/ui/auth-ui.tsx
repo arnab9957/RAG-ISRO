@@ -87,7 +87,7 @@ export function Typewriter({
 }
 
 const labelVariants = cva(
-  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+  "text-xs font-semibold leading-none text-zinc-200 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 );
 
 const Label = React.forwardRef<
@@ -145,7 +145,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "flex h-10 w-full rounded-lg border border-input dark:border-input/50 bg-background px-3 py-3 text-sm text-foreground shadow-sm shadow-black/5 transition-shadow placeholder:text-muted-foreground/70 focus-visible:bg-accent focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-10 w-full rounded-lg border border-zinc-800 bg-zinc-900/90 px-3 py-3 text-sm text-white placeholder:text-zinc-500 focus-visible:border-orange-500 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 font-medium shadow-inner",
           className
         )}
         ref={ref}
@@ -169,8 +169,8 @@ const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
         {label && <Label htmlFor={id}>{label}</Label>}
         <div className="relative">
           <Input id={id} type={showPassword ? "text" : "password"} className={cn("pe-10", className)} ref={ref} {...props} />
-          <button type="button" onClick={togglePasswordVisibility} className="absolute inset-y-0 end-0 flex h-full w-10 items-center justify-center text-muted-foreground/80 transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50" aria-label={showPassword ? "Hide password" : "Show password"}>
-            {showPassword ? (<EyeOff className="size-4" aria-hidden="true" />) : (<Eye className="size-4" aria-hidden="true" />)}
+          <button type="button" onClick={togglePasswordVisibility} className="absolute inset-y-0 end-0 flex h-full w-10 items-center justify-center text-zinc-400 hover:text-white transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50" aria-label={showPassword ? "Hide password" : "Show password"}>
+            {showPassword ? (<EyeOff className="size-4 text-orange-400" aria-hidden="true" />) : (<Eye className="size-4" aria-hidden="true" />)}
           </button>
         </div>
       </div>
@@ -202,15 +202,15 @@ function SignInForm({ onSubmit, usernameValue, passwordValue, roleValue, onUsern
   return (
     <form onSubmit={handleSignIn} autoComplete="on" className="flex flex-col gap-5">
       <div className="flex flex-col items-center gap-1.5 text-center">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
+        <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
           <LogIn className="w-6 h-6 text-orange-500" />
           <span>Sign in to IRSARGO</span>
         </h1>
-        <p className="text-balance text-xs text-muted-foreground">Enter your Keycloak identity credentials below</p>
+        <p className="text-balance text-xs text-zinc-400">Enter your Keycloak identity credentials below</p>
       </div>
       <div className="grid gap-3.5">
         <div className="grid gap-1.5">
-          <Label htmlFor="username" className="text-xs">Username / Email</Label>
+          <Label htmlFor="username" className="text-xs text-zinc-300">Username / Email</Label>
           <Input 
             id="username" 
             name="username" 
@@ -232,16 +232,16 @@ function SignInForm({ onSubmit, usernameValue, passwordValue, roleValue, onUsern
           onChange={(e) => onPasswordChange && onPasswordChange(e.target.value)}
         />
         <div className="grid gap-1.5">
-          <Label htmlFor="userType" className="text-xs">User Type / Clearance Level</Label>
+          <Label htmlFor="userType" className="text-xs text-zinc-300">User Type / Clearance Level</Label>
           <select
             id="userType"
             value={roleValue || 'Administrator'}
             onChange={(e) => onRoleChange && onRoleChange(e.target.value)}
-            className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer font-mono"
+            className="flex h-10 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 cursor-pointer font-mono font-medium"
           >
-            <option value="Administrator">🏛️ Administrator (Level 5 — Top Secret)</option>
-            <option value="Operator">🛰️ Operator (Level 3 — Confidential)</option>
-            <option value="Researcher">🔬 Research Officer (Level 2 — Internal RAG)</option>
+            <option value="Administrator" className="bg-zinc-950 text-white">🏛️ Administrator (Level 5 — Top Secret)</option>
+            <option value="Operator" className="bg-zinc-950 text-white">🛰️ Operator (Level 3 — Confidential)</option>
+            <option value="Researcher" className="bg-zinc-950 text-white">🔬 Research Officer (Level 2 — Internal RAG)</option>
           </select>
         </div>
         <Button 
@@ -282,15 +282,15 @@ function SignUpForm({ onSubmit, usernameValue, passwordValue, roleValue, onUsern
   return (
     <form onSubmit={handleSignUp} autoComplete="on" className="flex flex-col gap-3.5">
       <div className="flex flex-col items-center gap-1 text-center">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
+        <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
           <UserPlus className="w-6 h-6 text-orange-500" />
           <span>Create Keycloak Account</span>
         </h1>
-        <p className="text-balance text-xs text-muted-foreground">Register your ISRO identity in Keycloak Realm</p>
+        <p className="text-balance text-xs text-zinc-400">Register your ISRO identity in Keycloak Realm</p>
       </div>
       <div className="grid gap-2.5">
         <div className="grid gap-1">
-          <Label htmlFor="name" className="text-xs">Full Name</Label>
+          <Label htmlFor="name" className="text-xs text-zinc-300">Full Name</Label>
           <Input 
             id="name" 
             name="name" 
@@ -303,7 +303,7 @@ function SignUpForm({ onSubmit, usernameValue, passwordValue, roleValue, onUsern
           />
         </div>
         <div className="grid gap-1">
-          <Label htmlFor="email" className="text-xs">ISRO Email Address</Label>
+          <Label htmlFor="email" className="text-xs text-zinc-300">ISRO Email Address</Label>
           <div className="relative">
             <Input 
               id="email" 
@@ -316,11 +316,11 @@ function SignUpForm({ onSubmit, usernameValue, passwordValue, roleValue, onUsern
               onChange={(e) => setEmail(e.target.value)}
               className="ps-9"
             />
-            <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+            <Mail className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
           </div>
         </div>
         <div className="grid gap-1">
-          <Label htmlFor="username" className="text-xs">Keycloak Username</Label>
+          <Label htmlFor="username" className="text-xs text-zinc-300">Keycloak Username</Label>
           <Input 
             id="username" 
             name="username" 
@@ -342,33 +342,33 @@ function SignUpForm({ onSubmit, usernameValue, passwordValue, roleValue, onUsern
           onChange={(e) => onPasswordChange && onPasswordChange(e.target.value)}
         />
         <div className="grid gap-1">
-          <Label htmlFor="signupUserType" className="text-xs">User Type / Clearance Level</Label>
+          <Label htmlFor="signupUserType" className="text-xs text-zinc-300">User Type / Clearance Level</Label>
           <select
             id="signupUserType"
             name="signupUserType"
             value={roleValue || 'Operator'}
             onChange={(e) => onRoleChange && onRoleChange(e.target.value)}
-            className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer font-mono"
+            className="flex h-9 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 cursor-pointer font-mono font-medium"
           >
-            <option value="Administrator">🏛️ Administrator (Level 5 — Top Secret)</option>
-            <option value="Operator">🛰️ Operator (Level 3 — Confidential)</option>
-            <option value="Researcher">🔬 Research Officer (Level 2 — Internal RAG)</option>
+            <option value="Administrator" className="bg-zinc-950 text-white">🏛️ Administrator (Level 5 — Top Secret)</option>
+            <option value="Operator" className="bg-zinc-950 text-white">🛰️ Operator (Level 3 — Confidential)</option>
+            <option value="Researcher" className="bg-zinc-950 text-white">🔬 Research Officer (Level 2 — Internal RAG)</option>
           </select>
         </div>
         <div className="grid gap-1">
-          <Label htmlFor="department" className="text-xs">ISRO Center / Department</Label>
+          <Label htmlFor="department" className="text-xs text-zinc-300">ISRO Center / Department</Label>
           <select
             id="department"
             name="department"
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
-            className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer font-mono"
+            className="flex h-9 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 cursor-pointer font-mono font-medium"
           >
-            <option value="Space Applications Centre (SAC)">Space Applications Centre (SAC)</option>
-            <option value="UR Rao Satellite Centre (URSC)">UR Rao Satellite Centre (URSC)</option>
-            <option value="Vikram Sarabhai Space Centre (VSSC)">Vikram Sarabhai Space Centre (VSSC)</option>
-            <option value="ISTRAC Command Network">ISTRAC Command Network</option>
-            <option value="National Remote Sensing Centre (NRSC)">National Remote Sensing Centre (NRSC)</option>
+            <option value="Space Applications Centre (SAC)" className="bg-zinc-950 text-white">Space Applications Centre (SAC)</option>
+            <option value="UR Rao Satellite Centre (URSC)" className="bg-zinc-950 text-white">UR Rao Satellite Centre (URSC)</option>
+            <option value="Vikram Sarabhai Space Centre (VSSC)" className="bg-zinc-950 text-white">Vikram Sarabhai Space Centre (VSSC)</option>
+            <option value="ISTRAC Command Network" className="bg-zinc-950 text-white">ISTRAC Command Network</option>
+            <option value="National Remote Sensing Centre (NRSC)" className="bg-zinc-950 text-white">National Remote Sensing Centre (NRSC)</option>
           </select>
         </div>
         <Button 
@@ -452,14 +452,14 @@ function AuthFormContainer({
 
             {/* Error / Success Notifications */}
             {error && (
-              <div className="p-3 bg-red-950/80 border border-red-500/50 rounded-xl text-red-300 text-xs flex items-start gap-2 animate-in fade-in">
+              <div className="p-3 bg-red-950/80 border border-red-500/50 rounded-xl text-red-300 text-xs flex items-start gap-2 animate-in fade-in font-medium">
                 <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
             )}
 
             {successMessage && (
-              <div className="p-3 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-emerald-300 text-xs flex items-start gap-2 animate-in fade-in">
+              <div className="p-3 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-emerald-300 text-xs flex items-start gap-2 animate-in fade-in font-medium">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <span>{successMessage}</span>
               </div>
@@ -491,7 +491,7 @@ function AuthFormContainer({
             
             {/* Quick Test Persona Selector */}
             <div className="pt-2">
-              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider text-center mb-1.5">Quick Seed Test Personas:</p>
+              <p className="text-[10px] font-mono text-zinc-400 font-bold uppercase tracking-wider text-center mb-1.5">Quick Seed Test Personas:</p>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -499,10 +499,10 @@ function AuthFormContainer({
                     if (onUsernameChange) onUsernameChange('isro_admin');
                     if (onPasswordChange) onPasswordChange('admin_password');
                   }}
-                  className="px-2.5 py-1.5 bg-accent/40 hover:bg-accent border border-border rounded-lg text-left transition cursor-pointer"
+                  className="px-2.5 py-1.5 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-lg text-left transition cursor-pointer shadow-sm"
                 >
                   <p className="text-[10px] font-bold text-emerald-400 font-mono">isro_admin</p>
-                  <p className="text-[8px] text-muted-foreground font-mono">Level 5 (Top Secret)</p>
+                  <p className="text-[8px] text-zinc-400 font-mono font-medium">Level 5 (Top Secret)</p>
                 </button>
                 <button
                   type="button"
@@ -510,17 +510,17 @@ function AuthFormContainer({
                     if (onUsernameChange) onUsernameChange('isro_operator');
                     if (onPasswordChange) onPasswordChange('operator_password');
                   }}
-                  className="px-2.5 py-1.5 bg-accent/40 hover:bg-accent border border-border rounded-lg text-left transition cursor-pointer"
+                  className="px-2.5 py-1.5 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-lg text-left transition cursor-pointer shadow-sm"
                 >
                   <p className="text-[10px] font-bold text-blue-400 font-mono">isro_operator</p>
-                  <p className="text-[8px] text-muted-foreground font-mono">Level 3 (Confidential)</p>
+                  <p className="text-[8px] text-zinc-400 font-mono font-medium">Level 3 (Confidential)</p>
                 </button>
               </div>
             </div>
 
-            <div className="text-center text-sm pt-1">
+            <div className="text-center text-xs text-zinc-400 pt-1">
                 {isSignIn ? "Don't have a Keycloak account?" : "Already registered in Keycloak?"}{" "}
-                <Button variant="link" className="pl-1 text-orange-400 font-bold hover:text-orange-300" onClick={onToggle}>
+                <Button variant="link" className="pl-1 text-orange-400 font-bold hover:text-orange-300 text-xs" onClick={onToggle}>
                     {isSignIn ? "Create Keycloak Account" : "Sign In via Keycloak"}
                 </Button>
             </div>

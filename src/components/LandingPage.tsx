@@ -33,8 +33,84 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onToggleAirGappedMode
 }) => {
   const [activeVideo, setActiveVideo] = useState<'lp1' | 'lp2'>('lp1');
+  const [activeGuideStep, setActiveGuideStep] = useState<number>(0);
   const video1Ref = useRef<HTMLVideoElement>(null);
   const video2Ref = useRef<HTMLVideoElement>(null);
+
+  const guideSteps = [
+    {
+      stepNumber: '01',
+      badge: 'AIR-GAPPED vs CLOUD MODE',
+      title: 'Select Operational Execution Mode',
+      icon: Globe,
+      description: 'Choose your desired execution environment. In OFFLINE Mode (Glowing Orange), the system runs 100% air-gapped with local Ollama VLM + ChromaDB vector embeddings for zero data exfiltration. In ONLINE Mode (Glowing Emerald/Cyan), IRSARGO leverages Groq/Gemini API acceleration for high-speed cloud synthesis.',
+      bulletPoints: [
+        'OFFLINE MODE: Air-gapped confidentiality, local Ollama Moondream2 vision parsing.',
+        'ONLINE MODE: Cloud API acceleration (Groq llama-3.3-70b & Gemini 2.0 Flash).',
+        'Toggle instantly using the glowing Liquid Button in the top header bar.'
+      ],
+      tip: 'Use Offline Mode when handling sensitive mission technical specs or classified GFR documents.',
+      actionLabel: 'Toggle Mode in Header',
+      shortDesc: 'Choose between 100% Air-Gapped local Ollama & fast Cloud API acceleration.',
+      action: (_onConsole: any, _onBaseline: any, _onAuth: any, onToggleMode: any) => {
+        if (onToggleMode) onToggleMode();
+      }
+    },
+    {
+      stepNumber: '02',
+      badge: 'KEYCLOAK RBAC & PKI',
+      title: 'Authenticate Identity & Clearance Level',
+      icon: Lock,
+      description: 'Click the Sign In button in the top right to open the Keycloak IAM portal. IRSARGO enforces role-based access control (RBAC) and DACL clearance rules. You can select quick test personas (isro_admin Level 5 Top Secret vs isro_operator Level 3 Confidential vs Guest Level 1 Public) to test data boundary enforcement.',
+      bulletPoints: [
+        'Level 5 Administrator: Full access across propulsion, telemetry, and administrative rules.',
+        'Level 3 Operator: Scoped avionics access, excluded from propulsion secrets.',
+        'Level 1 Guest: Access strictly confined to public administrative GFR rules.'
+      ],
+      tip: 'Switch between isro_admin and isro_operator test personas to verify role-based document access control in action.',
+      actionLabel: 'Open Keycloak Sign In',
+      shortDesc: 'Authenticate via Keycloak OIDC with Level 1 to 5 Clearance Levels.',
+      action: (_onConsole: any, _onBaseline: any, onAuth: any) => {
+        if (onAuth) onAuth();
+      }
+    },
+    {
+      stepNumber: '03',
+      badge: 'SYNTHESIS ENGINE',
+      title: 'Dispatch Query & View 3D Globe Telemetry',
+      icon: Rocket,
+      description: 'Launch the Intelligence Console and enter space mission queries. While your query is processing, the interactive 3D particle satellite globe renders active satellite orbits (LEO/GEO) and real-time SMT formal logic constraint verification.',
+      bulletPoints: [
+        'Instant Query Dispatch: Select sample queries or type custom space mission questions.',
+        'Interactive 3D Globe: Visualizes satellite orbit telemetry & multi-agent reasoning.',
+        'Structured Answer: Returns verified technical synthesis with source document citations.'
+      ],
+      tip: 'Click any sample query card on the landing page to instantly jump to the active query console.',
+      actionLabel: 'Launch Query Console',
+      shortDesc: 'Dispatch queries & watch the interactive 3D satellite particle globe.',
+      action: (onConsole: any) => {
+        if (onConsole) onConsole();
+      }
+    },
+    {
+      stepNumber: '04',
+      badge: 'FORMAL LOGIC AUDIT',
+      title: 'Inspect Swarm Traces & Compare Baseline RAG',
+      icon: Activity,
+      description: 'Review the step-by-step reasoning of all 4 synchronized agents (Query Reformulator, Vector Retriever, Guardrail Auditor, and Synthesizer). Compare IRSARGO formal verified outputs against the un-sanitized Access Baseline Naive RAG engine.',
+      bulletPoints: [
+        '4-Agent Swarm Audit: Trace exact sub-goals, SMT solver outputs, and hallucination scores.',
+        'Naive Baseline Comparison: Evaluate un-sanitized vector search against formal logic verification.',
+        '3D Knowledge Graph: Interactively explore interconnected PDF nodes, entities, and citations.'
+      ],
+      tip: 'Access the Baseline Naive RAG tab to see how formal logic verification eliminates hallucinations found in standard RAG engines.',
+      actionLabel: 'Compare Baseline Naive RAG',
+      shortDesc: 'Audit 4-agent swarm traces and compare naive baseline RAG outputs.',
+      action: (_onConsole: any, onBaseline: any) => {
+        if (onBaseline) onBaseline();
+      }
+    }
+  ];
 
   const sampleQueries = [
     "What are the launch parameters and payload details for Chandrayaan-3?",
@@ -77,8 +153,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           )}
         </div>
 
-        {/* Right: Theme Toggle & GitHub & Sign In / User Profile */}
-        <div className="flex items-center gap-4">
+        {/* Right: How to Use Guide & Theme Toggle & GitHub & Sign In / User Profile */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById('interactive-user-guide');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-structure)] hover:border-orange-500/50 text-xs font-mono font-bold text-[var(--text-main)] transition cursor-pointer shadow-md"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
+            <span>How to Use Guide</span>
+          </button>
+
           <ThemeToggle />
 
           <a
@@ -426,6 +514,146 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </p>
           </motion.div>
         </div>
+
+        {/* 7. UNIQUE INTERACTIVE SYSTEM OPERATOR GUIDE */}
+        <motion.div
+          id="interactive-user-guide"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="w-full max-w-6xl mt-20 text-left space-y-8 scroll-mt-24"
+        >
+          {/* Section Title Banner */}
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-mono font-bold uppercase tracking-widest">
+              <HelpCircle className="w-4 h-4 animate-bounce" />
+              <span>Interactive System Operator Guide</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--text-main)] tracking-tight">
+              How to Operate <span className="bg-gradient-to-r from-orange-400 via-amber-300 to-cyan-400 bg-clip-text text-transparent">IRSARGO Engine</span>
+            </h2>
+            <p className="text-sm text-[var(--text-muted)] max-w-2xl font-sans">
+              Follow this 4-step workflow to execute formal logic RAG queries, audit multi-agent swarm telemetry, and enforce air-gapped security.
+            </p>
+          </div>
+
+          {/* Interactive Step Switcher Tabs */}
+          <div className="flex flex-wrap items-center justify-center gap-2 p-2 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-structure)] backdrop-blur-2xl shadow-xl">
+            {[
+              { num: '01', title: 'Execution Mode', icon: Globe, color: 'text-orange-400' },
+              { num: '02', title: 'IAM Clearance', icon: Lock, color: 'text-[var(--accent-cyan)]' },
+              { num: '03', title: 'Query & 3D Globe', icon: Rocket, color: 'text-amber-400' },
+              { num: '04', title: 'Trace & Baseline', icon: Activity, color: 'text-purple-400' },
+            ].map((step, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setActiveGuideStep(idx)}
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl font-mono text-xs font-bold transition-all duration-300 cursor-pointer ${
+                  activeGuideStep === idx
+                    ? 'bg-gradient-to-r from-orange-500/20 to-cyan-500/20 border border-orange-500/50 text-white shadow-lg shadow-orange-500/10 scale-105'
+                    : 'bg-transparent text-[var(--text-subtle)] hover:text-[var(--text-main)] hover:bg-[var(--bg-base)]/40'
+                }`}
+              >
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                  activeGuideStep === idx ? 'bg-orange-500 text-white font-extrabold' : 'bg-[var(--border-structure)] text-[var(--text-muted)]'
+                }`}>
+                  {step.num}
+                </span>
+                <step.icon className={`w-4 h-4 ${step.color}`} />
+                <span>{step.title}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Active Step Detailed Card Display */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeGuideStep}
+              initial={{ opacity: 0, y: 15, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -15, scale: 0.98 }}
+              transition={{ duration: 0.3 }}
+              className="p-6 md:p-8 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-structure)] backdrop-blur-2xl shadow-2xl relative overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-8"
+            >
+              {/* Background Accent Glow */}
+              <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/5 rounded-full filter blur-3xl pointer-events-none" />
+
+              {/* Left Column: Step Overview & Visual Indicator */}
+              <div className="lg:col-span-2 space-y-5">
+                <div className="flex items-center gap-3">
+                  <span className="px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/40 font-mono text-[10px] font-bold text-orange-400 uppercase tracking-widest">
+                    STEP {guideSteps[activeGuideStep].stepNumber} // {guideSteps[activeGuideStep].badge}
+                  </span>
+                </div>
+
+                <h3 className="text-2xl font-extrabold text-[var(--text-main)] flex items-center gap-3">
+                  {React.createElement(guideSteps[activeGuideStep].icon, { className: "w-7 h-7 text-orange-400" })}
+                  <span>{guideSteps[activeGuideStep].title}</span>
+                </h3>
+
+                <p className="text-sm text-[var(--text-muted)] leading-relaxed font-sans font-normal">
+                  {guideSteps[activeGuideStep].description}
+                </p>
+
+                {/* Key Instructions List */}
+                <div className="space-y-3 pt-2">
+                  {guideSteps[activeGuideStep].bulletPoints.map((point, bIdx) => (
+                    <div key={bIdx} className="flex items-start gap-3 p-3 rounded-2xl bg-[var(--bg-base)]/60 border border-[var(--border-structure)]/60">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span className="text-xs text-[var(--text-main)] font-medium leading-relaxed">{point}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Column: Interactive Action Box & Quick Launch */}
+              <div className="flex flex-col justify-between p-6 rounded-2xl bg-[var(--bg-base)] border border-[var(--border-structure)] shadow-inner space-y-4">
+                <div className="space-y-2">
+                  <span className="text-[10px] font-mono text-[var(--text-subtle)] uppercase tracking-wider block">PRO TIP & OPERATOR NOTE</span>
+                  <p className="text-xs text-[var(--text-muted)] italic leading-relaxed">
+                    "{guideSteps[activeGuideStep].tip}"
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-[var(--border-structure)] space-y-3">
+                  <span className="text-[10px] font-mono text-orange-400 font-bold uppercase tracking-wider block">TEST THIS STEP NOW</span>
+                  <button
+                    type="button"
+                    onClick={() => guideSteps[activeGuideStep].action(onLaunchConsole, onAccessBaselineRag, onSignIn, onToggleAirGappedMode)}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-mono text-xs font-bold transition-all shadow-lg shadow-orange-500/20 cursor-pointer flex items-center justify-center gap-2 group"
+                  >
+                    <span>{guideSteps[activeGuideStep].actionLabel}</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* 4-Step Summary Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
+            {guideSteps.map((step, sIdx) => (
+              <motion.div
+                key={sIdx}
+                whileHover={{ y: -4 }}
+                onClick={() => setActiveGuideStep(sIdx)}
+                className={`p-5 rounded-2xl border transition-all duration-300 cursor-pointer text-left ${
+                  activeGuideStep === sIdx
+                    ? 'bg-[var(--bg-surface)] border-orange-500/60 shadow-lg shadow-orange-500/10 ring-1 ring-orange-500/30'
+                    : 'bg-[var(--bg-surface)]/60 border-[var(--border-structure)] hover:border-[var(--accent-cyan)]/40'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-mono font-extrabold text-orange-400">STEP {step.stepNumber}</span>
+                  {React.createElement(step.icon, { className: "w-4 h-4 text-[var(--text-muted)]" })}
+                </div>
+                <h4 className="text-sm font-bold text-[var(--text-main)] mb-1">{step.title}</h4>
+                <p className="text-[11px] text-[var(--text-muted)] line-clamp-2 leading-relaxed">{step.shortDesc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
 
       </div>
     </div>
