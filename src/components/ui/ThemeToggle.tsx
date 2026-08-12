@@ -43,9 +43,7 @@ export function ThemeToggle() {
       ) : (
         <Moon className="w-4 h-4 text-[#0284c7] drop-shadow-[0_0_8px_rgba(2,132,199,0.4)]" />
       )}
-      <span className="ml-2 text-xs font-mono font-medium hidden sm:inline text-[var(--text-muted)]">
-        {theme === 'dark' ? 'DARK' : 'LIGHT'}
-      </span>
+     
     </motion.button>
   );
 }

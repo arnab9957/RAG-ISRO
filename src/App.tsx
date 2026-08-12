@@ -615,24 +615,28 @@ export default function App() {
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
 
   const handleTabSelect = (tabId: Tab) => {
+    if ((tabId === 'history' || tabId === 'evaluate') && (!token || !effectiveUser)) {
+      setLoginNotice(`Please sign in to access ${tabId === 'history' ? 'mission history' : 'system evaluation & security telemetry'}.`);
+      setPendingTargetTab(tabId);
+      setShowLoginModal(true);
+      return;
+    }
     setActiveTab(tabId);
   };
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (!effectiveUser || !token) return [];
     const key = `IRSARGO_chat_messages_${userStorageKey}`;
     const saved = localStorage.getItem(key);
     return saved ? JSON.parse(saved) : [];
   });
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>(() => {
+    if (!effectiveUser || !token) return [];
     const key = `IRSARGO_history_${userStorageKey}`;
     const saved = localStorage.getItem(key);
     if (saved) {
       try { return JSON.parse(saved); } catch { return []; }
-    }
-    const legacyHistory = localStorage.getItem('IRSARGO_history');
-    if (legacyHistory && userStorageKey === 'guest') {
-      try { return JSON.parse(legacyHistory); } catch { return []; }
     }
     return [];
   });
@@ -781,12 +785,20 @@ export default function App() {
       setToken(null);
       setUser(null);
       setLastSecurityContext(null);
+      setHistory([]);
+      setMessages([]);
     };
     window.addEventListener('irsargo-unauthorized', handleUnauthorized);
     return () => window.removeEventListener('irsargo-unauthorized', handleUnauthorized);
   }, []);
 
   useEffect(() => {
+    if (!effectiveUser || !token) {
+      setHistory([]);
+      setMessages([]);
+      return;
+    }
+
     const historyKey = `IRSARGO_history_${userStorageKey}`;
     const savedHistory = localStorage.getItem(historyKey);
     if (savedHistory) {
@@ -796,16 +808,7 @@ export default function App() {
         setHistory([]);
       }
     } else {
-      const legacyHistory = localStorage.getItem('IRSARGO_history');
-      if (legacyHistory && userStorageKey === 'guest') {
-        try {
-          setHistory(JSON.parse(legacyHistory));
-        } catch {
-          setHistory([]);
-        }
-      } else {
-        setHistory([]);
-      }
+      setHistory([]);
     }
 
     const messagesKey = `IRSARGO_chat_messages_${userStorageKey}`;
@@ -819,17 +822,19 @@ export default function App() {
     } else {
       setMessages([]);
     }
-  }, [userStorageKey]);
+  }, [userStorageKey, token, effectiveUser]);
 
   useEffect(() => {
+    if (!effectiveUser || !token) return;
     const historyKey = `IRSARGO_history_${userStorageKey}`;
     localStorage.setItem(historyKey, JSON.stringify(history));
-  }, [history, userStorageKey]);
+  }, [history, userStorageKey, token, effectiveUser]);
 
   useEffect(() => {
+    if (!effectiveUser || !token) return;
     const messagesKey = `IRSARGO_chat_messages_${userStorageKey}`;
     localStorage.setItem(messagesKey, JSON.stringify(messages));
-  }, [messages, userStorageKey]);
+  }, [messages, userStorageKey, token, effectiveUser]);
 
   const activeMessage = messages.find(m => m.id === activeMessageId);
   const activeResponse = activeMessage?.response || null;
@@ -1350,6 +1355,8 @@ export default function App() {
                       setToken(null);
                       setUser(null);
                       setLastSecurityContext(null);
+                      setHistory([]);
+                      setMessages([]);
                       setActiveTab('landing');
                     }}
                     className="p-1.5 bg-[var(--bg-surface)] border border-[var(--border-structure)] hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 rounded-lg text-[var(--text-muted)] transition cursor-pointer"
@@ -1405,6 +1412,8 @@ export default function App() {
                   setToken(null);
                   setUser(null);
                   setLastSecurityContext(null);
+                  setHistory([]);
+                  setMessages([]);
                   setActiveTab('landing');
                 }}
                 airGappedMode={airGappedMode}
@@ -2493,12 +2502,36 @@ export default function App() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <HistoryView 
-                history={history} 
-                onSelect={handleSelectHistory} 
-                onClear={() => setHistory([])}
-                onDeleteItem={(id) => setHistory(prev => prev.filter(item => item.id !== id))}
-              />
+              {!effectiveUser || !token ? (
+                <div className="isro-glass p-12 rounded-2xl flex flex-col items-center justify-center text-center max-w-xl mx-auto space-y-6 my-12">
+                  <div className="w-16 h-16 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-isro-orange">
+                    <Lock className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-xl font-display uppercase tracking-widest text-white">Authentication Required</h2>
+                    <p className="text-xs text-zinc-400 font-sans leading-relaxed">
+                      Mission query history contains restricted session telemetry. Please sign in with your credentials to access saved query traces.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setLoginNotice('Please sign in to view mission history.');
+                      setPendingTargetTab('history');
+                      setShowLoginModal(true);
+                    }}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-orange-600/30 cursor-pointer"
+                  >
+                    <Lock className="w-4 h-4" /> Sign In to View History
+                  </button>
+                </div>
+              ) : (
+                <HistoryView 
+                  history={history} 
+                  onSelect={handleSelectHistory} 
+                  onClear={() => setHistory([])}
+                  onDeleteItem={(id) => setHistory(prev => prev.filter(item => item.id !== id))}
+                />
+              )}
             </motion.div>
           )}
 
@@ -2510,263 +2543,262 @@ export default function App() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6 max-w-5xl mx-auto"
             >
-              {/* Dedicated Cryptographic Audit Trail Section */}
-              <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-800/80 pb-6">
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-2 text-isro-orange text-xs font-mono uppercase tracking-widest">
-                      <Shield className="w-4 h-4 text-isro-orange" />
-                      Hardware & Zero-Trust Security Log
-                    </div>
-                    <h2 className="text-2xl font-display font-bold text-white">Cryptographic Audit Trail</h2>
-                    <p className="text-sm text-zinc-400 max-w-2xl">
-                      Immutable ZK-STARK proof hashes, SPIRE SVID workload attestations, and SMT formal logic verification logs.
+              {!effectiveUser || !token ? (
+                <div className="isro-glass p-12 rounded-2xl flex flex-col items-center justify-center text-center max-w-xl mx-auto space-y-6 my-12">
+                  <div className="w-16 h-16 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-isro-orange">
+                    <Lock className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-xl font-display uppercase tracking-widest text-white">Authentication Required</h2>
+                    <p className="text-xs text-zinc-400 font-sans leading-relaxed">
+                      System evaluation telemetry, cryptographic audit logs, and formal security benchmarks are restricted. Please sign in with authorized operator credentials to access metrics.
                     </p>
                   </div>
-                  <div className="px-3.5 py-2 rounded-xl border border-zinc-800 bg-zinc-900/60 text-xs font-mono text-emerald-400 flex items-center gap-2 shrink-0">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    TPM 2.0 HARDWARE ACTIVE
-                  </div>
-                </div>
-
-                <TraceAudit
-                  traces={
-                    activeMessage?.response?.traceLog && activeMessage.response.traceLog.length > 0
-                      ? activeMessage.response.traceLog
-                      : [
-                          {
-                            nodeId: 'SPIRE-SVID-ATT-001',
-                            zkpStatus: 'verified',
-                            provenanceHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-                            smtApproval: true,
-                            smtStatus: 'SAT',
-                            smtLatencyMs: 0.12,
-                            smtConstraintsCount: 2,
-                            smtProofTrace: '; IRSARGO Real Z3 WASM SMT Prover Log\n(set-logic QF_LRA)\n(declare-const vacuum_thrust Real)\n(assert (>= vacuum_thrust 180.0))\n(declare-const specific_impulse Real)\n(assert (>= specific_impulse 440.0))\n(check-sat) ; -> SAT',
-                            timestamp: new Date().toISOString(),
-                            relevanceScore: 0.98
-                          },
-                          {
-                            nodeId: 'ZK-STARK-RISC0-PROOF-882',
-                            zkpStatus: 'verified',
-                            provenanceHash: '8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',
-                            smtApproval: true,
-                            smtStatus: 'SAT',
-                            smtLatencyMs: 0.08,
-                            smtConstraintsCount: 1,
-                            smtProofTrace: '; IRSARGO Real Z3 WASM SMT Prover Log\n(set-logic QF_LRA)\n(declare-const tender_threshold Real)\n(assert (>= tender_threshold 500000))\n(check-sat) ; -> SAT',
-                            timestamp: new Date().toISOString(),
-                            relevanceScore: 0.95
-                          },
-                          {
-                            nodeId: 'Z3-SMT-FORMAL-SOLVER-V4',
-                            zkpStatus: 'verified',
-                            provenanceHash: '7c9e01f68a5d3f2b1a9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a',
-                            smtApproval: true,
-                            smtStatus: 'SAT',
-                            smtLatencyMs: 0.14,
-                            smtConstraintsCount: 3,
-                            smtProofTrace: '; IRSARGO Real Z3 WASM SMT Prover Log\n(set-logic QF_LRA)\n(declare-const chamber_pressure Real)\n(assert (>= chamber_pressure 60.0))\n(check-sat) ; -> SAT',
-                            timestamp: new Date().toISOString(),
-                            relevanceScore: 0.99
-                          }
-                        ]
-                  }
-                  isVerifying={activeMessage?.response?.isPendingVerification}
-                />
-              </section>
-
-              {/* RAG Search Benchmarks */}
-              <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black space-y-6">
-                <div className="space-y-2">
-                  <div className="inline-flex items-center gap-2 text-isro-orange text-xs font-mono uppercase tracking-widest">
-                    <Activity className="w-4 h-4" />
-                    Evaluation Benchmarks
-                  </div>
-                  <h2 className="text-xl font-display font-bold text-white">Precision & Recall Benchmarks</h2>
-                  <p className="text-sm text-zinc-400 max-w-2xl">
-                    Run the automated evaluation suite against pre-configured query-document pairs to measure Precision@5 and Recall@5 metrics.
-                  </p>
-                </div>
-
-                <div className="flex gap-4">
                   <button
-                    onClick={async () => {
-                      setIsEvaluating(true);
-                      setEvalResults([]);
-                      try {
-                        const suite = [
-                          { query: "telemetry frame structure and header version APID count", groundTruthIds: ["500x0g4.pdf"], docName: "CCSDS Telecom Standard" },
-                          { query: "GFR 2017 Rule 161 Advertised Tender Enquiry bid timelines", groundTruthIds: ["OutcomeBudget2025_2026.pdf", "GFR"], docName: "Govt Financial Rules" },
-                          { query: "Multi-Layer Insulation MLI thermal protection system", groundTruthIds: ["astrosat_handbook_ver1.6.pdf"], docName: "Astrosat Thermal Specs" }
-                        ];
-
-                        const results = await Promise.all(suite.map(async (test) => {
-                          const res = await fetch('http://localhost:3001/api/evaluate', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                            },
-                            body: JSON.stringify({ query: test.query, groundTruthIds: test.groundTruthIds, domain: ingestDomain })
-                          });
-                          if (!res.ok) throw new Error("API error");
-                          const data = await res.json();
-                          return {
-                            query: test.query,
-                            precisionAt5: data.precisionAt5,
-                            recallAt5: data.recallAt5,
-                            retrievedIds: data.retrievedIds,
-                            groundTruthIds: data.groundTruthIds
-                          };
-                        }));
-                        setEvalResults(results);
-                      } catch (err) {
-                        console.error(err);
-                        setEvalResults([
-                          { query: "telemetry frame structure and header version APID count", precisionAt5: 0.8, recallAt5: 1.0, retrievedIds: ["CCSDS_133.pdf Page 1 (Child 1)"], groundTruthIds: ["CCSDS_133.pdf Page 1 (Child 1)"] },
-                          { query: "GFR 2017 Rule 161 Advertised Tender Enquiry bid timelines", precisionAt5: 0.6, recallAt5: 1.0, retrievedIds: ["GFR_2017.pdf Page 61 (Child 1)"], groundTruthIds: ["GFR_2017.pdf Page 61 (Child 1)"] },
-                          { query: "Multi-Layer Insulation MLI thermal protection system", precisionAt5: 1.0, recallAt5: 1.0, retrievedIds: ["THERMAL_TECH.pdf Page 10 (Child 1)"], groundTruthIds: ["THERMAL_TECH.pdf Page 10 (Child 1)"] }
-                        ]);
-                      } finally {
-                        setIsEvaluating(false);
-                      }
+                    onClick={() => {
+                      setLoginNotice('Please sign in to view system evaluation telemetry.');
+                      setPendingTargetTab('evaluate');
+                      setShowLoginModal(true);
                     }}
-                    disabled={isEvaluating}
-                    className="inline-flex items-center gap-2 rounded-xl bg-isro-orange px-5 py-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-orange-500 transition-colors disabled:bg-zinc-800 disabled:text-zinc-600 cursor-pointer"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-orange-600/30 cursor-pointer"
                   >
-                    {isEvaluating ? (
-                      <>
-                        <RefreshCcw className="w-4 h-4 animate-spin" />
-                        Running Suite...
-                      </>
-                    ) : (
-                      <>
+                    <Lock className="w-4 h-4" /> Sign In to Access Evaluation
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Dedicated Cryptographic Audit Trail Section */}
+                  <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-800/80 pb-6">
+                      <div className="space-y-1">
+                        <div className="inline-flex items-center gap-2 text-isro-orange text-xs font-mono uppercase tracking-widest">
+                          <Shield className="w-4 h-4 text-isro-orange" />
+                          Hardware & Zero-Trust Security Log
+                        </div>
+                        <h2 className="text-2xl font-display font-bold text-white">Cryptographic Audit Trail</h2>
+                        <p className="text-sm text-zinc-400 max-w-2xl">
+                          Immutable ZK-STARK proof hashes, SPIRE SVID workload attestations, and SMT formal logic verification logs.
+                        </p>
+                      </div>
+                      <div className="px-3.5 py-2 rounded-xl border border-zinc-800 bg-zinc-900/60 text-xs font-mono text-emerald-400 flex items-center gap-2 shrink-0">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        TPM 2.0 HARDWARE ACTIVE
+                      </div>
+                    </div>
+
+                    <TraceAudit
+                      traces={
+                        activeMessage?.response?.traceLog && activeMessage.response.traceLog.length > 0
+                          ? activeMessage.response.traceLog
+                          : [
+                              {
+                                nodeId: 'SPIRE-SVID-ATT-001',
+                                zkpStatus: 'verified',
+                                provenanceHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+                                smtApproval: true,
+                                smtStatus: 'SAT',
+                                smtLatencyMs: 0.12,
+                                smtConstraintsCount: 2,
+                                smtProofTrace: '; IRSARGO Real Z3 WASM SMT Prover Log\n(set-logic QF_LRA)\n(declare-const vacuum_thrust Real)\n(assert (>= vacuum_thrust 180.0))\n(declare-const specific_impulse Real)\n(assert (>= specific_impulse 440.0))\n(check-sat) ; -> SAT',
+                                timestamp: new Date().toISOString(),
+                                relevanceScore: 0.98
+                              },
+                              {
+                                nodeId: 'ZK-STARK-RISC0-PROOF-882',
+                                zkpStatus: 'verified',
+                                provenanceHash: '8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',
+                                smtApproval: true,
+                                smtStatus: 'SAT',
+                                smtLatencyMs: 0.08,
+                                smtConstraintsCount: 1,
+                                smtProofTrace: '; IRSARGO Real Z3 WASM SMT Prover Log\n(set-logic QF_LRA)\n(declare-const tender_threshold Real)\n(assert (>= tender_threshold 500000))\n(check-sat) ; -> SAT',
+                                timestamp: new Date().toISOString(),
+                                relevanceScore: 0.95
+                              },
+                              {
+                                nodeId: 'Z3-SMT-FORMAL-SOLVER-V4',
+                                zkpStatus: 'verified',
+                                provenanceHash: '7c9e01f68a5d3f2b1a9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a',
+                                smtApproval: true,
+                                smtStatus: 'SAT',
+                                smtLatencyMs: 0.14,
+                                smtConstraintsCount: 3,
+                                smtProofTrace: '; IRSARGO Real Z3 WASM SMT Prover Log\n(set-logic QF_LRA)\n(declare-const chamber_pressure Real)\n(assert (>= chamber_pressure 60.0))\n(check-sat) ; -> SAT',
+                                timestamp: new Date().toISOString(),
+                                relevanceScore: 0.99
+                              }
+                            ]
+                      }
+                      isVerifying={activeMessage?.response?.isPendingVerification}
+                    />
+                  </section>
+
+                  {/* RAG Search Benchmarks */}
+                  <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black space-y-6">
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-2 text-isro-orange text-xs font-mono uppercase tracking-widest">
                         <Activity className="w-4 h-4" />
-                        Run Evaluation Suite
-                      </>
-                    )}
-                  </button>
-                </div>
+                        Evaluation Benchmarks
+                      </div>
+                      <h2 className="text-xl font-display font-bold text-white">Precision & Recall Benchmarks</h2>
+                      <p className="text-sm text-zinc-400 max-w-2xl">
+                        Run the automated evaluation suite against pre-configured query-document pairs to measure Precision@5 and Recall@5 metrics.
+                      </p>
+                    </div>
 
-                {evalResults.length > 0 && (
-                  <div className="mt-8 space-y-6">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-5 space-y-2">
-                        <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Average Precision@5</span>
-                        <div className="text-3xl font-display font-bold text-emerald-400">
-                          {(evalResults.reduce((acc, r) => acc + r.precisionAt5, 0) / evalResults.length * 100).toFixed(1)}%
+                    <div className="flex gap-4">
+                      <button
+                        onClick={async () => {
+                          setIsEvaluating(true);
+                          setEvalResults([]);
+                          try {
+                            const suite = [
+                              { query: "telemetry frame structure and header version APID count", groundTruthIds: ["500x0g4.pdf"], docName: "CCSDS Telecom Standard" },
+                              { query: "GFR 2017 Rule 161 Advertised Tender Enquiry bid timelines", groundTruthIds: ["OutcomeBudget2025_2026.pdf", "GFR"], docName: "Govt Financial Rules" },
+                              { query: "cryogenic engine CE-20 thrust vector control specification", groundTruthIds: ["CE20_spec.pdf"], docName: "Propulsion Engineering" }
+                            ];
+
+                            const results = [];
+                            for (const test of suite) {
+                              const searchRes = await fetch('http://localhost:3001/api/search', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ query: test.query, domain: Domain.AEROSPACE })
+                              });
+                              if (searchRes.ok) {
+                                const data = await searchRes.json();
+                                const retrievedNodes = data.results || [];
+                                const retrievedFiles = retrievedNodes.map((n: any) => n.metadata?.filename || n.metadata?.source || '');
+                                
+                                const hits = test.groundTruthIds.filter(gt => retrievedFiles.some((rf: string) => rf.includes(gt)));
+                                const precision = retrievedNodes.length > 0 ? (hits.length / retrievedNodes.length) : 0;
+                                const recall = test.groundTruthIds.length > 0 ? (hits.length / test.groundTruthIds.length) : 0;
+
+                                results.push({
+                                  query: test.query,
+                                  docName: test.docName,
+                                  precision,
+                                  recall,
+                                  retrievedCount: retrievedNodes.length
+                                });
+                              }
+                            }
+                            setEvalResults(results);
+                          } catch (err) {
+                            console.error("Evaluation run failed:", err);
+                          } finally {
+                            setIsEvaluating(false);
+                          }
+                        }}
+                        disabled={isEvaluating}
+                        className="px-5 py-2.5 bg-isro-orange hover:bg-orange-500 disabled:bg-zinc-800 text-white font-mono text-xs font-bold rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer"
+                      >
+                        {isEvaluating ? (
+                          <>
+                            <RefreshCcw className="w-4 h-4 animate-spin" />
+                            RUNNING BENCHMARKS...
+                          </>
+                        ) : (
+                          <>
+                            <Cpu className="w-4 h-4" />
+                            RUN AUTOMATED BENCHMARK SUITE
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {evalResults.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-800/80">
+                        {evalResults.map((res, i) => (
+                          <div key={i} className="bg-black/60 p-4 rounded-xl border border-zinc-800 space-y-2">
+                            <div className="text-[10px] font-mono text-isro-orange uppercase font-bold">{res.docName}</div>
+                            <div className="text-xs text-zinc-300 line-clamp-1 italic">"{res.query}"</div>
+                            <div className="grid grid-cols-2 gap-2 pt-2 text-[10px] font-mono">
+                              <div>
+                                <span className="text-zinc-500 block">PRECISION@5</span>
+                                <span className="text-emerald-400 font-bold text-sm">{(res.precision * 100).toFixed(0)}%</span>
+                              </div>
+                              <div>
+                                <span className="text-zinc-500 block">RECALL@5</span>
+                                <span className="text-sky-400 font-bold text-sm">{(res.recall * 100).toFixed(0)}%</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  {/* Automated Security & Verification Benchmark Section */}
+                  <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-800/80 pb-6">
+                      <div className="space-y-1">
+                        <div className="inline-flex items-center gap-2 text-emerald-400 text-xs font-mono uppercase tracking-widest">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                          Aerospace Defense & Security Suite
                         </div>
-                        <p className="text-[9px] text-zinc-600 leading-normal">
-                          Percentage of retrieved documents that are relevant to the query context.
+                        <h2 className="text-xl font-display font-bold text-white">Automated Security & Verification Benchmark</h2>
+                        <p className="text-sm text-zinc-400 max-w-2xl">
+                          Automated evaluation of Prompt Injection Immunity, Z3 SMT Formal Constraints, Groth16 ZK DACL, and Self-RAG Entropy Defense.
                         </p>
                       </div>
 
-                      <div className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-5 space-y-2">
-                        <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Average Recall@5</span>
-                        <div className="text-3xl font-display font-bold text-isro-blue">
-                          {(evalResults.reduce((acc, r) => acc + r.recallAt5, 0) / evalResults.length * 100).toFixed(1)}%
+                      <button
+                        onClick={async () => {
+                          setIsRunningSecurityBenchmark(true);
+                          try {
+                            const res = await fetch('http://localhost:3001/api/benchmark/security', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' }
+                            });
+                            if (res.ok) {
+                              const report = await res.json();
+                              setSecurityReport(report);
+                            }
+                          } catch (e) {
+                            console.warn("Failed to fetch security benchmark:", e);
+                          } finally {
+                            setIsRunningSecurityBenchmark(false);
+                          }
+                        }}
+                        disabled={isRunningSecurityBenchmark}
+                        className="px-5 py-2.5 bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-mono text-xs font-bold rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer shrink-0"
+                      >
+                        {isRunningSecurityBenchmark ? (
+                          <>
+                            <RefreshCcw className="w-4 h-4 animate-spin" />
+                            RUNNING BENCHMARK...
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="w-4 h-4" />
+                            RUN SECURITY BENCHMARK SUITE
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4">
+                      {[
+                        { label: 'Prompt Injection Immunity', value: securityReport?.metrics?.promptInjectionDefenseRate ?? 100, color: 'text-purple-400' },
+                        { label: 'Formal Z3 SMT Accuracy', value: securityReport?.metrics?.smtFormalAccuracyRate ?? 100, color: 'text-cyan-400' },
+                        { label: 'ZK-SNARK DACL Enforcement', value: securityReport?.metrics?.zkDaclEnforcementRate ?? 100, color: 'text-emerald-400' },
+                        { label: 'Self-RAG Entropy Defense', value: securityReport?.metrics?.selfRagHallucinationDefenseRate ?? 100, color: 'text-isro-orange' },
+                      ].map((metric) => (
+                        <div key={metric.label} className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800 space-y-1">
+                          <span className="text-[10px] font-mono uppercase text-zinc-500 break-words">{metric.label}</span>
+                          <div className={`text-2xl font-display font-bold ${metric.color}`}>
+                            {metric.value}%
+                          </div>
+                          <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden mt-2">
+                            <div className="h-full bg-emerald-500 w-full" />
+                          </div>
                         </div>
-                        <p className="text-[9px] text-zinc-600 leading-normal">
-                          Percentage of all relevant documents that were successfully retrieved in top 5.
-                        </p>
-                      </div>
+                      ))}
                     </div>
-
-                    <div className="border border-zinc-900 rounded-xl overflow-hidden">
-                      <table className="w-full text-left border-collapse text-xs">
-                        <thead>
-                          <tr className="bg-zinc-900/40 text-zinc-400 font-mono text-[10px] uppercase tracking-wider border-b border-zinc-900">
-                            <th className="p-4">Benchmark Query</th>
-                            <th className="p-4">Precision@5</th>
-                            <th className="p-4">Recall@5</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-900">
-                          {evalResults.map((result, idx) => (
-                            <tr key={idx} className="hover:bg-zinc-900/10">
-                              <td className="p-4 font-mono text-[10px] text-zinc-300 max-w-xs truncate" title={result.query}>
-                                {result.query}
-                              </td>
-                              <td className="p-4 font-mono font-bold text-emerald-400">{(result.precisionAt5 * 100).toFixed(0)}%</td>
-                              <td className="p-4 font-mono font-bold text-isro-blue">{(result.recallAt5 * 100).toFixed(0)}%</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </section>
-
-              {/* Automated Aerospace Hallucination & Security Benchmark Suite */}
-              <section className="isro-glass p-6 md:p-8 rounded-2xl border border-zinc-800 bg-linear-to-br from-zinc-950 to-black space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-2 text-isro-orange text-xs font-mono uppercase tracking-widest">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      Aerospace Defense & Security Suite
-                    </div>
-                    <h2 className="text-xl font-display font-bold text-white">Automated Security & Verification Benchmark</h2>
-                    <p className="text-sm text-zinc-400 max-w-2xl">
-                      Automated evaluation of Prompt Injection Immunity, Z3 SMT Formal Constraints, Groth16 ZK DACL, and Self-RAG Entropy Defense.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={async () => {
-                      setIsRunningSecurityBenchmark(true);
-                      try {
-                        const res = await fetch('http://localhost:3001/api/benchmark/security', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' }
-                        });
-                        if (res.ok) {
-                          const report = await res.json();
-                          setSecurityReport(report);
-                        }
-                      } catch (e) {
-                        console.warn("Failed to fetch security benchmark:", e);
-                      } finally {
-                        setIsRunningSecurityBenchmark(false);
-                      }
-                    }}
-                    disabled={isRunningSecurityBenchmark}
-                    className="px-5 py-2.5 bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-mono text-xs font-bold rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer shrink-0"
-                  >
-                    {isRunningSecurityBenchmark ? (
-                      <>
-                        <RefreshCcw className="w-4 h-4 animate-spin" />
-                        RUNNING BENCHMARK...
-                      </>
-                    ) : (
-                      <>
-                        <Shield className="w-4 h-4" />
-                        RUN SECURITY BENCHMARK SUITE
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4">
-                  {[
-                    { label: 'Prompt Injection Immunity', value: securityReport?.metrics?.promptInjectionDefenseRate ?? 100, color: 'text-purple-400' },
-                    { label: 'Formal Z3 SMT Accuracy', value: securityReport?.metrics?.smtFormalAccuracyRate ?? 100, color: 'text-cyan-400' },
-                    { label: 'ZK-SNARK DACL Enforcement', value: securityReport?.metrics?.zkDaclEnforcementRate ?? 100, color: 'text-emerald-400' },
-                    { label: 'Self-RAG Entropy Defense', value: securityReport?.metrics?.selfRagHallucinationDefenseRate ?? 100, color: 'text-isro-orange' },
-                  ].map((metric) => (
-                    <div key={metric.label} className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800 space-y-1">
-                      <span className="text-[10px] font-mono uppercase text-zinc-500 break-words">{metric.label}</span>
-                      <div className={`text-2xl font-display font-bold ${metric.color}`}>
-                        {metric.value}%
-                      </div>
-                      <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden mt-2">
-                        <div className="h-full bg-emerald-500 w-full" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+                  </section>
+                </>
+              )}
             </motion.div>
           )}
 

@@ -15,9 +15,9 @@
     "server": "npm run docker:up && concurrently -k -n \"OLLAMA,BACKEND,FRONTEND\" -c \"yellow,cyan,magenta\" \"npm run ollama:serve\" \"npm run server:backend\" \"npm run dev\"",
     "start": "npm run server",
     "ingest": "tsx scripts/ingest.ts",
-    "groq-chat": "tsx scripts/groq_chat.ts",
-    "benchmark": "tsx scripts/benchmark_rag.ts",
-    "academic-benchmark": "tsx scripts/academic_benchmark.ts"
+    "benchmark": "tsx evaluation_benchmarks/scripts/benchmark_rag.ts",
+    "academic-benchmark": "tsx evaluation_benchmarks/scripts/academic_benchmark.ts",
+    "journal-suite": "tsx evaluation_benchmarks/scripts/run_journal_publication_suite.ts"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.9",

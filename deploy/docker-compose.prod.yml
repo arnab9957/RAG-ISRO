@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # 1. Reverse Proxy & Frontend Web Server
+  nginx:
+    image: nginx:alpine
+    container_name: irsargo_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+      - keycloak
+
+  # 2. Node.js Express API & Orchestrator Server
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.production
+    container_name: irsargo_backend
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - CHROMADB_URL=http://chromadb:8000
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=ISRO_SPACE
+      - JWT_SECRET=${JWT_SECRET:-change_this_jwt_secret_in_production}
+    volumes:
+      - ../datasets:/app/datasets
+      - chroma_data:/app/chroma_data
+    depends_on:
+      - chromadb
+      - keycloak
+
+  # 3. ChromaDB Vector Database
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: irsargo_chromadb
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ALLOW_RESET=TRUE
+
+  # 4. Keycloak Multi-User OIDC IAM Provider
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.0
+    container_name: irsargo_keycloak
+    command: start-dev --http-port 8080
+    environment:
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
+      - KC_DB_USERNAME=${KEYCLOAK_DB_USER:-keycloak}
+      - KC_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD:-change_this_db_password}
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-change_this_admin_password}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - keycloak-db
+    restart: always
+
+  # 5. PostgreSQL Database for Keycloak Users & RBAC
+  keycloak-db:
+    image: postgres:15-alpine
+    container_name: irsargo_keycloak_db
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=${KEYCLOAK_DB_USER:-keycloak}
+      - POSTGRES_PASSWORD=${KEYCLOAK_DB_PASSWORD:-change_this_db_password}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  chroma_data:
+  keycloak_db_data:

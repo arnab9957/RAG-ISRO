@@ -176,7 +176,8 @@ function calculateDomainRelevance(nodes: any[], queryText: string): number {
 
   // 1. Check node metadata domains
   nodes.forEach(node => {
-    const d = String(node.metadata?.domain || '').toUpperCase();
+    if (!node) return;
+    const d = String(typeof node === 'object' ? node.metadata?.domain || '' : '').toUpperCase();
     if (d.includes('AEROSPACE') || d.includes('SPACE') || d.includes('TECH')) {
       isAerospace = true;
     }
@@ -187,7 +188,8 @@ function calculateDomainRelevance(nodes: any[], queryText: string): number {
 
   // 2. Fallback to keyword heuristics in query/content
   if (!isAerospace && !isGovernment) {
-    const combinedText = (queryText + ' ' + nodes.map(n => n.content).join(' ')).toLowerCase();
+    const nodeTexts = nodes.map(n => typeof n === 'string' ? n : (n?.content || ''));
+    const combinedText = (queryText + ' ' + nodeTexts.join(' ')).toLowerCase();
     const aeroCount = AEROSPACE_KEYWORDS.filter(kw => combinedText.includes(kw)).length;
     const govtCount = GOVERNMENT_KEYWORDS.filter(kw => combinedText.includes(kw)).length;
     if (aeroCount >= govtCount) {
@@ -202,14 +204,15 @@ function calculateDomainRelevance(nodes: any[], queryText: string): number {
   // Calculate average score
   let totalScore = 0;
   nodes.forEach(node => {
-    const contentLower = (node.content || '').toLowerCase();
+    const text = typeof node === 'string' ? node : (node?.content || '');
+    const contentLower = text.toLowerCase();
     const matches = targetKeywords.filter(kw => contentLower.includes(kw)).length;
     // Score based on finding at least 2 key terms in the chunk
     const nodeScore = Math.min(1.0, matches / 2);
     totalScore += nodeScore;
   });
 
-  return totalScore / nodes.length;
+  return totalScore / Math.max(1, nodes.length);
 }
 
 
@@ -1805,8 +1808,9 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
       await new Promise((resolve) => setTimeout(resolve, smtDelay));
     }
 
-    const traces = nodes.map((node: any) => {
-      const trace = createTrace(node.id, node.content || '', answer);
+    const traces = nodes.map((node: any, idx: number) => {
+      const nodeId = String(node.id || node.nodeId || node.chunkId || `node_${idx + 1}`);
+      const trace = createTrace(nodeId, node.content || '', answer);
       if (disableSMT) {
         trace.smtApproval = true; // SMT check bypassed in ablation
         trace.smtStatus = 'SAT';
@@ -1941,9 +1945,9 @@ app.post('/api/verify', requireAuth, async (req: Request, res: Response) => {
       groundingSources: sources,
       allApproved
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Verification error:', error);
-    res.status(500).json({ error: 'Internal verification server error' });
+    res.status(500).json({ error: 'Internal verification server error', details: error.message, stack: error.stack });
   }
 });
 

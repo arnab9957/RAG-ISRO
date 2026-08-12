@@ -1,0 +1,36 @@
+# Multi-stage production build for IRSARGO Backend & API
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package descriptors
+COPY package*.json ./
+
+# Install all dependencies
+RUN npm ci
+
+# Copy application source
+COPY . .
+
+# Build Vite static frontend
+RUN npm run build
+
+# --- Production Runtime Image ---
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# Copy node_modules & build artifacts from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/datasets ./datasets
+
+EXPOSE 3001
+
+CMD ["npx", "tsx", "server/index.ts"]
