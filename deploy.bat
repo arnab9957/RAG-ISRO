@@ -18,7 +18,7 @@ echo ✅ IRSARGO PRODUCTION DEPLOYMENT COMPLETE!
 echo ============================================================
 echo 🔗 Frontend App URL : http://localhost (or http://^<YOUR_SERVER_IP^>)
 echo 🔗 Express API      : http://localhost/api/
-echo 🔗 Keycloak Admin   : http://localhost:8080 (User: admin / Pass: admin_password)
+echo 🔗 Keycloak Admin   : http://localhost:8080
 echo 🔗 ChromaDB API     : http://localhost:8000
 echo ============================================================
 pause
