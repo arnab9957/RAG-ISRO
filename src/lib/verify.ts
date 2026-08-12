@@ -158,16 +158,17 @@ export function createTrace(
   constraintsOrAnswer: string[] | string,
   answerOverride?: string
 ): SecurityTrace {
+  const safeNodeId = String(nodeId || 'node_chunk');
   let hash = 0;
-  for (let i = 0; i < nodeId.length; i++) {
-    hash = (hash << 5) - hash + nodeId.charCodeAt(i);
+  for (let i = 0; i < safeNodeId.length; i++) {
+    hash = (hash << 5) - hash + safeNodeId.charCodeAt(i);
     hash |= 0;
   }
   const normHash = Math.abs(hash) % 100;
   const relevanceScore = 0.85 + (normHash / 100) * 0.14;
 
   const answerText = typeof constraintsOrAnswer === 'string' ? constraintsOrAnswer : (answerOverride || '');
-  const docConstraints = extractSMTConstraints(content);
+  const docConstraints = extractSMTConstraints(content || '');
   const smtRes = solveSMTConstraints(answerText, docConstraints);
 
   // Generate real ZK DACL proof
@@ -176,7 +177,7 @@ export function createTrace(
   const zkVerification = verifyZKProof(zkPayload, userSecretKey);
 
   return {
-    nodeId,
+    nodeId: safeNodeId,
     zkpStatus: zkVerification.isVerified ? 'verified' : 'failed',
     zkProofHash: zkPayload.proofHash,
     zkMerkleRoot: zkPayload.publicSignals.merkleRoot,

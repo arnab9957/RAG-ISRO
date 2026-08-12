@@ -312,7 +312,7 @@
       <div class="matrix-box">
         <div class="matrix-cell bg-tp">
           <strong>TRUE POSITIVE (TP)</strong><br/>
-          <span style="font-size: 24px; font-weight: bold;">10</span><br/>
+          <span style="font-size: 24px; font-weight: bold;">5</span><br/>
           Legitimate Answered
         </div>
         <div class="matrix-cell bg-fp">
@@ -322,7 +322,7 @@
         </div>
         <div class="matrix-cell bg-fn">
           <strong>FALSE NEGATIVE (FN)</strong><br/>
-          <span style="font-size: 24px; font-weight: bold;">0</span><br/>
+          <span style="font-size: 24px; font-weight: bold;">5</span><br/>
           Legitimate Over-blocked
         </div>
         <div class="matrix-cell bg-tn">
@@ -359,29 +359,29 @@
           
             <tr>
               <td><strong>Full IRSARGO</strong></td>
-              <td>21556 ms</td>
-              <td style="color: #10b981; font-weight: bold;">91.4%</td>
+              <td>210 ms</td>
+              <td style="color: #10b981; font-weight: bold;">95%</td>
               <td style="color: #3b82f6; font-weight: bold;">98.2%</td>
             </tr>
           
             <tr>
               <td><strong>IRSARGO w/o SMT</strong></td>
-              <td>14241 ms</td>
-              <td style="color: #10b981; font-weight: bold;">91.4%</td>
+              <td>47 ms</td>
+              <td style="color: #10b981; font-weight: bold;">95%</td>
               <td style="color: #3b82f6; font-weight: bold;">85%</td>
             </tr>
           
             <tr>
               <td><strong>IRSARGO w/o Cache</strong></td>
-              <td>32593 ms</td>
-              <td style="color: #10b981; font-weight: bold;">91.4%</td>
+              <td>36 ms</td>
+              <td style="color: #10b981; font-weight: bold;">95%</td>
               <td style="color: #3b82f6; font-weight: bold;">98.2%</td>
             </tr>
           
             <tr>
               <td><strong>Baseline Naive RAG</strong></td>
-              <td>128027 ms</td>
-              <td style="color: #10b981; font-weight: bold;">91.4%</td>
+              <td>10 ms</td>
+              <td style="color: #10b981; font-weight: bold;">65%</td>
               <td style="color: #3b82f6; font-weight: bold;">8.4%</td>
             </tr>
           
@@ -412,9 +412,9 @@
 \hline
 Precision (1-FPR) (\%) & 100.0\% & 100.0\% & +0.0\% \\
 False Positive Rate (FPR) (\%) & 35.0\% & 0.0\% & -35.0\% \\
-F1-Score Quality & 0.62 & 1 & +0.38 \\
+F1-Score Quality & 0.62 & 0.6667 & +0.05 \\
 TruthfulQA Benchmark (\%) & 50\% & 100\% & +50\% \\
-Max Load Throughput (RPS) & 4.2 RPS & 9.5 RPS & +5.3 RPS \\
+Max Load Throughput (RPS) & 4.2 RPS & 77.72 RPS & +73.5 RPS \\
 Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
 \hline
 \end{tabular}
@@ -439,7 +439,7 @@ Cache Hit Absorption (\%) & 0.0\% & 0\% & +0\% \\
           },
           {
             label: 'Total Pipeline Latency (ms)',
-            data: [519,1427,2298,3723,4646],
+            data: [2,3,2,2,2],
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
             fill: true,

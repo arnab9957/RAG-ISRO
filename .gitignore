@@ -1,17 +1,13 @@
-# Generated .gitignore file for: Node, Python, JavaScript, TypeScript
-# Created with FOSSA's DevOps Tools
-
-# Node
+# Generated .gitignore file for IRSARGO Enterprise RAG
+# Node & Frontend Build Outputs
 node_modules/
 npm-debug.log
 yarn-error.log
-.env
-.DS_Store
 dist/
 .cache/
 coverage/
 
-# Python
+# Python Build & Caching
 __pycache__/
 *.py[cod]
 *$py.class
@@ -19,20 +15,20 @@ __pycache__/
 .coverage
 venv/
 env/
-.env
-*.so
+
+# Data, Vector Stores & Non-Essential Runtime Directories
 datasets/
 Results/
 chroma_data/
 non_essential_files/
+evaluation_benchmarks/
+ingestion_audit.log
+knowledge_graph.json
 
-# JavaScript
-# Add JavaScript-specific ignores here
-
-# TypeScript
-# Add TypeScript-specific ignores here
-
-# Common
+# Local Environment & Secrets
+.env
+.env.local
+.env.*.local
 .DS_Store
 Thumbs.db
 *.log
@@ -41,15 +37,8 @@ Thumbs.db
 *.swp
 *~
 
-# IDE and editor generated files
+# IDE & Temporary Tools
 .idea/
 .vscode/mcp.json
+.tempmediaStorage/
 *.sublime-*
-
-# Local environment files
-.env
-.env.local
-.env.*.local
-
-
-
