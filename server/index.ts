@@ -2398,8 +2398,57 @@ app.post('/api/v1/chatops/webhook', async (req: Request, res: Response) => {
   });
 });
 
+// 4. Server-Side Dynamic Translation Endpoint (Bypasses CORS restrictions)
+app.post('/api/v1/translate', async (req: Request, res: Response) => {
+  try {
+    const { text, targetLangCode } = req.body;
+    if (!text || !targetLangCode || targetLangCode === 'en') {
+      return res.json({ translatedText: text || '' });
+    }
+
+    // Try Google Translate GTX API
+    try {
+      const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLangCode)}&dt=t&q=${encodeURIComponent(text)}`;
+      const gtxRes = await fetch(gtxUrl, { signal: AbortSignal.timeout(3500) });
+      if (gtxRes.ok) {
+        const data = await gtxRes.json();
+        if (Array.isArray(data) && Array.isArray(data[0])) {
+          const translatedStr = data[0].map((chunk: any) => chunk[0]).join('');
+          if (translatedStr && translatedStr.trim()) {
+            return res.json({ translatedText: translatedStr });
+          }
+        }
+      }
+    } catch (e) {}
+
+    // Fallback: MyMemory API with strict quota warning check
+    try {
+      const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0, 450))}&langpair=en|${encodeURIComponent(targetLangCode)}`;
+      const mmRes = await fetch(mmUrl, { signal: AbortSignal.timeout(3000) });
+      if (mmRes.ok) {
+        const data = await mmRes.json();
+        const translatedStr = data?.responseData?.translatedText;
+        if (
+          translatedStr &&
+          typeof translatedStr === 'string' &&
+          !translatedStr.includes('MYMEMORY WARNING') &&
+          !translatedStr.includes('INVALID LANGUAGE PAIR')
+        ) {
+          return res.json({ translatedText: translatedStr });
+        }
+      }
+    } catch (e) {}
+
+    return res.json({ translatedText: text });
+  } catch (err: any) {
+    console.error('Translation endpoint error:', err);
+    res.status(500).json({ error: 'Translation failed', translatedText: req.body?.text || '' });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`IRSARGO Backend running on port ${PORT}`);
 });
+
 

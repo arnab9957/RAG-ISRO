@@ -20,11 +20,22 @@ import {
   ArrowRight,
   ChevronDown,
   GripVertical,
-  Move
+  Move,
+  Mic,
+  MicOff,
+  Globe,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { ChatMessage, AgentAction, Domain } from '../types';
 import { sanitizeOutput } from '../App';
+import { SUPPORTED_LANGUAGES, translateDynamicRealtime, useTranslatedText, getSpeechLangCode, speakText, stopSpeaking, Language } from '../lib/translator';
+
+const TranslatedMarkdown: React.FC<{ text: string; lang: string }> = ({ text, lang }) => {
+  const translated = useTranslatedText(text, lang);
+  return <ReactMarkdown>{translated}</ReactMarkdown>;
+};
 
 interface FloatingChatbotProps {
   isOpen: boolean;
@@ -40,6 +51,8 @@ interface FloatingChatbotProps {
   selectedDomain: Domain;
   setSelectedDomain: (domain: Domain) => void;
   activeTab: string;
+  selectedLanguage: Language;
+  setSelectedLanguage: (lang: Language) => void;
 }
 
 export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({
@@ -55,12 +68,65 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({
   airGappedMode,
   selectedDomain,
   setSelectedDomain,
-  activeTab
+  activeTab,
+  selectedLanguage,
+  setSelectedLanguage
 }) => {
   const [inputQuery, setInputQuery] = useState('');
   const [showDomainMenu, setShowDomainMenu] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  const toggleVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice Speech Recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = getSpeechLangCode(selectedLanguage.code);
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setInputQuery(transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Voice recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error('Voice input error:', err);
+      setIsListening(false);
+    }
+  };
   
   // Framer Motion drag controls for smooth header-based dragging
   const dragControls = useDragControls();
@@ -296,14 +362,24 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({
                 ) : (
                   <div className="space-y-2">
                     <div className="prose prose-invert prose-xs max-w-none text-zinc-200">
-                      <ReactMarkdown>
-                        {sanitizeOutput(msg.text, msg.response?.retrievedNodes || [])}
-                      </ReactMarkdown>
+                      <TranslatedMarkdown 
+                        text={sanitizeOutput(msg.text, msg.response?.retrievedNodes || [])} 
+                        lang={selectedLanguage.code} 
+                      />
                     </div>
 
                     {/* Metrics & Proof Badges if available */}
                     {msg.response?.metrics && (
-                      <div className="pt-2 border-t border-zinc-800/80 flex flex-wrap gap-1.5">
+                      <div className="pt-2 border-t border-zinc-800/80 flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => speakText(msg.text, selectedLanguage.code)}
+                          className="px-2 py-0.5 rounded bg-orange-500/20 border border-orange-500/40 text-orange-300 hover:text-white font-mono text-[9px] flex items-center gap-1 cursor-pointer transition"
+                          title="Listen to answer aloud"
+                        >
+                          <Volume2 className="w-2.5 h-2.5 text-orange-400" />
+                          <span>Listen ({selectedLanguage.nativeName})</span>
+                        </button>
                         <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[9px]">
                           Fidelity: {Math.round(msg.response.metrics.groundingFidelity * 100)}%
                         </span>
@@ -344,44 +420,87 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({
 
       {/* Footer Controls & Query Form */}
       <div className="p-3 bg-zinc-900/90 border-t border-[var(--border-structure)] shrink-0 space-y-2">
-        {/* Domain Selector & Filters */}
-        <div className="flex items-center justify-between text-[10px] font-mono">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowDomainMenu(!showDomainMenu)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white transition cursor-pointer"
-            >
-              <Layers className="w-3 h-3 text-orange-400" />
-              <span className="truncate max-w-[150px]">{selectedDomain}</span>
-              <ChevronDown className="w-3 h-3 text-zinc-400" />
-            </button>
+        {/* Domain & Language Selectors */}
+        <div className="flex items-center justify-between text-[10px] font-mono gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Domain Selector */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDomainMenu(!showDomainMenu);
+                  setShowLangMenu(false);
+                }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white transition cursor-pointer"
+              >
+                <Layers className="w-3 h-3 text-orange-400" />
+                <span className="truncate max-w-[110px]">{selectedDomain}</span>
+                <ChevronDown className="w-3 h-3 text-zinc-400" />
+              </button>
 
-            {showDomainMenu && (
-              <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl bg-zinc-900 border border-zinc-700 shadow-2xl p-1 z-50 space-y-1">
-                {Object.values(Domain).map((dom) => (
-                  <button
-                    key={dom}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDomain(dom);
-                      setShowDomainMenu(false);
-                    }}
-                    className={`w-full text-left p-2 rounded-lg text-[10px] font-mono transition ${
-                      selectedDomain === dom 
-                        ? 'bg-orange-500/20 text-orange-300 font-bold border border-orange-500/40' 
-                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                    }`}
-                  >
-                    {dom}
-                  </button>
-                ))}
-              </div>
-            )}
+              {showDomainMenu && (
+                <div className="absolute bottom-full left-0 mb-1 w-52 rounded-xl bg-zinc-900 border border-zinc-700 shadow-2xl p-1 z-50 space-y-1">
+                  {Object.values(Domain).map((dom) => (
+                    <button
+                      key={dom}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDomain(dom);
+                        setShowDomainMenu(false);
+                      }}
+                      className={`w-full text-left p-2 rounded-lg text-[10px] font-mono transition ${
+                        selectedDomain === dom 
+                          ? 'bg-orange-500/20 text-orange-300 font-bold border border-orange-500/40' 
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      }`}
+                    >
+                      {dom}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Language Selector */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLangMenu(!showLangMenu);
+                  setShowDomainMenu(false);
+                }}
+                className="flex items-center justify-center p-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white transition cursor-pointer hover:border-cyan-500/60"
+                title={`Language: ${selectedLanguage.nativeName}`}
+              >
+                <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              </button>
+
+              {showLangMenu && (
+                <div className="absolute bottom-full left-0 mb-1 w-44 rounded-xl bg-zinc-900 border border-zinc-700 shadow-2xl p-1 z-50 space-y-1 max-h-48 overflow-y-auto">
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => {
+                        setSelectedLanguage(lang);
+                        setShowLangMenu(false);
+                      }}
+                      className={`w-full text-left p-1.5 rounded-lg text-[10px] font-mono transition flex items-center justify-between cursor-pointer ${
+                        selectedLanguage.code === lang.code 
+                          ? 'bg-orange-500/20 text-orange-300 font-bold border border-orange-500/40' 
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      }`}
+                    >
+                      <span>{lang.flag} {lang.nativeName}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          <span className="text-zinc-500 flex items-center gap-1">
-            <Move className="w-2.5 h-2.5 text-zinc-500" /> Drag header to move
+          <span className="text-zinc-500 flex items-center gap-1 shrink-0">
+            <Move className="w-2.5 h-2.5 text-zinc-500" /> Move
           </span>
         </div>
 
@@ -391,10 +510,26 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({
             type="text"
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
-            placeholder="Ask IRSARGO AI..."
+            placeholder={isListening ? "Listening... Speak now" : "Ask IRSARGO AI..."}
             disabled={isQuerying}
             className="flex-1 py-2.5 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 font-sans text-xs focus:outline-none focus:border-orange-500/80 transition disabled:opacity-50"
           />
+          <button
+            type="button"
+            onClick={toggleVoiceInput}
+            className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-center shrink-0 ${
+              isListening 
+                ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.5)]' 
+                : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white'
+            }`}
+            title={isListening ? 'Listening... Click to stop' : 'Click to dictate via microphone'}
+          >
+            {isListening ? (
+              <MicOff className="w-4 h-4 text-red-400 animate-bounce" />
+            ) : (
+              <Mic className="w-4 h-4 text-zinc-400" />
+            )}
+          </button>
           <button
             type="submit"
             disabled={!inputQuery.trim() || isQuerying}

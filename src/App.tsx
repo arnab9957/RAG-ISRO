@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   ShieldAlert,
   Globe,
+  ChevronDown,
   WifiOff,
   LogOut,
   Plus,
@@ -42,7 +43,11 @@ import {
   X,
   Sparkles,
   Github,
-  Menu
+  Menu,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { AgentAction, Domain, IRSARGOResponse, AdvancedFilters, HistoryItem, ChatMessage } from './types';
 import { IRSARGOOrchestrator } from './lib/agents';
@@ -67,6 +72,17 @@ import { LandingPage } from './components/LandingPage';
 import { ThemeToggle } from './components/ui/ThemeToggle';
 import { BaselineRagView } from './components/BaselineRagView';
 import { FloatingChatbot } from './components/FloatingChatbot';
+import { SUPPORTED_LANGUAGES, translateDynamicRealtime, useTranslatedText, getSpeechLangCode, speakText, stopSpeaking, Language } from './lib/translator';
+
+const TranslatedMarkdownText: React.FC<{ text: string; langCode: string }> = ({ text, langCode }) => {
+  const translated = useTranslatedText(text, langCode);
+  return <ReactMarkdown>{formatMarkdownSpacing(translated)}</ReactMarkdown>;
+};
+
+const TranslatedOutputEditor: React.FC<{ content: string; langCode: string }> = ({ content, langCode }) => {
+  const translated = useTranslatedText(content, langCode);
+  return <OutputEditor key={`${langCode}-${content.length}`} content={translated} />;
+};
 
 type Tab = 'landing' | 'console' | 'activities' | 'database' | 'ingest' | 'history' | 'evaluate' | 'baseline';
 
@@ -604,6 +620,78 @@ export default function App() {
   // Persistent Floating Chatbot State (Permanently Enabled Across All Tabs)
   const [isFloatingBotOpen, setIsFloatingBotOpen] = useState<boolean>(true);
   const [isFloatingBotMinimized, setIsFloatingBotMinimized] = useState<boolean>(true);
+
+  // Multilingual Translation State
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(() => {
+    const saved = localStorage.getItem('irsargo_selected_language');
+    if (saved) {
+      const match = SUPPORTED_LANGUAGES.find(l => l.code === saved);
+      if (match) return match;
+    }
+    return SUPPORTED_LANGUAGES[0];
+  });
+  const [showLangMenu, setShowLangMenu] = useState<boolean>(false);
+
+  const handleLanguageChange = (lang: Language) => {
+    setSelectedLanguage(lang);
+    localStorage.setItem('irsargo_selected_language', lang.code);
+  };
+
+  // Multilingual Speech Synthesis (TTS) State
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
+
+  // Voice Input (Speech-to-Text) State
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const recognitionRef = useRef<any>(null);
+
+  const toggleVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice Speech Recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = getSpeechLangCode(selectedLanguage.code);
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setQuery(transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Voice recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error('Voice input error:', err);
+      setIsListening(false);
+    }
+  };
   // User Access State
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('irsargo_token'));
   const [user, setUser] = useState<any>(() => {
@@ -1308,6 +1396,44 @@ export default function App() {
             <div className="flex items-center gap-3">
               {/* Desktop Items */}
               <div className="hidden lg:flex items-center gap-3">
+                {/* Multilingual Selector */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowLangMenu(!showLangMenu)}
+                    className="flex items-center justify-center p-2 rounded-xl bg-zinc-900/80 border border-zinc-700/80 text-white transition hover:border-orange-500/60 cursor-pointer shadow-md hover:bg-zinc-800"
+                    title={`Language: ${selectedLanguage.nativeName} (${selectedLanguage.name})`}
+                  >
+                    <Globe className="w-4 h-4 text-orange-400" />
+                  </button>
+
+                  {showLangMenu && (
+                    <div className="absolute top-full right-0 mt-2 w-48 rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl p-1.5 z-50 space-y-1">
+                      {SUPPORTED_LANGUAGES.map((lang) => (
+                        <button
+                          key={lang.code}
+                          type="button"
+                          onClick={() => {
+                            handleLanguageChange(lang);
+                            setShowLangMenu(false);
+                          }}
+                          className={`w-full text-left p-2 rounded-xl text-xs font-mono transition flex items-center justify-between cursor-pointer ${
+                            selectedLanguage.code === lang.code 
+                              ? 'bg-orange-500/20 text-orange-300 font-bold border border-orange-500/40' 
+                              : 'text-zinc-300 hover:text-white hover:bg-zinc-900'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span>{lang.flag}</span>
+                            <span>{lang.nativeName}</span>
+                          </span>
+                          <span className="text-[10px] text-zinc-500">{lang.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <ThemeToggle />
 
                 <a
@@ -1676,10 +1802,26 @@ export default function App() {
                       type="text" 
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder={domain === Domain.AEROSPACE ? "Query telemetry..." : "Query GFR rules..."}
+                      placeholder={isListening ? "Listening... Speak your query now" : (domain === Domain.AEROSPACE ? "Query telemetry..." : "Query GFR rules...")}
                       className="flex-1 bg-transparent border-none outline-none text-zinc-200 placeholder:text-zinc-600 text-sm md:text-lg py-3 md:py-4 min-w-0"
                       disabled={isQuerying}
                     />
+                    <button
+                      type="button"
+                      onClick={toggleVoiceInput}
+                      className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-center shrink-0 ${
+                        isListening 
+                          ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
+                          : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                      }`}
+                      title={isListening ? 'Listening to voice input... Click to stop' : 'Click to dictate query via microphone'}
+                    >
+                      {isListening ? (
+                        <MicOff className="w-4 h-4 md:w-5 md:h-5 text-red-400 animate-bounce" />
+                      ) : (
+                        <Mic className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
+                      )}
+                    </button>
                     <button 
                       type="submit"
                       disabled={isQuerying || !query.trim()}
@@ -1859,13 +2001,16 @@ export default function App() {
                                     <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
                                   </div>
 
-                                  {/* Text Content */}
+                                   {/* Text Content */}
                                   <div className="text-sm leading-relaxed font-sans">
                                     {isUser ? (
                                       <div className="whitespace-pre-wrap">{msg.text}</div>
                                     ) : (
                                       <div className="markdown-content">
-                                        <ReactMarkdown>{formatMarkdownSpacing(sanitizeOutput(msg.text, msg.response?.retrievedNodes || []))}</ReactMarkdown>
+                                        <TranslatedMarkdownText 
+                                          text={sanitizeOutput(msg.text, msg.response?.retrievedNodes || [])} 
+                                          langCode={selectedLanguage.code} 
+                                        />
                                       </div>
                                     )}
                                   </div>
@@ -1935,6 +2080,41 @@ export default function App() {
                                 <h2 className="text-lg md:text-xl font-display font-bold text-white tracking-tight">Verified Technical Synthesis</h2>
                               </div>
                               <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (isSpeaking && speakingMessageId === activeMessageId) {
+                                      stopSpeaking();
+                                      setIsSpeaking(false);
+                                      setSpeakingMessageId(null);
+                                    } else {
+                                      setIsSpeaking(true);
+                                      setSpeakingMessageId(activeMessageId);
+                                      speakText(activeResponse.answer, selectedLanguage.code, () => {
+                                        setIsSpeaking(false);
+                                        setSpeakingMessageId(null);
+                                      });
+                                    }
+                                  }}
+                                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-mono font-bold transition cursor-pointer ${
+                                    isSpeaking && speakingMessageId === activeMessageId
+                                      ? 'bg-amber-500/20 border-amber-500 text-amber-300 animate-pulse'
+                                      : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border-zinc-700'
+                                  }`}
+                                  title={isSpeaking ? 'Click to stop audio readout' : 'Read answer aloud in native language'}
+                                >
+                                  {isSpeaking && speakingMessageId === activeMessageId ? (
+                                    <>
+                                      <VolumeX className="w-3 h-3 text-amber-400 animate-bounce" />
+                                      <span>STOP AUDIO</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Volume2 className="w-3 h-3 text-orange-400" />
+                                      <span>LISTEN ({selectedLanguage.nativeName})</span>
+                                    </>
+                                  )}
+                                </button>
                                 <button 
                                   onClick={handleExport}
                                   className="flex items-center gap-2 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-white hover:text-white rounded-full border border-zinc-700 text-[10px] font-mono font-bold transition-colors cursor-pointer"
@@ -1955,7 +2135,11 @@ export default function App() {
                             </div>
 
                             <div className="mt-6 mb-8">
-                              <OutputEditor key={activeMessageId} content={sanitizeOutput(activeResponse.answer, activeResponse.retrievedNodes || [])} />
+                              <TranslatedOutputEditor 
+                                key={`${activeMessageId}-${selectedLanguage.code}`} 
+                                content={sanitizeOutput(activeResponse.answer, activeResponse.retrievedNodes || [])} 
+                                langCode={selectedLanguage.code} 
+                              />
                             </div>
 
                             <div className="mt-8 pt-8 border-t border-zinc-800/80 grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -3093,6 +3277,8 @@ export default function App() {
         selectedDomain={domain}
         setSelectedDomain={setDomain}
         activeTab={activeTab}
+        selectedLanguage={selectedLanguage}
+        setSelectedLanguage={handleLanguageChange}
       />
     </div>
   );

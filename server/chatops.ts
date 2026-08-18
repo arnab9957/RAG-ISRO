@@ -43,7 +43,7 @@ ${result.answer || 'No grounded answer synthesized.'}
 ---
 🛡️ **Security Telemetry**:
 - **Groundedness Fidelity**: \`${fidelityPercent}%\`
-- **ZK-STARK Proof**: \`${zkpHash.substring(0, 24)}...\`
+- **ZK-SNARK Proof**: \`${zkpHash.substring(0, 24)}...\`
 - **Audit Domain**: \`${result.domain || 'Aerospace Technical Operations'}\`
 - **Operator User**: \`@${payload.user_name || 'airgapped_operator'}\`
     `.trim();

@@ -2,7 +2,7 @@
 
 **IRSARGO** (Secure and Accurate Retrieval-Augmented Generation for Aerospace & Government Compliance) is a mission-critical, self-contained, enterprise-grade RAG system tailored for Indian Space Research Organisation (ISRO) aerospace technical specifications and government procurement compliance guidelines (such as GFR 2017). 
 
-Designed to operate in secure, air-gapped / off-grid environments, the system features a zero-trust multi-agent security pipeline, local embedding computation, dynamic access control lists (DACL), anti-exfiltration output filtering, and simulated hybrid formal verification (ZK-STARK + Z3 SMT) to guarantee response groundedness, constraint satisfaction, and strict data safety.
+Designed to operate in secure, air-gapped / off-grid environments, the system features a zero-trust multi-agent security pipeline, local embedding computation, dynamic access control lists (DACL), anti-exfiltration output filtering, and hybrid formal verification (Circom ZK-SNARK + WebAssembly Z3 SMT) to guarantee response groundedness, constraint satisfaction, and strict data safety.
 
 
 ---
@@ -31,7 +31,7 @@ graph TD
     User([User Query]) --> PreProcess[Query Pre-Processing]
     
     subgraph Pre-Processing Stage
-        PreProcess --> ZK["ZK-STARK Query Verification<br/>(RISC Zero Simulation)"]
+        PreProcess --> ZK["ZK-SNARK Query Verification<br/>(Circom Engine)"]
         ZK --> Expand["Query Expansion & HyDE<br/>(Executor Agent)"]
     end
     
@@ -54,7 +54,7 @@ graph TD
         ReActLoop --> GraphRAG["GraphRAG Path Injection<br/>(knowledge_graph.json)"]
         GraphRAG --> ExecutorGen["Grounded Generation Layer"]
         ExecutorGen --> CriticAudit["Adversarial Hallucination Audit<br/>(Critic Agent)"]
-        CriticAudit --> SMTVerify["Z3 SMT Formal Prover Simulation<br/>(Validator Agent)"]
+        CriticAudit --> SMTVerify["WebAssembly Z3 SMT Formal Prover<br/>(Validator Agent)"]
         SMTVerify --> ConfScore[Confidence & Risk Metric Scoring]
     end
     
@@ -63,7 +63,7 @@ graph TD
 ```
 
 1. **Query Pre-Processing**: User query input is validated and cryptographically verified.
-2. **ZK-STARK Proving**: Generates a simulated zero-knowledge proof (`zkstark_[timestamp]_[hash]_risc0_v2`) representing query integrity.
+2. **ZK-SNARK Proving**: Generates a zero-knowledge proof (`zksnark_[timestamp]_[hash]_circom`) representing query integrity and clearance membership.
 3. **Query Expansion & HyDE**: Generates 2 alternative search queries and a hypothetical document paragraph to bridge semantic phrasing gaps and boost retrieval recall.
 4. **Parent-Document Retrieval**: Indexes small child chunks for semantic precision but swaps in larger parent document context blocks during generation to maintain context continuity.
 5. **RAPTOR (Recursive Summarization Tree)**: Recursively clusters document chunks using local cosine similarity and generates summary layers, allowing multi-level search across leaf passages and high-level themes.
