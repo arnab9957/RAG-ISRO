@@ -123,17 +123,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     <div className="relative min-h-screen w-full text-[var(--text-main)] selection:bg-orange-500 selection:text-white flex flex-col">
       
       {/* 0. LANDING PAGE DEDICATED HEADER TOP BAR */}
-      <header className="relative z-30 w-full px-6 lg:px-10 h-20 flex items-center justify-between">
+      <header className="relative z-30 w-full px-4 sm:px-6 lg:px-10 h-16 sm:h-20 flex items-center justify-between">
         {/* Left: Landing Logo & Air-Gapped Mode Toggle */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6 min-w-0">
           <img 
             src="/logo.png" 
             alt="IRSARGO Logo" 
-            className="h-12 md:h-14 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(56,189,248,0.4)] transition-all hover:scale-105" 
+            style={{ height: '90px', width: 'auto', maxWidth: '125px' }}
+            className="h-4 sm:h-5 w-auto max-w-[80px] sm:max-w-[95px] object-contain transition-all hover:scale-105 shrink-0 my-auto" 
           />
 
           {onToggleAirGappedMode && (
-            <div className="hidden md:flex items-center">
+            <div className="hidden lg:flex items-center">
               <LiquidButton
                 onClick={onToggleAirGappedMode}
                 glassClassName={
@@ -154,14 +155,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
 
         {/* Right: How to Use Guide & Theme Toggle & GitHub & Sign In / User Profile */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             type="button"
             onClick={() => {
               const el = document.getElementById('interactive-user-guide');
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}
-            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-structure)] hover:border-orange-500/50 text-xs font-mono font-bold text-[var(--text-main)] transition cursor-pointer shadow-md"
+            className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-structure)] hover:border-orange-500/50 text-xs font-mono font-bold text-[var(--text-main)] transition cursor-pointer shadow-md whitespace-nowrap shrink-0"
           >
             <HelpCircle className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
             <span>How to Use Guide</span>
@@ -174,11 +175,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             title="View Source Code on GitHub"
+            className="hidden sm:inline-block shrink-0"
           >
             <LiquidButton
               size="sm"
               glassClassName="bg-gradient-to-r from-zinc-900/80 via-black/80 to-zinc-900/80 border border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.2)] group-hover:border-white/80 group-hover:scale-105"
-              className="flex items-center justify-center gap-1.5 py-1.5 px-3.5 text-[11px] font-mono font-bold text-white shadow-xl cursor-pointer"
+              className="flex items-center justify-center gap-1.5 py-1.5 px-3 text-[11px] font-mono font-bold text-white shadow-xl cursor-pointer whitespace-nowrap"
             >
               <Github className="w-3.5 h-3.5 text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
               <span className="tracking-wider font-extrabold text-[10px] text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]">
@@ -191,9 +193,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={onAccessBaselineRag}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-950/60 hover:bg-red-900/60 border border-red-500/40 text-red-300 font-mono text-xs font-bold transition shadow-lg hover:scale-105 cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-red-950/60 hover:bg-red-900/60 border border-red-500/40 text-red-300 font-mono text-[11px] sm:text-xs font-bold transition shadow-lg cursor-pointer whitespace-nowrap shrink-0"
             >
-              <Layers className="w-3.5 h-3.5 text-red-400" /> Baseline RAG
+              <Layers className="w-3.5 h-3.5 text-red-400" />
+              <span>Baseline RAG</span>
             </button>
           )}
 
@@ -201,21 +204,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={onSignIn}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-orange-600/30 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-5 sm:py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-orange-600/30 cursor-pointer whitespace-nowrap shrink-0"
             >
-              <Lock className="w-3.5 h-3.5" /> Sign In
+              <Lock className="w-3.5 h-3.5" /> <span className="whitespace-nowrap">Sign In</span>
             </button>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => onLaunchConsole()}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-cyan-600/30 cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-cyan-600/30 cursor-pointer whitespace-nowrap shrink-0"
               >
-                <Terminal className="w-3.5 h-3.5" /> Launch Console
+                <Terminal className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Launch Console</span>
               </button>
-              <div className="flex items-center gap-3 border-l border-[var(--border-structure)] pl-4 h-10">
-                <div className="text-right">
+              <div className="flex items-center gap-2 border-l border-[var(--border-structure)] pl-2 sm:pl-4 h-9 sm:h-10 shrink-0">
+                <div className="text-right hidden sm:block">
                   <p className="text-[11px] font-bold text-[var(--text-main)] tracking-wide">{effectiveUser.displayName}</p>
                   <p className="text-[8px] font-mono text-[var(--accent-cyan)] uppercase tracking-wider">{effectiveUser.role}</p>
                 </div>
@@ -223,7 +226,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <button
                     type="button"
                     onClick={onLogout}
-                    className="p-1.5 bg-[var(--bg-surface)] border border-[var(--border-structure)] hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 rounded-lg text-[var(--text-muted)] transition cursor-pointer"
+                    className="p-1.5 bg-[var(--bg-surface)] border border-[var(--border-structure)] hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 rounded-lg text-[var(--text-muted)] transition cursor-pointer shrink-0"
                     title="Logout operator session"
                   >
                     <LogOut className="w-3.5 h-3.5" />
@@ -235,11 +238,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </header>
       
-      {/* 1. CONTINUOUS SEQUENTIAL VIDEO BACKGROUND ENGINE (FULL SCREEN) */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none opacity-40 dark:opacity-75 transition-opacity duration-300">
+      {/* 1. CONTINUOUS SEQUENTIAL VIDEO BACKGROUND ENGINE (FULL SCREEN & RESPONSIVE COVER) */}
+      <div className="fixed inset-0 w-screen h-screen min-w-full min-h-screen h-[100dvh] z-0 overflow-hidden pointer-events-none opacity-70 dark:opacity-85 transition-opacity duration-300">
         {/* Video 1 Container */}
         <div 
-          className={`absolute inset-0 transition-opacity duration-1000 ${
+          className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${
             activeVideo === 'lp1' ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none z-0'
           }`}
         >
@@ -255,7 +258,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 video2Ref.current.play().catch(() => {});
               }
             }}
-            className="w-full h-full object-cover scale-105 filter brightness-75 contrast-110"
+            className="w-full h-full min-w-full min-h-full object-cover scale-110 filter brightness-90 contrast-105"
           >
             <source src="/videos/lp.mp4" type="video/mp4" />
             <source src="/datasets/lp.mp4" type="video/mp4" />
@@ -264,7 +267,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Video 2 Container */}
         <div 
-          className={`absolute inset-0 transition-opacity duration-1000 ${
+          className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${
             activeVideo === 'lp2' ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none z-0'
           }`}
         >
@@ -280,16 +283,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 video1Ref.current.play().catch(() => {});
               }
             }}
-            className="w-full h-full object-cover scale-105 filter brightness-75 hue-rotate-15"
+            className="w-full h-full min-w-full min-h-full object-cover scale-110 filter brightness-90 hue-rotate-15"
           >
             <source src="/videos/lp2.mp4" type="video/mp4" />
             <source src="/datasets/lp2.mp4" type="video/mp4" />
           </video>
         </div>
 
-        {/* Dynamic Theme Radial Overlay for Readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-base)] via-[var(--bg-base)]/80 to-[var(--bg-base)]/40 z-20" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--bg-base)_100%)] opacity-90 z-20" />
+        {/* Responsive Backdrop Overlays (Ensures video covers 100% of screen while maintaining high text readability) */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60 z-20 pointer-events-none" />
+        <div className="absolute inset-0 bg-[var(--bg-base)]/40 dark:bg-[var(--bg-base)]/30 backdrop-brightness-95 z-20 pointer-events-none" />
         
         {/* Tech Grid Pattern Overlay */}
         <div 
