@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   ShieldAlert,
   Globe,
+  ChevronDown,
   WifiOff,
   LogOut,
   Plus,
@@ -41,7 +42,12 @@ import {
   CheckCircle2,
   X,
   Sparkles,
-  Github
+  Github,
+  Menu,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { AgentAction, Domain, IRSARGOResponse, AdvancedFilters, HistoryItem, ChatMessage } from './types';
 import { IRSARGOOrchestrator } from './lib/agents';
@@ -65,6 +71,18 @@ import { OllamaTerminal } from './components/ui/OllamaTerminal';
 import { LandingPage } from './components/LandingPage';
 import { ThemeToggle } from './components/ui/ThemeToggle';
 import { BaselineRagView } from './components/BaselineRagView';
+import { FloatingChatbot } from './components/FloatingChatbot';
+import { SUPPORTED_LANGUAGES, translateDynamicRealtime, useTranslatedText, getSpeechLangCode, speakText, stopSpeaking, Language } from './lib/translator';
+
+const TranslatedMarkdownText: React.FC<{ text: string; langCode: string }> = ({ text, langCode }) => {
+  const translated = useTranslatedText(text, langCode);
+  return <ReactMarkdown>{formatMarkdownSpacing(translated)}</ReactMarkdown>;
+};
+
+const TranslatedOutputEditor: React.FC<{ content: string; langCode: string }> = ({ content, langCode }) => {
+  const translated = useTranslatedText(content, langCode);
+  return <OutputEditor key={`${langCode}-${content.length}`} content={translated} />;
+};
 
 type Tab = 'landing' | 'console' | 'activities' | 'database' | 'ingest' | 'history' | 'evaluate' | 'baseline';
 
@@ -598,6 +616,82 @@ export default function App() {
   const [domain, setDomain] = useState<Domain>(Domain.AEROSPACE);
   const [isQuerying, setIsQuerying] = useState(false);
   const [actions, setActions] = useState<AgentAction[]>([]);
+
+  // Persistent Floating Chatbot State (Permanently Enabled Across All Tabs)
+  const [isFloatingBotOpen, setIsFloatingBotOpen] = useState<boolean>(true);
+  const [isFloatingBotMinimized, setIsFloatingBotMinimized] = useState<boolean>(true);
+
+  // Multilingual Translation State
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(() => {
+    const saved = localStorage.getItem('irsargo_selected_language');
+    if (saved) {
+      const match = SUPPORTED_LANGUAGES.find(l => l.code === saved);
+      if (match) return match;
+    }
+    return SUPPORTED_LANGUAGES[0];
+  });
+  const [showLangMenu, setShowLangMenu] = useState<boolean>(false);
+
+  const handleLanguageChange = (lang: Language) => {
+    setSelectedLanguage(lang);
+    localStorage.setItem('irsargo_selected_language', lang.code);
+  };
+
+  // Multilingual Speech Synthesis (TTS) State
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
+
+  // Voice Input (Speech-to-Text) State
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const recognitionRef = useRef<any>(null);
+
+  const toggleVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice Speech Recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = getSpeechLangCode(selectedLanguage.code);
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setQuery(transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Voice recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error('Voice input error:', err);
+      setIsListening(false);
+    }
+  };
   // User Access State
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('irsargo_token'));
   const [user, setUser] = useState<any>(() => {
@@ -608,8 +702,9 @@ export default function App() {
   const effectiveUser = user;
   const userStorageKey = effectiveUser?.username ? effectiveUser.username.toLowerCase() : 'guest';
 
-  // Modal Login & Gatekeeper States
+  // Modal Login, Gatekeeper & Responsive Drawer States
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
   const [pendingTargetTab, setPendingTargetTab] = useState<Tab | null>(null);
   const [pendingQuery, setPendingQuery] = useState<string | null>(null);
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
@@ -878,12 +973,14 @@ export default function App() {
     await executeSubmittedQuery(query);
   };
 
-  const executeSubmittedQuery = async (queryText: string) => {
+  const executeSubmittedQuery = async (queryText: string, stayOnCurrentTab: boolean = false) => {
     if (!queryText.trim() || isQuerying) return;
 
     const currentQuery = queryText;
     setQuery('');
-    setActiveTab('console');
+    if (!stayOnCurrentTab) {
+      setActiveTab('console');
+    }
     setIsQuerying(true);
     setActions([]);
 
@@ -1246,20 +1343,21 @@ export default function App() {
       <BackgroundPixelStars />
       {/* Main App Header (Hidden on Landing Page) */}
       {activeTab !== 'landing' && (
-        <header className="relative z-10 border-b border-[var(--border-structure)] bg-[var(--glass-bg)] backdrop-blur-xl sticky top-0 transition-colors duration-300">
-          <div className="w-full px-6 lg:px-10 h-20 flex items-center justify-between">
-            {/* Left Group: Logo + Privacy Mode Toggle */}
-            <div className="flex items-center gap-6">
+        <header className="relative z-30 border-b border-[var(--border-structure)] bg-[var(--glass-bg)] backdrop-blur-xl sticky top-0 transition-colors duration-300">
+          <div className="w-full px-4 sm:px-6 lg:px-10 h-16 sm:h-20 flex items-center justify-between">
+            {/* Left Group: Logo + Air-Gapped Mode Toggle (Desktop) */}
+            <div className="flex items-center gap-4 sm:gap-6">
               <img 
                 src="/logo.png" 
                 alt="IRSARGO Logo" 
                 onClick={() => setActiveTab('landing')}
-                className="h-12 md:h-14 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(56,189,248,0.4)] transition-all hover:scale-105 cursor-pointer" 
+                style={{ height: '70px', width: 'auto', maxWidth: '105px' }}
+                className="h-4 sm:h-5 w-auto max-w-[80px] sm:max-w-[95px] object-contain transition-all hover:scale-105 cursor-pointer shrink-0 my-auto" 
                 title="Return to IRSARGO Landing Page"
               />
 
-              {/* Air-Gapped / Sever Online Cloud Services Toggle Button */}
-              <div className="hidden md:flex items-center">
+              {/* Air-Gapped / Sever Online Cloud Services Toggle Button (Desktop) */}
+              <div className="hidden lg:flex items-center">
                 <LiquidButton
                   onClick={toggleAirGappedMode}
                   glassClassName={
@@ -1278,7 +1376,7 @@ export default function App() {
               </div>
             </div>
             
-            {/* Center Group: Navigation Tabs */}
+            {/* Center Group: Navigation Tabs (Desktop) */}
             <div className="hidden lg:flex items-center justify-center">
               <NavMenu
                 items={[
@@ -1294,78 +1392,117 @@ export default function App() {
               />
             </div>
 
-            {/* Right Group: Theme Toggle + GitHub + User Profile Session */}
-            <div className="flex items-center gap-4">
-              <div className="flex lg:hidden items-center">
-                <NavMenu
-                  items={[
-                    { id: 'console', label: 'console' },
-                    { id: 'activities', label: 'activities' },
-                    { id: 'database', label: 'nodes' },
-                    { id: 'ingest', label: 'ingest' },
-                    { id: 'history', label: 'history' },
-                    { id: 'evaluate', label: 'evaluate' }
-                  ]}
-                  activeTab={activeTab}
-                  onSelectTab={(id) => handleTabSelect(id as Tab)}
-                />
-              </div>
+            {/* Right Group: Desktop Session & Theme controls OR Mobile Menu Trigger */}
+            <div className="flex items-center gap-3">
+              {/* Desktop Items */}
+              <div className="hidden lg:flex items-center gap-3">
+                {/* Multilingual Selector */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowLangMenu(!showLangMenu)}
+                    className="flex items-center justify-center p-2 rounded-xl bg-zinc-900/80 border border-zinc-700/80 text-white transition hover:border-orange-500/60 cursor-pointer shadow-md hover:bg-zinc-800"
+                    title={`Language: ${selectedLanguage.nativeName} (${selectedLanguage.name})`}
+                  >
+                    <Globe className="w-4 h-4 text-orange-400" />
+                  </button>
 
-              <ThemeToggle />
+                  {showLangMenu && (
+                    <div className="absolute top-full right-0 mt-2 w-48 rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl p-1.5 z-50 space-y-1">
+                      {SUPPORTED_LANGUAGES.map((lang) => (
+                        <button
+                          key={lang.code}
+                          type="button"
+                          onClick={() => {
+                            handleLanguageChange(lang);
+                            setShowLangMenu(false);
+                          }}
+                          className={`w-full text-left p-2 rounded-xl text-xs font-mono transition flex items-center justify-between cursor-pointer ${
+                            selectedLanguage.code === lang.code 
+                              ? 'bg-orange-500/20 text-orange-300 font-bold border border-orange-500/40' 
+                              : 'text-zinc-300 hover:text-white hover:bg-zinc-900'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span>{lang.flag}</span>
+                            <span>{lang.nativeName}</span>
+                          </span>
+                          <span className="text-[10px] text-zinc-500">{lang.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-              <a
-                href="https://github.com/arnab9957/RAG-ISRO.git"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="View Source Code on GitHub"
-              >
-                <LiquidButton
-                  size="sm"
-                  glassClassName="bg-gradient-to-r from-zinc-900/80 via-black/80 to-zinc-900/80 border border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.2)] group-hover:border-white/80 group-hover:scale-105"
-                  className="flex items-center justify-center gap-1.5 py-1.5 px-3.5 text-[11px] font-mono font-bold text-white shadow-xl cursor-pointer"
+                <ThemeToggle />
+
+                <a
+                  href="https://github.com/arnab9957/RAG-ISRO.git"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="View Source Code on GitHub"
                 >
-                  <Github className="w-3.5 h-3.5 text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
-                  <span className="tracking-wider font-extrabold text-[10px] text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]">
-                    GitHub
-                  </span>
-                </LiquidButton>
-              </a>
+                  <LiquidButton
+                    size="sm"
+                    glassClassName="bg-gradient-to-r from-zinc-900/80 via-black/80 to-zinc-900/80 border border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.2)] group-hover:border-white/80 group-hover:scale-105"
+                    className="flex items-center justify-center gap-1.5 py-1.5 px-3.5 text-[11px] font-mono font-bold text-white shadow-xl cursor-pointer"
+                  >
+                    <Github className="w-3.5 h-3.5 text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+                    <span className="tracking-wider font-extrabold text-[10px] text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]">
+                      GitHub
+                    </span>
+                  </LiquidButton>
+                </a>
 
-              {!effectiveUser ? (
-                <button
-                  onClick={() => {
-                    setLoginNotice(null);
-                    setShowLoginModal(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-orange-600/30 cursor-pointer"
-                >
-                  <Lock className="w-3.5 h-3.5" /> Sign In
-                </button>
-              ) : (
-                <div className="flex items-center gap-3 border-l border-[var(--border-structure)] pl-4 h-10">
-                  <div className="text-right">
-                    <p className="text-[11px] font-bold text-[var(--text-main)] tracking-wide">{effectiveUser.displayName}</p>
-                    <p className="text-[8px] font-mono text-[var(--accent-cyan)] uppercase tracking-wider">{effectiveUser.role}</p>
-                  </div>
+                {!effectiveUser ? (
                   <button
                     onClick={() => {
-                      localStorage.removeItem('irsargo_token');
-                      localStorage.removeItem('irsargo_user');
-                      localStorage.removeItem('irsargo_last_security_context');
-                      setToken(null);
-                      setUser(null);
-                      setLastSecurityContext(null);
-                      setHistory([]);
-                      setMessages([]);
-                      setActiveTab('landing');
+                      setLoginNotice(null);
+                      setShowLoginModal(true);
                     }}
-                    className="p-1.5 bg-[var(--bg-surface)] border border-[var(--border-structure)] hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 rounded-lg text-[var(--text-muted)] transition cursor-pointer"
-                    title="Logout operator session"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold transition shadow-lg shadow-orange-600/30 cursor-pointer"
                   >
-                    <LogOut className="w-3.5 h-3.5" />
+                    <Lock className="w-3.5 h-3.5" /> Sign In
                   </button>
-                </div>
-              )}
+                ) : (
+                  <div className="flex items-center gap-3 border-l border-[var(--border-structure)] pl-4 h-10">
+                    <div className="text-right">
+                      <p className="text-[11px] font-bold text-[var(--text-main)] tracking-wide">{effectiveUser.displayName}</p>
+                      <p className="text-[8px] font-mono text-[var(--accent-cyan)] uppercase tracking-wider">{effectiveUser.role}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem('irsargo_token');
+                        localStorage.removeItem('irsargo_user');
+                        localStorage.removeItem('irsargo_last_security_context');
+                        setToken(null);
+                        setUser(null);
+                        setLastSecurityContext(null);
+                        setHistory([]);
+                        setMessages([]);
+                        setActiveTab('landing');
+                      }}
+                      className="p-1.5 bg-[var(--bg-surface)] border border-[var(--border-structure)] hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 rounded-lg text-[var(--text-muted)] transition cursor-pointer"
+                      title="Logout operator session"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile View controls: ThemeToggle + Mobile Hamburger Drawer Trigger */}
+              <div className="flex lg:hidden items-center gap-2">
+                <ThemeToggle />
+                <button
+                  type="button"
+                  onClick={() => setIsMobileNavOpen(true)}
+                  className="p-2.5 rounded-xl border border-[var(--border-structure)] bg-[var(--bg-surface)] text-[var(--text-main)] hover:bg-[var(--bg-surface-hover)] focus:outline-none transition cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg"
+                  aria-label="Open mobile navigation drawer"
+                >
+                  <Menu className="w-5 h-5 text-orange-400" />
+                </button>
+              </div>
             </div>
           </div>
         </header>
@@ -1665,10 +1802,26 @@ export default function App() {
                       type="text" 
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder={domain === Domain.AEROSPACE ? "Query telemetry..." : "Query GFR rules..."}
+                      placeholder={isListening ? "Listening... Speak your query now" : (domain === Domain.AEROSPACE ? "Query telemetry..." : "Query GFR rules...")}
                       className="flex-1 bg-transparent border-none outline-none text-zinc-200 placeholder:text-zinc-600 text-sm md:text-lg py-3 md:py-4 min-w-0"
                       disabled={isQuerying}
                     />
+                    <button
+                      type="button"
+                      onClick={toggleVoiceInput}
+                      className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-center shrink-0 ${
+                        isListening 
+                          ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
+                          : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                      }`}
+                      title={isListening ? 'Listening to voice input... Click to stop' : 'Click to dictate query via microphone'}
+                    >
+                      {isListening ? (
+                        <MicOff className="w-4 h-4 md:w-5 md:h-5 text-red-400 animate-bounce" />
+                      ) : (
+                        <Mic className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
+                      )}
+                    </button>
                     <button 
                       type="submit"
                       disabled={isQuerying || !query.trim()}
@@ -1848,13 +2001,16 @@ export default function App() {
                                     <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
                                   </div>
 
-                                  {/* Text Content */}
+                                   {/* Text Content */}
                                   <div className="text-sm leading-relaxed font-sans">
                                     {isUser ? (
                                       <div className="whitespace-pre-wrap">{msg.text}</div>
                                     ) : (
                                       <div className="markdown-content">
-                                        <ReactMarkdown>{formatMarkdownSpacing(sanitizeOutput(msg.text, msg.response?.retrievedNodes || []))}</ReactMarkdown>
+                                        <TranslatedMarkdownText 
+                                          text={sanitizeOutput(msg.text, msg.response?.retrievedNodes || [])} 
+                                          langCode={selectedLanguage.code} 
+                                        />
                                       </div>
                                     )}
                                   </div>
@@ -1924,6 +2080,41 @@ export default function App() {
                                 <h2 className="text-lg md:text-xl font-display font-bold text-white tracking-tight">Verified Technical Synthesis</h2>
                               </div>
                               <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (isSpeaking && speakingMessageId === activeMessageId) {
+                                      stopSpeaking();
+                                      setIsSpeaking(false);
+                                      setSpeakingMessageId(null);
+                                    } else {
+                                      setIsSpeaking(true);
+                                      setSpeakingMessageId(activeMessageId);
+                                      speakText(activeResponse.answer, selectedLanguage.code, () => {
+                                        setIsSpeaking(false);
+                                        setSpeakingMessageId(null);
+                                      });
+                                    }
+                                  }}
+                                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-mono font-bold transition cursor-pointer ${
+                                    isSpeaking && speakingMessageId === activeMessageId
+                                      ? 'bg-amber-500/20 border-amber-500 text-amber-300 animate-pulse'
+                                      : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border-zinc-700'
+                                  }`}
+                                  title={isSpeaking ? 'Click to stop audio readout' : 'Read answer aloud in native language'}
+                                >
+                                  {isSpeaking && speakingMessageId === activeMessageId ? (
+                                    <>
+                                      <VolumeX className="w-3 h-3 text-amber-400 animate-bounce" />
+                                      <span>STOP AUDIO</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Volume2 className="w-3 h-3 text-orange-400" />
+                                      <span>LISTEN ({selectedLanguage.nativeName})</span>
+                                    </>
+                                  )}
+                                </button>
                                 <button 
                                   onClick={handleExport}
                                   className="flex items-center gap-2 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-white hover:text-white rounded-full border border-zinc-700 text-[10px] font-mono font-bold transition-colors cursor-pointer"
@@ -1944,7 +2135,11 @@ export default function App() {
                             </div>
 
                             <div className="mt-6 mb-8">
-                              <OutputEditor key={activeMessageId} content={sanitizeOutput(activeResponse.answer, activeResponse.retrievedNodes || [])} />
+                              <TranslatedOutputEditor 
+                                key={`${activeMessageId}-${selectedLanguage.code}`} 
+                                content={sanitizeOutput(activeResponse.answer, activeResponse.retrievedNodes || [])} 
+                                langCode={selectedLanguage.code} 
+                              />
                             </div>
 
                             <div className="mt-8 pt-8 border-t border-zinc-800/80 grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -2869,6 +3064,157 @@ export default function App() {
         </div>
       </div>
 
+      {/* Mobile Slide-Over Navigation Panel / Side Drawer */}
+      <AnimatePresence>
+        {isMobileNavOpen && (
+          <div className="fixed inset-0 z-50 overflow-hidden">
+            {/* Backdrop Blur Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileNavOpen(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+
+            {/* Slide-in Side Drawer */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute top-0 right-0 bottom-0 w-full max-w-sm bg-[var(--bg-base)] border-l border-[var(--border-structure)] shadow-2xl p-6 flex flex-col justify-between overflow-y-auto z-10"
+            >
+              <div className="space-y-6">
+                {/* Top Bar inside Drawer */}
+                <div className="flex items-center justify-between pb-4 border-b border-[var(--border-structure)] gap-4">
+                  <img 
+                    src="/logo.png" 
+                    alt="IRSARGO Logo" 
+                    style={{ height: '18px', width: 'auto', maxWidth: '85px' }}
+                    className="h-4 sm:h-5 w-auto object-contain shrink-0" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileNavOpen(false)}
+                    className="p-2 rounded-xl border border-[var(--border-structure)] bg-[var(--bg-surface)] text-zinc-300 hover:text-white transition cursor-pointer shrink-0"
+                    aria-label="Close mobile menu"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Operator Profile Section inside Drawer */}
+                {effectiveUser ? (
+                  <div className="p-4 rounded-xl border border-[var(--border-structure)] bg-[var(--bg-surface)] flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-[var(--text-main)]">{effectiveUser.displayName}</p>
+                      <p className="text-[10px] font-mono text-[var(--accent-cyan)] uppercase">{effectiveUser.role}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem('irsargo_token');
+                        localStorage.removeItem('irsargo_user');
+                        localStorage.removeItem('irsargo_last_security_context');
+                        setToken(null);
+                        setUser(null);
+                        setLastSecurityContext(null);
+                        setHistory([]);
+                        setMessages([]);
+                        setActiveTab('landing');
+                        setIsMobileNavOpen(false);
+                      }}
+                      className="p-2 bg-red-500/10 border border-red-500/40 rounded-lg text-red-400 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" /> Logout
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setLoginNotice(null);
+                      setShowLoginModal(true);
+                      setIsMobileNavOpen(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 text-white font-mono text-xs font-bold shadow-lg cursor-pointer"
+                  >
+                    <Lock className="w-4 h-4" /> Sign In to Keycloak IAM
+                  </button>
+                )}
+
+                {/* Navigation Links inside Drawer */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-subtle)] px-2">Navigation Views</p>
+                  {[
+                    { id: 'console', label: 'Console Intelligence', icon: Terminal },
+                    { id: 'activities', label: 'Swarm Activities', icon: Activity },
+                    { id: 'database', label: 'Vector Nodes', icon: Database },
+                    { id: 'ingest', label: 'Doc Ingestion', icon: Upload },
+                    { id: 'history', label: 'Mission History', icon: Clock },
+                    { id: 'evaluate', label: 'Evaluation & Benchmarks', icon: Gauge }
+                  ].map((nav) => {
+                    const IconComp = nav.icon;
+                    const isActive = activeTab === nav.id;
+                    return (
+                      <button
+                        key={nav.id}
+                        onClick={() => {
+                          handleTabSelect(nav.id as Tab);
+                          setIsMobileNavOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-xs font-mono font-bold uppercase transition min-h-[48px] cursor-pointer ${
+                          isActive 
+                            ? 'bg-[var(--accent-cyan)]/15 border-orange-500 text-white shadow-lg shadow-orange-500/10' 
+                            : 'bg-[var(--bg-surface)] border-[var(--border-structure)] text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-surface-hover)]'
+                        }`}
+                      >
+                        <IconComp className={`w-4 h-4 ${isActive ? 'text-orange-400' : 'text-zinc-400'}`} />
+                        <span>{nav.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Operational Security Mode Toggle */}
+                <div className="p-4 rounded-xl border border-[var(--border-structure)] bg-[var(--bg-surface)] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-bold uppercase text-[var(--text-main)]">Operational Mode</span>
+                    <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded ${airGappedMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'}`}>
+                      {airGappedMode ? 'OFFLINE' : 'ONLINE'}
+                    </span>
+                  </div>
+                  <LiquidButton
+                    onClick={toggleAirGappedMode}
+                    glassClassName={
+                      airGappedMode
+                        ? "bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 border border-amber-200/90"
+                        : "bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500 border border-emerald-200/90"
+                    }
+                    size="sm"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-mono font-bold text-white shadow-lg cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-white" />
+                    <span>Switch to {airGappedMode ? 'ONLINE CLOUD' : 'AIR-GAPPED OFFLINE'}</span>
+                  </LiquidButton>
+                </div>
+              </div>
+
+              {/* Drawer Footer Links */}
+              <div className="pt-6 border-t border-[var(--border-structure)] space-y-3">
+                <a
+                  href="https://github.com/arnab9957/RAG-ISRO.git"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-zinc-900 border border-zinc-700 text-white font-mono text-xs font-bold"
+                >
+                  <Github className="w-4 h-4 text-white" /> GitHub Source Code
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Login Portal Modal Overlay for Unauthenticated Users */}
       {showLoginModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-2xl flex items-center justify-center p-4 md:p-8">
@@ -2904,6 +3250,36 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Persistent Floating Chatbot Overlay */}
+      <FloatingChatbot
+        isOpen={true}
+        isMinimized={isFloatingBotMinimized}
+        onToggleOpen={() => setIsFloatingBotMinimized(!isFloatingBotMinimized)}
+        onToggleMinimize={() => setIsFloatingBotMinimized(!isFloatingBotMinimized)}
+        messages={messages}
+        isQuerying={isQuerying}
+        currentAgentAction={actions.length > 0 ? actions[actions.length - 1] : null}
+        onSendMessage={(text, selectedDomain) => {
+          if (selectedDomain && selectedDomain !== domain) {
+            setDomain(selectedDomain);
+          }
+          executeSubmittedQuery(text, true);
+        }}
+        onClearHistory={() => {
+          setMessages([]);
+          if (effectiveUser && token) {
+            const key = `IRSARGO_chat_messages_${userStorageKey}`;
+            localStorage.removeItem(key);
+          }
+        }}
+        airGappedMode={airGappedMode}
+        selectedDomain={domain}
+        setSelectedDomain={setDomain}
+        activeTab={activeTab}
+        selectedLanguage={selectedLanguage}
+        setSelectedLanguage={handleLanguageChange}
+      />
     </div>
   );
 }

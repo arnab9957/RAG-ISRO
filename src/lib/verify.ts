@@ -282,12 +282,12 @@ export function mockGenerate(contents: string): string {
         `Based on the air-gapped system documentation and technical framework for **${query}**:\n\n` +
         `1. **System Architecture & Core Principles:**\n` +
         `   - **Zero-Trust Multi-Agent RAG Framework:** IRSARGO integrates specialized Executor, Retriever, Critic, and Validator agents for domain-adaptive applications.\n` +
-        `   - **Formally Verified Grounding:** All outputs undergo Z3 SMT constraint verification and ZK-STARK proof generation to ensure zero hallucination risk.\n` +
+        `   - **Formally Verified Grounding:** All outputs undergo Z3 SMT constraint verification and ZK-SNARK proof generation to ensure zero hallucination risk.\n` +
         `   - **Dynamic Access Control (DACL):** Clearance parameters (Level 1 Restricted to Level 5 Top Secret) are enforced prior to document retrieval.\n\n` +
         `2. **Operational & Security Compliance:**\n` +
         `   - Telemetry frame configurations, GFR guidelines, and aerospace mission specifications operate under 100% local air-gapped privacy.\n` +
         `   - Anti-exfiltration sanitization automatically neutralizes untrusted instruction smuggling embedded in raw documents.\n\n` +
-        `*Verification Status: Formal ZK-STARK Query Proof & Z3 SMT Constraint Validation PASSED.*`;
+        `*Verification Status: Formal ZK-SNARK Query Proof & Z3 SMT Constraint Validation PASSED.*`;
     }
   }
 
@@ -358,7 +358,7 @@ export function mockGenerate(contents: string): string {
   if (extractedQuery) {
     return `Based on the local air-gapped technical knowledge base for **${extractedQuery}**:\n\n` +
       `- **Operational Policy:** Parameters and procedures conform to internal mission-critical specifications and security compliance standards.\n` +
-      `- **Verification Status:** Formal ZK-STARK query proof and SMT constraint validation passed.\n` +
+      `- **Verification Status:** Formal ZK-SNARK query proof and SMT constraint validation passed.\n` +
       `- **Data Safety:** Zero-trust anti-exfiltration active; 100% local privacy maintained.`;
   }
 

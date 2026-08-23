@@ -168,13 +168,11 @@ function LiquidButton({
 
         <div
           className="absolute inset-0 isolate -z-10 h-full w-full overflow-hidden rounded-full backdrop-blur-xl"
-          style={{ backdropFilter: 'url("#container-glass") blur(16px)' }}
         />
 
         <div className="relative z-10 flex items-center justify-center gap-2">
           {children}
         </div>
-        <GlassFilter />
       </Comp>
     </>
   )

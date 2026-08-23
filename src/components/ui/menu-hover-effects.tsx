@@ -54,58 +54,57 @@ export default function NavMenu({
   };
 
   return (
-    <nav className={`relative w-full ${className}`}>
-      {/* Mobile menu toggle button */}
+    <nav className={`relative w-full ${className}`} aria-label="Main Navigation">
+      {/* Mobile Menu Toggle Button */}
       <button 
+        type="button"
         onClick={toggleMenu}
-        className="md:hidden absolute top-3 right-4 z-20 p-2 text-zinc-200"
-        aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+        className="lg:hidden flex items-center justify-center p-2.5 rounded-xl border border-[var(--border-structure)] bg-[var(--bg-surface)] text-[var(--text-main)] hover:bg-[var(--bg-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-cyan)] transition cursor-pointer min-h-[44px] min-w-[44px]"
+        aria-controls="responsive-main-nav"
+        aria-expanded={isMenuOpen}
+        aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
       >
-        <div className={`w-6 h-0.5 bg-current mb-1.5 transition-transform duration-300 ${isMenuOpen ? 'transform rotate-45 translate-y-2' : ''}`}></div>
-        <div className={`w-6 h-0.5 bg-current mb-1.5 transition-opacity duration-300 ${isMenuOpen ? 'opacity-0' : ''}`}></div>
-        <div className={`w-6 h-0.5 bg-current transition-transform duration-300 ${isMenuOpen ? 'transform -rotate-45 -translate-y-2' : ''}`}></div>
+        <div className="flex flex-col items-center justify-center w-5 h-5 space-y-1">
+          <div className={`w-5 h-0.5 bg-current transition-transform duration-300 ${isMenuOpen ? 'transform rotate-45 translate-y-1.5' : ''}`}></div>
+          <div className={`w-5 h-0.5 bg-current transition-opacity duration-300 ${isMenuOpen ? 'opacity-0' : ''}`}></div>
+          <div className={`w-5 h-0.5 bg-current transition-transform duration-300 ${isMenuOpen ? 'transform -rotate-45 -translate-y-1.5' : ''}`}></div>
+        </div>
       </button>
       
-      {/* Menu container */}
-      <div className={`
-        flex items-center justify-center w-full
-        ${isMenuOpen ? 'block' : 'hidden md:flex'}
-      `}>
-        <ul className="flex flex-col items-center space-y-4 md:flex-row md:space-y-0 md:space-x-3 lg:space-x-6">
+      {/* Navigation Links Container */}
+      <div 
+        id="responsive-main-nav"
+        className={`
+          w-full transition-all duration-300
+          ${isMenuOpen ? 'block absolute top-full left-0 right-0 z-50 mt-2 p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-structure)] backdrop-blur-2xl shadow-2xl' : 'hidden lg:flex items-center justify-center'}
+        `}
+      >
+        <ul className="flex flex-col lg:flex-row items-stretch lg:items-center space-y-2 lg:space-y-0 lg:space-x-3 xl:space-x-5">
           {normalizedItems.map((item) => {
             const isActive = currentActive.toLowerCase() === item.id.toLowerCase();
             return (
               <li key={item.id} className="list-none">
                 <a 
                   href={`#${item.id}`}
-                  className="relative inline-block group"
+                  className="relative inline-block w-full lg:w-auto group rounded-xl"
                   onClick={(e) => handleItemClick(item.id, e)}
                 >
-                  {/* Link text */}
+                  {/* Link Text */}
                   <span className={`
                     relative z-10 block uppercase font-sans font-semibold tracking-wider transition-colors duration-300 
-                    text-xs py-1.5 px-2.5 md:text-xs md:py-1 md:px-3 lg:text-xs lg:py-1.5 lg:px-3.5
-                    ${isActive ? 'text-[var(--text-main)] font-bold' : 'text-[var(--text-muted)] group-hover:text-[var(--text-main)]'}
+                    text-xs py-3 px-4 lg:py-1.5 lg:px-3.5 text-center lg:text-left min-h-[44px] lg:min-h-0 flex items-center justify-center
+                    ${isActive ? 'text-[var(--text-main)] font-bold bg-[var(--bg-surface-hover)] lg:bg-transparent rounded-lg lg:rounded-none' : 'text-[var(--text-muted)] group-hover:text-[var(--text-main)]'}
                   `}>
                     {item.label}
                   </span>
 
-                  {/* Top & bottom border animation */}
+                  {/* Desktop Underline Effect */}
                   <span className={`
-                    absolute inset-0 border-t-2 border-b-2 border-[var(--border-structure)]
+                    hidden lg:block absolute inset-0 border-t-2 border-b-2 border-[var(--border-structure)]
                     transform transition-all duration-300 origin-center
                     ${isActive 
                       ? 'scale-y-100 opacity-100 border-isro-orange' 
                       : 'scale-y-[2] opacity-0 group-hover:scale-y-100 group-hover:opacity-100'}
-                  `} />
-
-                  {/* Background fill animation */}
-                  <span className={`
-                    absolute top-[2px] left-0 w-full h-full bg-[var(--bg-surface)]
-                    transform transition-all duration-300 origin-top
-                    ${isActive 
-                      ? 'scale-100 opacity-100 shadow-sm' 
-                      : 'scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100'}
                   `} />
                 </a>
               </li>

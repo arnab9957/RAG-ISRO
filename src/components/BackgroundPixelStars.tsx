@@ -245,41 +245,34 @@ export const BackgroundPixelStars = memo(
         });
 
         if (shootingStarsRef.current.length) {
-          shootingStarsRef.current = shootingStarsRef.current
-            .map((star) => {
-              const newX = star.x + star.speed * Math.cos((star.angle * Math.PI) / 180);
-              const newY = star.y + star.speed * Math.sin((star.angle * Math.PI) / 180);
-              const newDistance = star.distance + star.speed;
+          const activeStars: ShootingStar[] = [];
+          for (let s = 0; s < shootingStarsRef.current.length; s++) {
+            const star = shootingStarsRef.current[s]!;
+            star.x += star.speed * Math.cos((star.angle * Math.PI) / 180);
+            star.y += star.speed * Math.sin((star.angle * Math.PI) / 180);
+            star.distance += star.speed;
 
-              const newTrail = [...star.trail];
+            if (star.distance % 8 < star.speed) {
+              star.trail.push({ x: star.x, y: star.y, opacity: 1.0 });
+            }
 
-              if (newDistance % 8 < star.speed) {
-                newTrail.push({
-                  x: star.x,
-                  y: star.y,
-                  opacity: 1.0,
-                });
+            for (let t = star.trail.length - 1; t >= 0; t--) {
+              star.trail[t]!.opacity -= 0.1;
+              if (star.trail[t]!.opacity <= 0) {
+                star.trail.splice(t, 1);
               }
+            }
 
-              const updatedTrail = newTrail
-                .map((point) => ({ ...point, opacity: point.opacity - 0.1 }))
-                .filter((point) => point.opacity > 0);
-
-              return {
-                ...star,
-                x: newX,
-                y: newY,
-                distance: newDistance,
-                trail: updatedTrail,
-              };
-            })
-            .filter(
-              (star) =>
-                star.x >= -30 &&
-                star.x <= window.innerWidth + 30 &&
-                star.y >= -30 &&
-                star.y <= window.innerHeight + 30,
-            );
+            if (
+              star.x >= -30 &&
+              star.x <= window.innerWidth + 30 &&
+              star.y >= -30 &&
+              star.y <= window.innerHeight + 30
+            ) {
+              activeStars.push(star);
+            }
+          }
+          shootingStarsRef.current = activeStars;
 
           shootingStarsRef.current.forEach((star) => {
             star.trail.forEach((point) => {

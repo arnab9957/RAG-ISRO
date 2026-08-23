@@ -171,7 +171,7 @@ function GradientBackground({
   noisePatternSize = 90,
   noisePatternScaleX = 1,
   noisePatternScaleY = 1,
-  noisePatternRefreshInterval = 2,
+  noisePatternRefreshInterval = 0,
   noisePatternAlpha = 50,
   noiseIntensity = 1,
   className = '',

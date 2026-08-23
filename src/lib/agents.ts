@@ -317,7 +317,7 @@ ${finalObservationsContext}
     }
 
     // 0. Pre-processing: Integrity & Ingestion Simulation
-    const preAction = addAction(AgentRole.VALIDATOR, `Executing RISC Zero ZK-STARK query verification...`);
+    const preAction = addAction(AgentRole.VALIDATOR, `Executing Circom ZK-SNARK query clearance verification...`);
     const queryProof = generateQueryProof(query);
     preAction.status = 'completed';
     preAction.output = `PROOF_GEN: ${queryProof}\nINGESTION: Local offline node authenticated.`;
