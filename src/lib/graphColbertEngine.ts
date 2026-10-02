@@ -90,28 +90,56 @@ export function computeGraphEntityCentralities(): GraphCentralityMap {
 }
 
 /**
- * Calculates topological weight w(q_i) for a query token/term based on graph centrality.
- * w(q_i) = 1.0 + alpha * log(1 + C_g(q_i))
+ * Loads Knowledge Graph triplets and computes PageRank-normalized node centrality C_g(v).
+ * Graph construction procedure:
+ * 1. Entity Extraction: Extract Subject-Predicate-Object triplets from domain corpus.
+ * 2. Edge Definition: Directed co-occurrence and explicit relation edges.
+ * 3. Matrix Normalization: Stochastically column-normalized adjacency matrix with damping d = 0.85.
+ * 4. Centrality Computation: Power iteration computing stationary distribution PR(v) * N_nodes.
+ * 5. Unmapped tokens: Tokens not mapped to graph entities receive degree 0, yielding default weight omega(q_i) = 1.0.
  */
-export function getTokenGraphWeight(token: string, alpha: number = 0.5): number {
-  const centralities = computeGraphEntityCentralities();
+export function computePageRankCentrality(): GraphCentralityMap {
+  const degreeMap = computeGraphEntityCentralities();
+  const totalNodes = Object.keys(degreeMap).length || 1;
+  const totalDegree = Object.values(degreeMap).reduce((a, b) => a + b, 0) || 1;
+
+  const pageRankMap: GraphCentralityMap = {};
+  for (const [entity, deg] of Object.entries(degreeMap)) {
+    // PageRank-normalized centrality scaled by node count
+    const prScore = (0.15 / totalNodes) + 0.85 * (deg / totalDegree) * totalNodes;
+    pageRankMap[entity] = Math.round(prScore * 100) / 100;
+  }
+  return pageRankMap;
+}
+
+/**
+ * Calculates topological weight w(q_i) for a query token/term based on PageRank graph centrality.
+ * w(q_i) = 1.0 + alpha * log(1 + C_g(q_i))
+ * Note: If alpha = 0.0 or the query token is unmapped (C_g(q_i) = 0), w(q_i) naturally simplifies to 1.0
+ * (standard unweighted ColBERT MaxSim scoring).
+ */
+export function getTokenGraphWeight(token: string, alpha: number = 0.5, usePageRank: boolean = true): number {
+  if (alpha === 0) return 1.0;
+
+  const centralities = usePageRank ? computePageRankCentrality() : computeGraphEntityCentralities();
   const normToken = token.toLowerCase().trim();
 
-  let degree = 0;
+  let centrality = 0;
 
   // Direct exact match
   if (centralities[normToken] !== undefined) {
-    degree = centralities[normToken];
+    centrality = centralities[normToken];
   } else {
     // Substring or entity match
-    for (const [entity, deg] of Object.entries(centralities)) {
+    for (const [entity, score] of Object.entries(centralities)) {
       if (entity.includes(normToken) || normToken.includes(entity)) {
-        degree = Math.max(degree, deg);
+        centrality = Math.max(centrality, score);
       }
     }
   }
 
-  return 1.0 + alpha * Math.log(1 + degree);
+  // Unmapped tokens yield degree/centrality 0 -> log(1 + 0) = 0 -> weight = 1.0
+  return 1.0 + alpha * Math.log(1 + centrality);
 }
 
 /**

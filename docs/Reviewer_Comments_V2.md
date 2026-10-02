@@ -1,0 +1,163 @@
+# Reviewer Comments from V2 Draft
+
+What still needs attention
+
+The most important remaining weakness is that the public benchmark validation section is not yet technically convincing in its current form.
+
+The manuscript says that 1,500 public human-annotated cases were drawn from RAGTruth, StrategyQA and HotpotQA, but then the key statistical sentence is incomplete:
+
+“yielded Fleiss' (p < 0.001)...”
+
+and the counts of concordant accepts/rejects are also missing.
+
+More importantly, the claim that Z3 “correctly flagged subtle numerical roundoff errors in 52 benchmark instances” needs very careful justification. StrategyQA and HotpotQA are not inherently numerical-constraint benchmarks. If only a subset contained suitable numerical claims, state that explicitly.
+
+Otherwise a reviewer may question whether these public datasets are really appropriate for validating the formal component.
+
+I would rewrite this section to distinguish:
+
+general factual-answer validation on public benchmarks;
+
+SMT-specific validation only on the subset containing extractable structured claims.
+
+That would be much safer.
+
+There is also an inconsistency in the reported full-system metrics
+
+Table 1 reports:
+
+grounding fidelity = 99.90%
+
+PIDR = 99.40%
+
+SCLR = 0.0%
+
+But the architectural ablation table reports the Full IRSARGO baseline as:
+
+grounding = 97.4%
+
+PIDR = 96.4%
+
+SCLR = 1.2%
+
+That is a serious inconsistency unless these tables refer to different subsets.
+
+This is probably the single most important numerical issue to resolve.
+
+If Table 7 uses a different adversarial subset, say so explicitly:
+
+“Table 7 reports component ablation on the 5,000-query adversarial subset; Table 1 reports aggregate held-out performance on N=10,000.”
+
+If they are supposed to be the same evaluation set, the numbers must match.
+
+A reviewer will definitely notice this.
+
+The operational-cost section is presently the weakest section
+
+The new cost-efficiency table is ambitious, but I would be cautious with it.
+
+For IRSARGO, the table reports:
+
+96.5% cache absorption,
+
+0.035 LLM inference/query,
+
+34.2 RPS,
+
+146 ms cached latency,
+
+1.6 kWh/100k queries,
+
+versus much larger values for the baselines.
+
+Those are extremely strong efficiency gains and will attract scrutiny.
+
+The paragraph below the table is also incomplete:
+
+“IRSARGO prevents of invalid LLM generation retry loops…”
+
+and
+
+“reducing mean cached query latency to .”
+
+More fundamentally, “Token Cost = 0.00” because the model is local is not really a computational cost comparison; it is only an external API billing cost comparison. Local inference still consumes energy and hardware.
+
+I would rename that column something like:
+
+External API token expenditure
+
+and explain exactly how energy was measured or estimated.
+
+If the energy figures are estimates rather than direct power-meter measurements, say so.
+
+Otherwise I might actually remove this section. The paper is already technically strong without it.
+
+The (\alpha)-sensitivity table still needs the actual (\alpha) values
+
+The sensitivity analysis currently labels rows as:
+
+Standard Unweighted,
+
+Moderate Graph Weighting,
+
+Optimal Selected Setting,
+
+Heavy Graph Weighting.
+
+But it does not show the actual values of (\alpha).
+
+That defeats much of the point of a hyperparameter sensitivity analysis.
+
+You should show something like:
+
+α
+
+Setting
+
+P@5
+
+R@5
+
+Multi-hop R@5
+
+0.0
+
+Unweighted
+
+...
+
+0.25
+
+Moderate
+
+...
+
+0.5
+
+Selected
+
+...
+
+1.0
+
+Heavy
+
+...
+
+Without the numeric values, the experiment is not reproducible.
+
+I would ask for reconciliation and validation:
+
+reconcile Table 1 and Table 7 metrics;
+
+complete and justify the public-benchmark validation;
+
+give actual (\alpha) values;
+
+clean the cost/energy methodology or remove that section;
+
+update the limitations and conclusion to reflect the 10k held-out set;
+
+remove reviewer-response text, incomplete sentences and duplicate references.
+
+Once those are fixed, I would be comfortable recommending submission to a modest SCIE journal, and I think the paper would have a reasonable chance of surviving first-round peer review rather than being rejected at the editorial stage.
